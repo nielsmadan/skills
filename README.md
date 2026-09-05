@@ -15,6 +15,14 @@ claude plugin install nlsmdn@nlsmdn
 
 Skills then appear as `/nlsmdn:code-review` and so on.
 
+Codex, as a plugin:
+
+```
+codex plugin marketplace add nielsmadan/skills
+```
+
+Then install `nlsmdn` from `/plugins` and start a new session.
+
 Any other agent (Codex, Cursor, OpenCode, Zed, Copilot CLI, Gemini CLI, Amp):
 
 ```

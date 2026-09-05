@@ -1,0 +1,19 @@
+{
+  "name": "nlsmdn",
+  "interface": {
+    "displayName": "nlsmdn skills"
+  },
+  "plugins": [
+    {
+      "name": "nlsmdn",
+      "source": {
+        "source": "local",
+        "path": "./"
+      },
+      "policy": {
+        "installation": "AVAILABLE"
+      },
+      "category": "Developer Tools"
+    }
+  ]
+}

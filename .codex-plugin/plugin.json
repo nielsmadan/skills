@@ -1,0 +1,28 @@
+{
+  "name": "nlsmdn",
+  "version": "1.0.0",
+  "description": "Opinionated agent skills for code review, research, and daily workflow",
+  "author": {
+    "name": "Niels Madan",
+    "url": "https://github.com/nielsmadan"
+  },
+  "homepage": "https://github.com/nielsmadan/skills",
+  "repository": "https://github.com/nielsmadan/skills",
+  "license": "MIT",
+  "keywords": [
+    "agent-skills",
+    "code-review",
+    "planning",
+    "testing",
+    "workflow"
+  ],
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "nlsmdn",
+    "shortDescription": "Opinionated agent skills for code review, research, and daily workflow",
+    "longDescription": "Opinionated agent skills for the daily development loop, organized in groups: multi-perspective code review (an orchestrator plus dedicated reviewers for architecture, security, performance, interfaces, tests, and language-specific design, with cross-CLI second opinions), planning and research workflows, testing and debugging, git and session history, docs and writing, and small environment tools. Generated and synced hourly from a single source repo.",
+    "developerName": "Niels Madan",
+    "category": "Developer Tools",
+    "websiteURL": "https://github.com/nielsmadan/skills"
+  }
+}
