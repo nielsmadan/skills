@@ -1,0 +1,15 @@
+{
+  "name": "nlsmdn",
+  "owner": {
+    "name": "Niels Madan",
+    "url": "https://github.com/nielsmadan"
+  },
+  "description": "Opinionated agent skills for code review, research, and daily workflow",
+  "plugins": [
+    {
+      "name": "nlsmdn",
+      "source": "./",
+      "description": "Opinionated agent skills for code review, research, and daily workflow"
+    }
+  ]
+}

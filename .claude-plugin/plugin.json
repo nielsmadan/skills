@@ -1,0 +1,10 @@
+{
+  "name": "nlsmdn",
+  "description": "Opinionated agent skills for code review, research, and daily workflow",
+  "author": {
+    "name": "Niels Madan",
+    "url": "https://github.com/nielsmadan"
+  },
+  "homepage": "https://github.com/nielsmadan/skills",
+  "license": "MIT"
+}
