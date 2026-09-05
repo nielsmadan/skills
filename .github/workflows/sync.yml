@@ -34,7 +34,7 @@ jobs:
 
       - name: Commit if changed
         run: |
-          git add -A -- skills README.md LICENSE .claude-plugin
+          git add -A -- skills README.md LICENSE .claude-plugin .codex-plugin .cursor-plugin .agents
           if git diff --cached --quiet; then
             echo "no changes"
             exit 0
