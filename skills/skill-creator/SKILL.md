@@ -246,9 +246,9 @@ declaration** — nothing else needs editing to wire it up. Supporting files
 so an executable script stays executable; `__pycache__` is skipped.
 
 One mandatory hookup: classify the skill in `publish/skills.toml` — add its name
-to `publish` or `private`. Every global skill must appear in exactly one list; the
-pre-commit hook rejects an unclassified skill, and publishable sources must carry
-no personal strings.
+to one of the README groups under `[groups]`, or to `private`. Every global skill
+must appear in exactly one place; the pre-commit hook rejects an unclassified
+skill, and publishable sources must carry no personal strings.
 
 One optional hookup: add a row to `loadout/skills/README.md`, the human-facing
 catalog. Agents read the `description:` frontmatter instead, so that frontmatter is
@@ -275,7 +275,7 @@ Note: any skill body referencing `docs/` writes into the *target project's*
 
 ### Step 7: Vary the text per harness (only if needed)
 
-Almost no skill needs this — 50 of 52 render identically everywhere. Reach for it
+Almost no skill needs this — 49 of 51 render identically everywhere. Reach for it
 when a skill must genuinely say different things to different agents (e.g.
 `code-review`, whose dispatch instructions differ between the claude/codex/opencode
 family and pi).
@@ -325,7 +325,7 @@ Before finalizing, verify:
 - [ ] References clearly linked from SKILL.md (if using references/)
 - [ ] File types mentioned in description (if applicable)
 - [ ] Placed by scope: `loadout/skills/` (global), `loadout/templates/<type>/skills/` (project-type), or `.claude/skills/` (this repo only)
-- [ ] Classified in `publish/skills.toml` (publish or private) — the pre-commit hook fails otherwise
+- [ ] Classified in `publish/skills.toml` (a `[groups]` entry, or private) — the pre-commit hook fails otherwise
 - [ ] `loadout sync --global` run, and the skill appears under all four harness skills directories
 - [ ] `loadout check --global` reports no drift
 - [ ] Row added to `loadout/skills/README.md` (the human catalog — agents read the `description:` frontmatter instead)
