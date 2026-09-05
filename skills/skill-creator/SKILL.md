@@ -275,7 +275,7 @@ Note: any skill body referencing `docs/` writes into the *target project's*
 
 ### Step 7: Vary the text per harness (only if needed)
 
-Almost no skill needs this — 49 of 51 render identically everywhere. Reach for it
+Almost no skill needs this — 47 of 49 render identically everywhere. Reach for it
 when a skill must genuinely say different things to different agents (e.g.
 `code-review`, whose dispatch instructions differ between the claude/codex/opencode
 family and pi).

@@ -167,5 +167,5 @@ in [sources](references/sources.md).
   mechanism. If absent, record the specific missing prerequisite and continue other
   rows. Never replace runtime observation with static inspection and call it passed.
 - **Automation fails:** refresh stale refs and verify the selected app/surface before
-  reporting a product defect. For EPERM or sandbox errors, use `nono-sandbox` to
-  distinguish a missing grant from a nested sandbox; record genuine blockers.
+  reporting a product defect. For EPERM or sandbox errors, rule out a sandbox
+  denial (a sandbox-diagnosis skill, if you have one) before recording a blocker.
