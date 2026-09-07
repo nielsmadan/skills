@@ -203,6 +203,43 @@ prose unless the format genuinely helps.
 "The key is balance." / "Ultimately, it depends." / weighing two sides then
 refusing to land. → Take a position, or cut the paragraph.
 
+### Stance echo
+One evaluative word carrying the framing over and over — *honest*, *genuine*,
+*careful*, *deliberate*, *critical*, *important*. Three or more in a document is
+the threshold; the writer is asserting a judgment instead of letting the content
+earn it, and usually the content already does.
+
+- ❌ "an **honest** look at where it sits" … "taking the survey **honestly**" …
+  "and the **honest** flip side"
+- ✅ Keep whichever one is load-bearing; delete the others.
+
+Subject nouns repeat legitimately and are not echoes — a page about ports says
+"port" constantly. The tell is confined to words that assert a *judgment*.
+**Don't fix it with synonyms**: swapping the second "honest" for "candid" moves
+the tic rather than removing it.
+
+---
+
+## 3b. Genre decides how hard to look
+
+The same catalog applied uniformly produces noise on one kind of page and misses
+things on another.
+
+**Reference prose** — CLI pages, API docs, config guides, runbooks. The
+vocabulary is fixed by the subject: there is a command, a path, a behavior, and
+little room to inflate. Single-word puffery hits here are almost all literal
+(*unlock* the phone, the literal *underscore*, a test *harness*). What survives
+as signal: punctuation density, filler, stance echo, and formatting-by-rule.
+
+**Persuasive prose** — landing pages, comparisons, READMEs above the install
+section, announcements, instructions written to convince. This is where models
+reach for staging and inflation, because the subject is abstract enough to allow
+it. Apply the whole catalog.
+
+The rule of thumb: **slop needs something abstract to attach to.** A page that
+states what a command does gives it nothing to work with; a page arguing that
+one tool beats another gives it plenty.
+
 ---
 
 ## 4. What NOT to touch (avoid over-editing)
@@ -222,7 +259,19 @@ The biggest failure mode of this skill is over-correction. Guard against it:
 - **Don't swap one tell for another.** Replacing every "delve" with "explore"
   across a document just creates a new tell. Vary, or delete.
 - **Domain terms of art are not tells.** "Robust" in statistics, "optimize" in
-  ML, "leverage" in finance — keep when technically precise.
+  ML, "leverage" in finance — keep when technically precise. When one recurs
+  across a whole codebase, record it in `.deslopignore` so it stops costing a
+  judgment call on every run.
+- **Code is not prose.** Fenced blocks, inline code, commands, flags, paths,
+  URLs, link targets and YAML frontmatter are out of scope — always, in every
+  genre. `--not --remotes` is a git invocation, not negative parallelism.
+- **Ordinary negation is not negative parallelism.** "Does not export its
+  contents", "will not report anything until restarted" — these are statements,
+  not the rhetorical "not X, but Y". The tell needs a contrastive pivot.
+- **Real ranges are not false ranges.** "From 191 to 88 lines", "from 2019 to
+  2025", "from project to project" all name something actual. The tell is a
+  decorative span invented for rhythm ("from intimate gatherings to global
+  movements").
 
 When in doubt, prefer the lighter edit and flag it rather than rewrite
 aggressively.
