@@ -66,11 +66,11 @@ Eliminate **only** on hard constraints, recording the specific constraint for ea
 
 ### Step 5: Evaluate in parallel — identical rubric
 
-Dispatch one sub-agent per surviving candidate, **all in a single message**. Use the template in `references/agent-prompt.md` verbatim, substituting only the job, profile, constraint lists, and candidate name.
+Dispatch one sub-agent per surviving candidate, launching each batch together as runtime capacity allows. Use the template in `references/agent-prompt.md`, filling its placeholders while keeping the evaluation rubric identical.
 
-**Dispatch read-only** — Claude Code's `Explore`, or any harness's read-only agent profile. Each agent returns a scored evaluation, never a file, so it needs no write access; and a read-only type has no agent-spawning tool, which stops one candidate's agent from fanning out into its own research swarm. That matters doubly here: the rubric is per-candidate, so recursion multiplies by the number of candidates.
+**Dispatch workers with read/search/fetch tools and no file edits.** Each returns a scored evaluation. Disable delegation tools for ordinary workers where supported; read-only access alone does not prevent delegation. If a candidate needs coordinated research, assign its subtasks, descendant count, and stopping condition explicitly and include them in the overall allocation.
 
-**Send every agent the same prompt.** Do not add candidate-specific hints ("check whether this one's commits are bot-authored", "this package had a maintainership change"). It feels helpful and it silently corrupts the comparison: the candidate you hinted at gets a check its rivals never got, so a difference in the results may just be a difference in the prompts. If a check is worth doing for one candidate, it is worth doing for all — put it in `references/criteria.md`, where every agent reads it.
+**Send every agent the same evaluation criteria.** The coordination assignment may differ, but do not add candidate-specific hints ("check whether this one's commits are bot-authored", "this package had a maintainership change"). It feels helpful and it silently corrupts the comparison: the candidate you hinted at gets a check its rivals never got, so a difference in the results may just be a difference in the prompts. If a check is worth doing for one candidate, it is worth doing for all — put it in `references/criteria.md`, where every agent reads it.
 
 **Screen inline before dispatching — never with agents.** A full evaluation costs roughly 80-90k tokens; a screening *agent* still costs 15-25k, so fanning out screeners only pays if it eliminates more than about a third of the field. It usually doesn't, and then it costs more than it saves. Run the screen yourself in one batched command instead — a few thousand tokens for the whole field:
 

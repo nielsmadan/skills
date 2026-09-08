@@ -102,10 +102,11 @@ Create a TodoWrite item per step.
   **(A) job coverage** (the most important — can the user actually finish the
   job?), **(B) friction** (Nielsen heuristics applied to flows), **(C) onboarding
   & first run**, **(D) trust & safety**, **(E) opportunities** to add/change/remove.
-- For large products or `--live`, dispatch parallel sub-agents (one per primary
-  use case, **3 by default** — ask before exceeding) to walk and audit independently, then merge. Dispatch
-  them read-only (Claude Code's `Explore`, or any harness's read-only profile) —
-  they return findings, not files, and a read-only type cannot fan out further.
+- For large products or `--live`, assign primary use cases to workers and queue
+  them within the runtime concurrency limit, then merge their findings. Give them
+  the read/browser tools needed for the walkthrough without code edits. Disable
+  delegation tools for ordinary workers; any coordinating role needs explicit
+  subtasks, a descendant limit, and a stopping condition.
 - Rate each finding by user impact: **Critical / High / Medium / Suggestion**
   (definitions in the checklist).
 

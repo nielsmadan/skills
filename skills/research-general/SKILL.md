@@ -55,13 +55,13 @@ When in doubt, use Standard. **Stop at diminishing returns** — if three agents
 
 ### Step 4: Spawn Agents in Parallel
 
-Pick the relevant agents from the table below and dispatch them in a **single message** so they run in parallel. Each agent captures source metadata: URL, date, source type, author/publisher, and (where it applies) sample/methodology, primary-vs-secondary, and **affiliate or sponsorship disclosure**.
+Pick the relevant agents from the table below and launch each batch together as runtime capacity allows. Each agent captures source metadata: URL, date, source type, author/publisher, and (where it applies) sample/methodology, primary-vs-secondary, and **affiliate or sponsorship disclosure**.
 
-**Dispatch them read-only, so they cannot fan out further.** Their deliverable is a returned message, never a file, so use an agent type that has no agent-spawning tool of its own — Claude Code's `Explore` (it keeps Bash, WebFetch/WebSearch and MCP tools, so every search strategy below still works), or any harness's read-only agent profile. A general-purpose agent inherits the full toolset *including the ability to spawn more agents*, and will recursively decompose a multi-part brief into its own fan-out. Two rounds of that turns 5 agents into 20 and burns the research budget before you see a single result.
+**Dispatch research workers with read/search/fetch tools and no file edits.** Disable delegation tools for ordinary workers where supported; read-only access alone does not prevent delegation, and available tools vary by harness. If a branch needs a coordinator, its brief must name the subtasks, bound all descendants, and define when to stop. Include those descendants in the main agent's allocation.
 
-**One question per agent.** A brief with six numbered sub-questions invites decomposition even from a read-only agent (which will serialize it instead). Split it into separate agents, or accept a narrower answer.
+**One focused assignment per worker.** Give it a concrete question and a stopping condition. Coordinators receive an explicit decomposition; workers do the assigned research themselves.
 
-**Pick 3. The table is a menu, not a checklist.** Default to the 3 highest-value agents for this question and run only those. If the question genuinely needs more, ask the user first — name the count, what each agent covers, and why 3 will not do — then wait for an answer. Do not treat "every row whose *Spawn when* matches" as authorization; on a broad question that is 6+ agents and the user never agreed to it.
+**The table is a menu.** Pick the smallest useful set of complementary perspectives. Briefly state a larger decomposition, including any nesting, and queue work within the runtime concurrency limit. Additional agents do not require approval solely because of their count.
 
 | Agent | Spawn when | Search strategy |
 |-------|------------|-----------------|
@@ -115,7 +115,7 @@ If a topic area has fewer than 2 sources or the core question is unanswered: ide
 
 **Max 1 cycle.** If the gap persists, mark as low confidence in the synthesis.
 
-**Budget check.** Follow-up agents come out of the same 3-agent budget as Step 4, they do not reset it. If Step 4 already used 3, a follow-up round needs the user's go-ahead — ask, or report what you have with the gap flagged. Cost the user cannot see coming is worse than an incomplete answer they can.
+**Reuse the allocation.** Reuse a worker when practical, and keep follow-ups focused on the named gap. Include descendants and advisor calls in the same task accounting; a new round does not reset a spending limit. Stop when further sources only repeat the findings.
 
 ### Step 8: Adversarial Critique (Standard only)
 

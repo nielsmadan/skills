@@ -219,9 +219,9 @@ After the agent returns, deduplicate its findings and render the surviving items
 
 **Load `references/agents.md`** — it carries the brief for each of Agents 1–10.
 
-Launch the selected review perspectives IN PARALLEL.
+Launch the selected review perspectives in parallel, queuing successive batches when runtime capacity requires it.
 
-**Launch them read-only** — Claude Code's `Explore`, or any harness's read-only agent profile. A review agent's deliverable is a returned list of issues, never an edit, so read-only costs nothing and buys two things: it cannot modify the code it is reviewing, and it has no agent-spawning tool, so it cannot turn one perspective into its own fan-out. With many parallel perspectives, recursion here is the most expensive failure mode in this skill. (Read-only profiles retain the Skill tool, so the sub-skill delegation below still works.)
+**Launch workers that return findings without editing files.** Disable delegation tools for ordinary reviewers where supported; read-only access alone does not prevent delegation. If a reviewer coordinates verification, name the checks, bound the descendants, and define when it should stop. Workers can read the relevant sub-skill directly when their harness has no Skill tool.
 
 Each agent should output a list of issues. For each issue, include: what the problem is, where it is (file + line), and why it matters. Do NOT assign confidence scores — scoring happens in a separate pass.
 

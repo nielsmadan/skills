@@ -91,11 +91,11 @@ Apply any comment conventions from the repository's applicable agent instruction
 Read each file in full and analyze its comments against the surrounding declarations, control flow, and other comments in that file. Review comments outside the changed hunks too when they duplicate or contradict a comment in the changed code.
 
 **For --all (large codebase):**
-Split files into batches and spawn up to three parallel sub-agents:
+Split files into balanced batches that each worker can read in full:
 
 1. Get all source files
-2. Split them into at most three balanced batches. If the scope cannot be reviewed reliably in three batches, ask before launching more agents or review the remainder locally.
-3. Dispatch one sub-agent per batch, all in a single message so they run in parallel. Dispatch read-only (Claude Code's `Explore`, or any harness's read-only agent profile) — each batch returns a findings list, not edits, and a read-only type cannot spawn further agents:
+2. Choose batch sizes that keep each assignment manageable; use the smallest useful set of workers.
+3. Dispatch one worker per batch, queuing within the runtime concurrency limit. Each returns findings without editing files. Disable delegation tools where supported and tell workers to review their assigned files themselves:
 
 ```
 Prompt per batch:

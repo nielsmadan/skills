@@ -47,8 +47,7 @@ Based on plan complexity, decide:
 
 ### Step 3: Spawn Review Agents in Parallel
 
-**CRITICAL:** Launch agents in a SINGLE message with multiple tool calls.
-Do NOT invoke one at a time. Do NOT stop after the first agent.
+Launch each batch together as runtime capacity allows. Complete all selected perspectives across successive batches when needed.
 
 | Agent | Purpose | How |
 |-------|---------|------|
@@ -58,9 +57,9 @@ Do NOT invoke one at a time. Do NOT stop after the first agent.
 | **Adversarial** | Maximally critical review | read-only sub-agent |
 | **Research** | Relevant practices online | `research-tech` skill |
 
-**Read-only** means Claude Code's `Explore` or any harness's read-only agent profile — an agent type with no agent-spawning tool. The three review agents return findings, never files, so they need nothing more; and a general-purpose agent would decompose "check for fragile patterns" into its own fan-out.
+**The three reviewers return findings without editing files.** Disable delegation tools for these workers where supported; read-only access alone does not prevent delegation. A coordinating role requires named subtasks, a descendant limit, and a stopping condition.
 
-**This skill nests two skills that each fan out on their own** (`research-tech` spawns up to 8; `second-opinion` queries every configured advisor). Three agents here plus those two is already the budget. Do not also spawn ad-hoc extra reviewers, and do not let the Research row expand into a full multi-round research session — one `research-tech` invocation, scoped to the plan's riskiest assumption.
+**Account for the nested workflows.** `research-tech` chooses research workers and `second-opinion` queries its configured advisors. The main agent includes both in the overall allocation and queues them within runtime limits. Scope research to the plan's riskiest assumption and one follow-up cycle; additional reviewers must address a specific uncovered question.
 
 See [references/agent-prompts.md](references/agent-prompts.md) for full prompt templates for each agent.
 

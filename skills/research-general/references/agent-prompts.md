@@ -1,6 +1,6 @@
 # Agent Prompt Templates
 
-Full prompt templates for each research agent. Every agent is a general-purpose sub-agent, and must capture metadata for each source: URL, date, source type, author/publisher, and (where it applies) sample size / methodology / primary-vs-secondary status.
+Full prompt templates for the research workers selected in Step 4. Apply that step's tool restrictions and explicit coordination limits. Every worker must capture metadata for each source: URL, date, source type, author/publisher, and (where it applies) sample size / methodology / primary-vs-secondary status.
 
 ## Fetching web content
 

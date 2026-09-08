@@ -1,8 +1,8 @@
 # Per-Candidate Agent Prompt
 
-Dispatch one `general-purpose` sub-agent per candidate, **all in a single message** so they run in parallel. Every agent gets the identical template so results come back comparable.
+Dispatch one research worker per candidate using Step 5's tool restrictions. Queue work within the runtime concurrency limit. Every agent gets the identical template so results come back comparable.
 
-Substitute: `{CANDIDATE}` · `{JOB}` (the Step 1 job statement) · `{PROFILE}` (Library / Tool / Service) · `{HARD}` (hard constraints) · `{SOFT}` (soft constraints) · `{TODAY}` · `{CRITERIA_PATH}` (absolute path to this skill's `references/criteria.md` — resolve it, since the skill root differs per harness: `~/.claude/skills/…` for Claude Code, `~/.agents/skills/…` elsewhere).
+Substitute: `{CANDIDATE}` · `{JOB}` (the Step 1 job statement) · `{PROFILE}` (Library / Tool / Service) · `{HARD}` (hard constraints) · `{SOFT}` (soft constraints) · `{TODAY}` · `{CRITERIA_PATH}` (absolute path to this skill's `references/criteria.md` — resolve it, since the skill root differs per harness: `~/.claude/skills/…` for Claude Code, `~/.agents/skills/…` elsewhere) · `{DELEGATION}` (default: "Do not dispatch sub-agents or launch other agent CLIs; do this work yourself."; for a coordinator, specify the subtasks, maximum descendant count, and stopping condition).
 
 ---
 
@@ -18,6 +18,7 @@ HARD CONSTRAINTS (must hold): {HARD}
 SOFT CONSTRAINTS (current codebase choices — these are COSTS to quantify, never
 disqualifiers): {SOFT}
 TODAY'S DATE: {TODAY}
+DELEGATION: {DELEGATION}
 
 Read {CRITERIA_PATH}. Evaluate core criteria C1-C8 plus the {PROFILE} profile block.
 Follow its commands and registry reference.

@@ -43,7 +43,7 @@ Interface design review for functions, classes, modules, and components.
 2. **Review each file** against all 6 categories in the Interface Checklist below
 3. **Parallelize** if scope has >5 files: spawn one sub-agent per category, each scanning all files for that category. Merge results and deduplicate.
 
-   Dispatch these read-only (Claude Code's `Explore`, or any harness's read-only agent profile): they return findings, not edits, and a read-only agent type has no agent-spawning tool, so a category cannot fan out into its own swarm.
+   Dispatch workers that return findings without editing files. Disable delegation tools where supported; read-only access alone does not prevent delegation. Any coordinating role needs explicit subtasks, a descendant limit, and a stopping condition in its brief.
 4. **Classify severity** for each finding:
    - **Critical**: Interface that actively misleads callers into incorrect usage, allows invalid states, or has a naming/type mismatch that will cause bugs
    - **High**: Interface with significant usability problems — too many params, weak types where strong types exist, public members that leak implementation

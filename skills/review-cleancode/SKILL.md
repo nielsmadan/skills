@@ -47,7 +47,7 @@ Language-agnostic clean code review covering SOLID, DRY, YAGNI, KISS, design pri
 3. **Review each file** against all 5 categories in the Clean Code Checklist below
 4. **Parallelize** if scope has >5 files: spawn one sub-agent per category, each scanning all files for that category. Merge results and deduplicate.
 
-   Dispatch these read-only (Claude Code's `Explore`, or any harness's read-only agent profile): they return findings, not edits, and a read-only agent type has no agent-spawning tool, so a category cannot fan out into its own swarm.
+   Dispatch workers that return findings without editing files. Disable delegation tools where supported; read-only access alone does not prevent delegation. Any coordinating role needs explicit subtasks, a descendant limit, and a stopping condition in its brief.
 5. **External opinions** (if `--multi`): invoke `second-opinion --quick`, which queries every advisor it has configured, in parallel (the roster lives in the `second-opinion` skill), with this prompt:
 
 ```

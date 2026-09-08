@@ -1,6 +1,6 @@
 # Agent Prompt Templates
 
-Full prompt templates for each review agent spawned in Step 3. Every dispatched agent is a general-purpose sub-agent.
+Full prompt templates for the reviewers and nested workflows selected in Step 3. Apply that step's tool restrictions and coordination limits.
 
 ## External Opinions Agent
 
@@ -139,12 +139,12 @@ Focus on:
 
 ## Spawning All Agents (Example)
 
-In a **SINGLE message**, spawn all 5 agents:
+Schedule the three reviewers and two skill workflows in parallel as runtime capacity allows:
 
 1. `second-opinion` skill with plan summary
-2. general-purpose sub-agent for alternatives
-3. general-purpose sub-agent for robustness
-4. general-purpose sub-agent for adversarial
+2. restricted worker for alternatives
+3. restricted worker for robustness
+4. restricted worker for adversarial
 5. `research-tech` skill with relevant topic
 
 Wait for ALL to complete before proceeding.

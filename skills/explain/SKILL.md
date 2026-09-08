@@ -105,11 +105,11 @@ Before dispatching aspect sub-agents, write `docs/explain/preliminary.md`. Keep 
 Every aspect sub-agent should be told to assume readers have read `preliminary.md` and link to it rather than restate its content.
 
 ### 5. Run aspect sub-agents in parallel
-For each requested aspect, dispatch one sub-agent — all in a single message so they execute concurrently.
+For each requested aspect, dispatch one sub-agent, launching each batch together as runtime capacity allows.
 
 **The sub-agent must be able to write files.** Its deliverable is a markdown file it creates itself, so dispatch a general-purpose agent, never a read-only one (Claude Code's `Explore`, or any harness's read-only agent profile). A read-only agent either fails outright ("I'm in read-only mode") or flails improvising via `Bash` heredocs, which can stall it. Read-only agents suit tasks whose deliverable is a returned message, not a file.
 
-**Because these agents are general-purpose, they can spawn agents of their own — tell them not to.** Add a literal line to every aspect prompt: *"Do not dispatch sub-agents; research and write this document yourself."* Without it, a broad aspect like "architecture" over a large repo gets decomposed into a per-module fan-out, and `--all` multiplies that by six. This skill is the one place the cheap structural fix (a read-only agent type, which has no agent-spawning tool) is unavailable, so the instruction has to carry it.
+**Assign delegation separately from write access.** Default aspect writers do their own research and writing; disable delegation tools where supported and include: *"Do not dispatch sub-agents or launch other agent CLIs; research and write this document yourself."* When an aspect benefits from coordinated research, replace that line with the named subtasks, maximum descendant count, and stopping condition. Include those descendants in the overall allocation; the aspect writer owns the final document.
 
 Each sub-agent prompt must include:
 - The aspect name (e.g. "architecture")
@@ -120,7 +120,7 @@ Each sub-agent prompt must include:
 - The file format template (see Output)
 - Instructions to link to siblings using the "See also" block
 - An explicit "use the `Write` tool to create the file" instruction
-- The "Do not dispatch sub-agents" line from above
+- The worker restriction or explicit coordination assignment from above
 
 ### 6. Write `overview.md`
 After sub-agents return, write `docs/explain/overview.md` as the entry index: short intro, link to `preliminary.md`, one link per generated aspect file with a one-line summary. In the final chat response, tell the user to open `overview.md` first.
