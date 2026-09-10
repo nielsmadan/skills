@@ -43,13 +43,22 @@ Common mislabels worth catching: "it has to work with our Redux store" (soft —
 
 React/Flutter/Node *is* hard. "The way we currently use React" is not.
 
-Confirm the hard list with the user before spending research on it. Wrongly promoting a soft constraint to hard is the single most expensive error in this workflow, and it happens silently.
+Read the conversation and relevant project docs before treating missing context as a
+decision. If an unresolved choice about the job, priorities, or acceptable tradeoffs
+would change the candidate pool or ranking, invoke `blind-spots` on that evaluation
+brief before enumerating candidates. Supply the recon and hard/soft lists; keep
+candidate capabilities and costs as research questions.
+
+Use its returned brief to update the job and constraints. Confirm any inferred hard
+constraints in this same scoping exchange; reuse decisions already explicit in the
+request, docs, or a parent workflow. A settled brief proceeds directly to Step 3,
+without another interview or confirmation.
 
 ### Step 3: Enumerate wide — do not evaluate yet
 
 Target **5-8 candidates** before any filtering. Resist narrowing early; the point of this step is coverage.
 
-Sources: registry search · ecosystem awesome-lists and curated directories · "alternatives to ⟨incumbent⟩" · what comparable projects depend on · the framework's own docs (an official/first-party option often exists) · `research-tech` in Product/Market mode if the space is unfamiliar.
+Sources: registry search · ecosystem awesome-lists and curated directories · "alternatives to ⟨incumbent⟩" · what comparable projects depend on · the framework's own docs (an official/first-party option often exists) · `research-tech` in Product/Market mode if the space is unfamiliar. Pass nested research the settled brief and a focused factual question.
 
 Always include these, explicitly, even if they lose:
 
@@ -66,7 +75,7 @@ Eliminate **only** on hard constraints, recording the specific constraint for ea
 
 ### Step 5: Evaluate in parallel — identical rubric
 
-Dispatch one sub-agent per surviving candidate, launching each batch together as runtime capacity allows. Use the template in `references/agent-prompt.md`, filling its placeholders while keeping the evaluation rubric identical.
+Dispatch one sub-agent per surviving candidate, launching each batch together as runtime capacity allows. Use the template in `references/agent-prompt.md`, filling its placeholders with the settled job, constraints, and priorities while keeping the evaluation rubric identical. Workers return newly discovered scope blockers to you; they do not interview the user themselves.
 
 **Dispatch workers with read/search/fetch tools and no file edits.** Each returns a scored evaluation. Disable delegation tools for ordinary workers where supported; read-only access alone does not prevent delegation. If a candidate needs coordinated research, assign its subtasks, descendant count, and stopping condition explicitly and include them in the overall allocation.
 

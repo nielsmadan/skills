@@ -1,7 +1,7 @@
 ---
 name: blind-spots
-description: Surface the decisions a plan or design left silently assumed, by interviewing the user in dependency order until nothing is unstated. Use when the user says "blind spots", "grill me", "stress-test this plan", "poke holes in this", "what am I missing", "interrogate this design", "what haven't I decided", or hands over a loose idea to sharpen before building. Do NOT use to explain a previous reply in more detail (use `huh`), to generate ideas when it is unclear what to build (use `ideation`), or to review an already-written plan with agents (use `review-plan`).
-argument-hint: '[plan, design, or idea to probe; blank = take it from the conversation]'
+description: Surface consequential decisions a plan, design, or research brief left silently assumed, by interviewing the user in dependency order. Use when the user says "blind spots", "grill me", "stress-test this plan", "poke holes in this", "what am I missing", "interrogate this design", "what haven't I decided", or needs a loose idea or research brief clarified before work begins. Do NOT use for a clear factual lookup, to explain a previous reply in more detail (use `huh`), to generate ideas when it is unclear what to build (use `ideation`), or to review an already-written plan with agents (use `review-plan`).
+argument-hint: '[plan, design, idea, or research brief to probe; blank = take it from the conversation]'
 effort: high
 ---
 
@@ -11,37 +11,42 @@ effort: high
 
 Find the decisions the user does not know they have left open, then get each one made.
 
-A plan feels complete from the inside because the gaps were filled in silently. Make
-them visible before they become code. The deliverable is not the answers — it is the
-discovery that the questions existed.
+A plan or research brief can feel complete because its gaps were filled in silently.
+Make those decisions visible before they steer implementation or research.
 
 ## Instructions
 
 ### 1. Resolve the target
 
-The argument is what to probe. If blank, take it from the conversation. If no plan,
-design, or idea is in play, ask for one sentence on what they want to build.
+The argument is what to probe. If blank, take it from the conversation. If no target
+is in play, ask for one sentence on what they want to build, understand, or decide.
 
 ### 2. Recon before asking anything
 
 An uninformed question wastes a round and spends the user's patience. Before round one,
-read what the repo already answers: the relevant source, `AGENTS.md` / `CLAUDE.md`, any
-`docs/` covering the area, and how comparable features are already built here.
+read the available context: the conversation and relevant supplied documents; for repo
+work, the source, `AGENTS.md` / `CLAUDE.md`, and relevant `docs/`. Reuse recon and settled
+decisions supplied by a calling workflow. For an unfamiliar topic, a short direct lookup
+can establish the terminology or options needed to ask useful questions.
 
 **Finding facts is your job, never the user's.** Anything discoverable from the
 filesystem, the git history, or a tool is yours to look up. Ask the user only for
-*decisions*.
+*decisions*. Open empirical questions remain research tasks; the user need not settle
+them before research begins. For example, ask whether offline use is required, then
+research which candidates support it.
 
 ### 3. Build the decision tree, then prune it
 
 Map the work as decisions, each branching into the decisions that hang off it. Pruning
 is what separates a useful round from an interrogation:
 
-- **Keep** a decision that *forks the design* — different answers lead to different
-  structure, different interfaces, or different work.
+- **Keep** a decision that changes the work — different answers lead to different
+  structure, interfaces, candidate pools, evidence to gather, or success criteria.
+  For research, this can mean purpose, population, region, timeframe, or the outcome
+  being compared. A request to learn about a topic need not serve an adoption decision.
 - **Drop** a decision that is cheap to reverse and constrains nothing downstream.
   Naming, log wording, which of two equivalent helpers to use: decide those yourself
-  while building.
+  during the work.
 
 An unspecified detail is not automatically a blind spot. A fork the user cannot see is.
 
@@ -68,6 +73,12 @@ Rules for a round:
 
 - **Every question carries your recommendation.** "Go with your defaults" must be a
   complete answer — the user may be tired, or may simply trust you on that branch.
+- **An asked question stays pending until the user answers or explicitly delegates
+  the choice.** Silence, elapsed time, an empty tool result, and a preselected
+  recommendation settle nothing. An asynchronous prompt returning only confirms
+  delivery; wait for the user's reply. Continue independent read-only work while
+  waiting, then yield if none remains. These are required decisions, not optional
+  preferences that may fall back to defaults on timeout.
 - **A question whose answer depends on another open question belongs to a later
   round**, not this one. This is the whole mechanism: question 12 does not exist as a
   question until question 4 is answered.
@@ -81,28 +92,34 @@ Rules for a round:
 ### 5. Recompute and repeat
 
 Each set of answers settles decisions, pushing the frontier outward and unblocking
-questions that depended on them. Recompute the frontier and ask the next round. Expect
-two to four rounds; a wide design may take more.
+questions that depended on them. Recompute the frontier and ask the next round only
+while consequential decisions remain open.
 
 ### 6. Close
 
-Stop when the frontier is empty: every kept branch visited, nothing left silently
-assumed. State the settled understanding back — the decisions and their answers,
-compactly, in the user's own terms — and ask the user to confirm it matches what they
-meant.
+Stop when every consequential decision is settled. Unknown facts may remain.
+
+**When called by another workflow:** return a compact brief with the purpose, scope,
+settled constraints and priorities, and remaining factual questions. If the context
+already settles every decision, return immediately without an interview. The caller
+owns any existing confirmation or approval step; do not add a separate closing
+confirmation or hand off to another workflow.
+
+**When invoked directly:** state the settled understanding back — the decisions and
+their answers, compactly, in the user's own terms — and ask the user to confirm it
+matches what they meant.
 
 On confirmation, hand off rather than sprawling into implementation: `plan` for a
 medium task, `longshot` if they are handing it over and leaving, a heavier planning
-workflow for an architectural change. Write the understanding to a file only if asked.
-
-If another workflow invoked this skill, return the settled understanding to that
-workflow and stop. Do not hand off yourself.
+workflow for an architectural change. For a research brief, return it for the requested
+research. Write the understanding to a file only if asked.
 
 ## Boundaries
 
 - **Do not build during the interrogation.** No edits, no scaffolding, no mutating
-  commands, no implementation subagents — not until the user confirms the closing
-  summary. Reading and searching are expected.
+  commands, no implementation subagents. Direct invocation awaits confirmation of the
+  closing summary; embedded use follows the caller's existing approval requirements.
+  Reading and searching are expected.
 - Cap parallel lookups at **three read-only subagents**, one question each.
 - Do not answer a decision on the user's behalf to shorten the session. Recommend, then
   wait.
@@ -126,6 +143,20 @@ open.
 round asks only about forks the plan left implicit (backfill under load, rollback
 window, dual-write duration), never about what the plan already states.
 
+### A research brief
+
+`research-general research home batteries` — context leaves the purpose unclear.
+Ask whether the user wants an explanation or a purchase comparison, recommending an
+overview if they are exploring. Only a purchase comparison opens questions about the
+installation region and whether backup power or bill savings matters most. Prices and
+available products remain research questions. Return the brief to `research-general`.
+
+### A caller already settled the scope
+
+`evaluate-tech` delegates research on export support for a named candidate with the
+job and constraints supplied. Research that capability directly. A worker discovering
+a scope blocker returns it to the caller; it does not start another interview.
+
 ## Troubleshooting
 
 ### The user answers "you decide" to everything
@@ -141,8 +172,8 @@ on. Do not make the user repeat themselves.
 
 ### The frontier keeps growing and the session will not end
 
-Each round should narrow. If it widens twice running, the scope is bigger than one
-feature — say so, propose splitting it, and probe only the first piece.
+Each round should narrow. If it widens twice running, propose splitting the work
+into bounded pieces and probe only the first piece.
 
 ### The user says a question is trivia
 

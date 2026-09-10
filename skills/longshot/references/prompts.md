@@ -115,6 +115,12 @@ made — not reconstructed at the end, when the reasoning is gone.
 Brief: <one line>
 Started: <ISO date> · Plan: <path>
 
+## Implementation start
+
+Approved plan: <path and the final summary presented to the user>
+User approval: <the user's actual reply approving that summary, with date or message reference>
+Implementation started: <ISO timestamp, after approval and the start announcement>
+
 ## Rulings
 
 ### R1 — <short title>  [scope|design|process]

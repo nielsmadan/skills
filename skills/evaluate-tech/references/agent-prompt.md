@@ -2,7 +2,7 @@
 
 Dispatch one research worker per candidate using Step 5's tool restrictions. Queue work within the runtime concurrency limit. Every agent gets the identical template so results come back comparable.
 
-Substitute: `{CANDIDATE}` · `{JOB}` (the Step 1 job statement) · `{PROFILE}` (Library / Tool / Service) · `{HARD}` (hard constraints) · `{SOFT}` (soft constraints) · `{TODAY}` · `{CRITERIA_PATH}` (absolute path to this skill's `references/criteria.md` — resolve it, since the skill root differs per harness: `~/.claude/skills/…` for Claude Code, `~/.agents/skills/…` elsewhere) · `{DELEGATION}` (default: "Do not dispatch sub-agents or launch other agent CLIs; do this work yourself."; for a coordinator, specify the subtasks, maximum descendant count, and stopping condition).
+Substitute: `{CANDIDATE}` · `{JOB}` (the settled job statement) · `{PROFILE}` (Library / Tool / Service) · `{HARD}` (hard constraints) · `{SOFT}` (soft constraints) · `{PRIORITIES}` (settled outcomes and tradeoffs; "none specified" if absent) · `{TODAY}` · `{CRITERIA_PATH}` (absolute path to this skill's `references/criteria.md` — resolve it, since the skill root differs per harness: `~/.claude/skills/…` for Claude Code, `~/.agents/skills/…` elsewhere) · `{DELEGATION}` (default: "Do not dispatch sub-agents or launch other agent CLIs; do this work yourself."; for a coordinator, specify the subtasks, maximum descendant count, and stopping condition).
 
 ---
 
@@ -17,6 +17,7 @@ PROFILE: {PROFILE}
 HARD CONSTRAINTS (must hold): {HARD}
 SOFT CONSTRAINTS (current codebase choices — these are COSTS to quantify, never
 disqualifiers): {SOFT}
+PRIORITIES AND ACCEPTABLE TRADEOFFS: {PRIORITIES}
 TODAY'S DATE: {TODAY}
 DELEGATION: {DELEGATION}
 
@@ -24,6 +25,8 @@ Read {CRITERIA_PATH}. Evaluate core criteria C1-C8 plus the {PROFILE} profile bl
 Follow its commands and registry reference.
 
 RULES
+- Research the supplied brief. Return newly discovered scope blockers under Unknowns;
+  do not start a user interview or change the job, constraints, priorities, or rubric.
 - C1 (maintenance health) is mandatory and comes first. Report absolute dates AND months
   elapsed relative to {TODAY}. If you cannot establish a last-release date, say so —
   never assume it is current.

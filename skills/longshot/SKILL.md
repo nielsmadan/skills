@@ -1,6 +1,6 @@
 ---
 name: longshot
-description: Run a long autonomous build session from a brief — interrogate every open decision up front with `blind-spots`, then execute for hours without check-ins, deciding ambiguities as recorded rulings instead of stopping to ask. Per task a fresh implementer subagent, an independent spec+quality reviewer, a fix loop, then a whole-branch review and a handoff report with rulings, deferred questions and a squash proposal. Use when the user says "longshot", "work on this independently", "run with this", "ask me everything up front then go", "I'll be away", or hands over a multi-hour feature or package to build end to end. Do NOT use for a single small change — use `plan` for that.
+description: Run a long autonomous build session from a brief — interview the user with `blind-spots`, prepare the plan, and wait for explicit final approval to start implementation. Only then decide later ambiguities as recorded rulings and execute without check-ins. Per task a fresh implementer subagent, an independent spec+quality reviewer, a fix loop, then a whole-branch review and a handoff report with rulings, deferred questions and a squash proposal. Use when the user says "longshot", "work on this independently", "run with this", "ask me everything up front then go", "I'll be away", or hands over a multi-hour feature or package to build end to end. Do NOT use for a single small change — use `plan` for that.
 argument-hint: '[--plan FILE] [--no-worktree] [--repos a,b] (brief, or blank to take it from the conversation)'
 effort: xhigh
 ---
@@ -9,24 +9,31 @@ effort: xhigh
 
 # Longshot
 
-Take a brief, interrogate it until nothing is silently assumed, then build for hours
-without the user in the loop.
+Take a brief, settle its consequential decisions with the user, prepare the plan,
+then get final approval to start implementation and build without check-ins.
 
-The bet this skill makes: a session parked on a question costs the user their whole
-day and buys nothing, while a wrong ruling costs rework they can see and undo. So
-every ambiguity after the interrogation closes gets **decided and recorded**, not asked.
+**Preparation needs the user; implementation is autonomous.** Until the Phase 2
+start gate is approved, stay read-only and wait for answers to every question you
+ask. Silence, an empty tool response, a preselected recommendation, elapsed time,
+and the initial longshot invocation are never answers or start approval. The
+autonomous contract below applies only after that gate, including its stop rules
+and troubleshooting advice.
+
+A fresh longshot run needs its own start approval; a previous run's ledger does
+not authorize new scope.
 
 ## The contract
 
-Invoking longshot authorizes staging and implementation commits for the run's work
-in its writable repos, including on the primary repo's current branch. Honor any
-explicit limits the user gives. Do not ask for a separate commit confirmation.
-Final squashing requires its own approval under Phase 6.
+Approving the implementation start authorizes staging and implementation commits
+for the run's work in its writable repos, including on the primary repo's current
+branch. Honor any explicit limits the user gives. Do not ask for a separate commit
+confirmation. Final squashing requires its own approval under Phase 6.
 
-State it back to the user when the interrogation closes, verbatim in substance:
+State it back to the user at the implementation start gate, verbatim in substance:
 
-1. **Every question up front.** The interrogation runs to completion first; after it
-   closes, no more questions except the four stops below.
+1. **Every question up front.** Finish the interrogation and planning, then wait for
+   the user's final go-ahead. Announce implementation starting; only then are there
+   no more questions except the four stops below.
 2. **Rulings, not stalls.** Every conflict, gap, plan defect or judgment call gets
    decided and written to the ledger as
    `Ruling: <decision> — <why> — <cost if wrong>`.
@@ -34,10 +41,10 @@ State it back to the user when the interrogation closes, verbatim in substance:
    progress summary, never "should I continue?".
 4. **Nothing is pushed.** Nothing outside the repos named in the brief is touched.
 
-**Four things stop the run, and only these:** an irreversible or destructive
-operation; a security-sensitive action; a side effect outside the work tree that
-norms say you ask about first (a merge, a push, a release); or the brief turning out
-to be wrong about something load-bearing. Everything else is a ruling.
+**After implementation starts, four things stop the run:** an irreversible or
+destructive operation; a security-sensitive action; a side effect outside the work
+tree that norms say you ask about first (a merge, a push, a release); or the brief
+turning out to be wrong about something load-bearing. Everything else is a ruling.
 
 ## Phase 0 — Recon before questions
 
@@ -62,14 +69,15 @@ analysis and a recommendation** in the first round. Do not hand it back.
 Invoke `blind-spots` on the brief and run it to completion. Phase 0 already did the
 recon its step 2 calls for — do not repeat it.
 
-**This is the one part of a longshot run that needs the user present.** It ends when
-the frontier is empty, and that close is the gate for everything after it.
+**The user is still needed through planning and the final start gate.** The
+interrogation ends when every consequential decision is settled by existing
+context, a user answer, or the user's explicit delegation of that decision.
 
 `blind-spots` supplies the mechanics: dependency-ordered rounds, a recommendation on
-every question so silence-plus-"go" is a complete answer, and pruning to decisions
-that fork the design. Longshot sharpens its fork test — *would a wrong guess here
-cost a rewrite, or just a follow-up commit?* Follow-up commit → do not ask it, rule
-on it during the run.
+every question so an explicit "use your recommendations" can settle the round, and
+pruning to decisions that fork the design. Longshot sharpens its fork test — *would
+a wrong guess here cost a rewrite, or just a follow-up commit?* Follow-up commit →
+do not ask it, rule on it during the run.
 
 These are mandatory wherever they sit in the tree, because the run cannot proceed
 correctly without them. Put any still open into the first round:
@@ -81,23 +89,56 @@ correctly without them. Put any still open into the first round:
 - The user's own opening question, answered.
 - Anything where a wrong guess is architectural.
 
-When the frontier is empty, state the contract above and get the go. From that point
-the contract binds: rulings, not questions.
+Once a question is asked, keep it pending until the user answers or explicitly
+asks you to choose. These are required decisions, not optional preferences with
+timeout defaults. An asynchronous question tool returning means the question was
+sent; it does not mean the user submitted the selected option. Continue independent
+read-only work while waiting; if none remains, yield with the questions pending.
+Never turn an unanswered question into a ruling to close the frontier.
+
+"Use your recommendations" settles the questions it refers to. Recompute the
+frontier and ask any dependent questions; it does not bypass the final start gate.
+When the frontier is empty, proceed to planning while remaining in preparation.
 
 ## Phase 2 — Plan (auto-detect)
 
 - **A plan doc exists** → read it, then validate it against the *current* repo state:
   which steps are already done, which paths moved, what the plan asserts that is no
-  longer true. Report the drift as part of the run, do not stop for it.
-- **No plan doc** → write one now. Invoke `plan` for a moderate scope; for a large one
-  run `review-plan` (multi-agent) over the draft and fold the findings in. Save to
-  `docs/plans/<YYYY-MM-DD>-<slug>.md` with checkbox tasks.
+  longer true. Fold factual drift into the draft; ask about consequential choices
+  the drift exposes before seeking start approval.
+- **No plan doc** → draft one now with checkbox tasks. Use only `plan`'s read-only
+  planning step for a moderate scope; for a large one run `review-plan` (multi-agent)
+  over the draft and fold the findings in. Keep the draft in the conversation or
+  planner output until approval; save it afterwards to
+  `docs/plans/<YYYY-MM-DD>-<slug>.md`.
 
-Either way there is **no approval gate here** — the interrogation was the gate.
+Longshot owns the final start gate; nested planning and review workflows must stay
+read-only and return here without implementing. Any new consequential decision
+returns to Phase 1. Resolving it does not itself approve implementation.
+
+### Final gate — start implementation
+
+Present the settled decisions, the concrete plan, writable repo boundaries,
+definition of done, and the contract above. Say that preparation is complete and
+ask **"Start implementation with this plan? After you approve, you can leave it
+running; I'll handle later decisions and report milestones."** Then wait for an
+explicit reply. This is the single final confirmation that the user is done
+attending preparation, even when the original brief settled every decision.
+
+A clear "yes", "looks good", "go ahead", or equivalent in response to this gate
+starts implementation immediately; do not ask again. If the reply changes scope
+or leaves a consequential choice unresolved, settle it and present the revised
+gate. Earlier answers to interview questions do not count as approval of this gate.
+
+After approval, announce **"Implementation is starting. Up-front questions are
+complete; you can leave this running. I'll decide later details and send milestone
+updates."** Only now activate autonomous rulings, save the plan, create worktrees,
+dispatch implementers, or make implementation edits and commits.
 
 Open the ledger at `docs/plans/<YYYY-MM-DD>-<slug>-ledger.md` (see
-`references/prompts.md` for its shape) and append to it for the rest of the run. It
-lives on disk, not in context, so it survives compaction.
+`references/prompts.md` for its shape). Record the approved plan and the user's
+actual start-approval message before the first ruling. Append to it for the rest
+of the run; it lives on disk so the phase and approval survive compaction.
 
 ## Phase 3 — Isolation
 
@@ -190,13 +231,25 @@ Actions: read `workflow.md`, the plan doc, both neighbour repos' tooling and the
 integration surfaces (3 `Explore` agents) → answer the killed-sessions question with
 a recommendation, then `blind-spots`: round 1 asks the questions answerable now
 (repo boundary, protocol scope, what "integrate" means, …), round 2 the
-two that only became questions once protocol scope was settled, state the contract → validate the plan
-against the repo → worktree per consumer repo → 6 tasks through the loop with pings →
-whole-branch review + contract-coherence pass + fix wave → handoff.
+two that only became questions once protocol scope was settled → validate the plan
+against the repo → present the final plan and contract → wait for start approval →
+announce implementation starting → worktree per consumer repo → 6 tasks through
+the loop with pings → whole-branch review + contract-coherence pass + fix wave → handoff.
 
 Result: three branches ready to integrate, a rulings ledger explaining every decision
 made in the user's absence, one XCTest run flagged as theirs to do, and a squash plan
-waiting on a yes. Zero user turns between the interrogation closing and the report.
+waiting on a yes. Zero required user turns between start approval and the report.
+
+### Example: unanswered choices in an asynchronous prompt
+
+The agent asks whether a file contains a complete prompt or reusable instructions,
+and whether redirected stdin should be read automatically. Both have recommended
+options, but the user has not replied. The question tool returns immediately.
+
+Actions: keep both questions pending; do only independent read-only work, then
+yield. If the user says "use both recommendations", record those answers and
+finish any dependent questions and planning. Present the final start gate and
+wait. Once the user approves that gate, announce implementation and proceed.
 
 ### Example: too small for longshot
 
@@ -207,13 +260,19 @@ instead. Longshot's overhead only pays off across many tasks.
 
 ## Troubleshooting
 
-### The run stalls waiting for the user anyway
+### The agent accepts its own interview recommendations
 
-**Cause:** treating an ambiguity as a stop condition. Only the four listed stops
-qualify.
-**Solution:** re-read the four. If it is not one of them, decide, write the ruling,
-continue. A plan defect is a ruling. A conflict between the plan and the spec is a
-ruling — the spec wins.
+**Cause:** applying implementation autonomy during preparation, or treating a
+question tool's return or preselected option as a user answer.
+**Solution:** keep the questions pending. Read the user's actual replies; wait for
+answers and final start approval. Waiting during preparation is required.
+
+### Implementation stalls waiting for the user anyway
+
+**Cause:** treating an ambiguity as a stop condition after start approval.
+**Solution:** verify that implementation was approved, then re-read the four stops.
+If it is not one of them, decide, write the ruling, continue. A plan defect is a
+ruling. A conflict between the plan and the spec is a ruling — the spec wins.
 
 ### Reviews keep passing but the code is wrong
 
@@ -226,9 +285,11 @@ Phase 4 step 4 — that step is not delegable.
 ### Context runs out mid-run
 
 **Cause:** a multi-hour run outlives its context window.
-**Solution:** this is expected and handled — the plan's checkboxes and the on-disk
-ledger are the state. After a compaction, re-read both and resume at the first
-unchecked task. Never restate finished work into context to "remember" it.
+**Solution:** recover the current phase and the user's replies first. Pending
+questions and an unapproved start gate stay pending. During implementation,
+re-read the plan and ledger, including the recorded start approval, and resume at
+the first unchecked task. A plan or ledger existing is not itself approval. If
+approval cannot be recovered, ask before implementing; never invent it.
 
 ### The user comes back mid-run and asks something
 

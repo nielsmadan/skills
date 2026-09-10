@@ -30,7 +30,28 @@ research-general nuclear vs solar economics for grid power
 
 ## Workflow
 
-### Step 1: Check Existing Knowledge
+### Step 1: Resolve the Research Brief
+
+Extract: **topic**, **purpose** (understand, decide, or verify), **sub-questions / claims**,
+**date scope**, **comparison targets and outcomes**, **region/locale**, **personal context**
+when relevant, and **topic stability** (current / active research / established / historical).
+Use the conversation, relevant supplied documents, and any brief from a calling workflow
+to fill these in. These are context to consider, not a questionnaire to complete.
+
+If an unresolved decision would materially change the investigation, invoke
+`blind-spots` on the brief before answering or dispatching researchers. For example,
+"research home batteries" may need a choice between an explanation and a purchase
+comparison; region and priorities matter for the latter. A short direct lookup can
+establish unfamiliar options before asking. Keep prices, capabilities, and empirical
+claims as research questions, even when their answers are unknown.
+
+Use the returned purpose, scope, constraints, and priorities to focus the research.
+Clear lookups, explicit requests for an overview, and settled briefs proceed without
+an interview or confirmation. A lookup assigned during an active `blind-spots`
+interview answers its narrow question and returns evidence or a scope blocker to the
+caller; it does not open another interview.
+
+### Step 2: Check Existing Knowledge
 
 Before spawning any agents, assess whether you can already answer well from training data:
 
@@ -39,10 +60,6 @@ Before spawning any agents, assess whether you can already answer well from trai
 - **Low confidence** (unfamiliar, rapidly changing, contested, or regulatory/regional specifics): proceed in **Standard mode**.
 
 When in doubt, lean toward searching — but only if searching can plausibly improve the answer.
-
-### Step 2: Parse Input
-
-Extract: **topic**, **sub-questions / claims**, **date scope**, **comparison targets**, **region/locale** (drives which sources are authoritative), **personal context** (career stage, budget for consumer queries), and **topic stability** (current / active research / established / historical — drives the recency rubric).
 
 ### Step 3: Classify Query Depth
 
@@ -55,7 +72,7 @@ When in doubt, use Standard. **Stop at diminishing returns** — if three agents
 
 ### Step 4: Spawn Agents in Parallel
 
-Pick the relevant agents from the table below and launch each batch together as runtime capacity allows. Each agent captures source metadata: URL, date, source type, author/publisher, and (where it applies) sample/methodology, primary-vs-secondary, and **affiliate or sponsorship disclosure**.
+Pick the relevant agents from the table below and launch each batch together as runtime capacity allows. Include the settled brief and each worker's factual question in every prompt. Workers return new scope blockers to you instead of interviewing the user. Each agent captures source metadata: URL, date, source type, author/publisher, and (where it applies) sample/methodology, primary-vs-secondary, and **affiliate or sponsorship disclosure**.
 
 **Dispatch research workers with read/search/fetch tools and no file edits.** Disable delegation tools for ordinary workers where supported; read-only access alone does not prevent delegation, and available tools vary by harness. If a branch needs a coordinator, its brief must name the subtasks, bound all descendants, and define when to stop. Include those descendants in the main agent's allocation.
 
@@ -145,6 +162,11 @@ Available detail sections (use only those that add value): Background · Evidenc
 For the full output template, see `references/output-format.md`.
 
 ## Examples
+
+"Research home batteries" with no established purpose goes through `blind-spots`.
+"Explain how home batteries work" proceeds with an overview. A purchase comparison
+with the location, budget, and priorities already supplied uses that brief directly;
+product prices and availability are research tasks.
 
 | # | Query | Spawns |
 |---|-------|--------|

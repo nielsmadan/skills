@@ -46,13 +46,27 @@ Extract: **library/framework**, **error message** (if any, usually quoted), **ve
 
 When in doubt, use Standard. When the question is "which should I use / can it do X / is it any good" rather than "how do I build/fix it", use Product/Market.
 
-### Step 3: Check Internal Documentation First (Standard only)
+### Step 3: Check Context and Resolve Scope
 
-Before external research, Grep relevant keywords in `docs/` and `*.md`. Internal docs often contain project-specific decisions external research won't cover. If found, include in the synthesis.
+For Standard and Product/Market work tied to a project, read relevant `docs/`, manifests,
+and conversation context before external research. Reuse a brief already supplied by
+`evaluate-tech`, `longshot`, or another caller.
+
+If an unresolved decision would materially change the investigation, invoke
+`blind-spots` on the research brief before dispatching researchers. Supply the context
+already gathered and distinguish the intended outcome (learn, compare, implement, or
+debug) from the facts to establish. For example, "research authentication" may need a
+purpose and target environment; "does this provider support passkeys?" is a factual
+lookup. A short direct lookup may be needed to frame unfamiliar options first.
+
+Use the returned purpose, scope, constraints, and priorities to focus the research.
+Clear lookups and settled briefs proceed without an interview or confirmation. A
+lookup assigned during an active `blind-spots` interview answers its narrow question
+and returns evidence or a scope blocker to the caller; it does not open another interview.
 
 ### Step 4: Spawn Agents in Parallel
 
-Pick the relevant agents and launch each batch together as runtime capacity allows. Each captures source metadata: URL, date, source type, and (for community sources) engagement signals.
+Pick the relevant agents and launch each batch together as runtime capacity allows. Include the settled brief and each worker's factual question in every prompt. Workers return new scope blockers to you instead of interviewing the user. Each captures source metadata: URL, date, source type, and (for community sources) engagement signals.
 
 **Dispatch research workers with read/search/fetch tools and no file edits.** Disable delegation tools for ordinary workers where supported; read-only access alone does not prevent delegation, and available tools vary by harness. If a branch needs a coordinator, its brief must name the subtasks, bound all descendants, and define when to stop. Include those descendants in the main agent's allocation.
 
@@ -137,6 +151,11 @@ Available detail sections (include only relevant): Documentation · GitHub Issue
 For the full output template, see `references/output-format.md`.
 
 ## Examples
+
+"Research authentication" with no established goal first goes through `blind-spots`
+to settle the purpose and target environment. "Does this provider support passkeys?"
+proceeds directly to capability research. An implementation brief already settled by
+`longshot` proceeds with that scope.
 
 | # | Query | Spawns |
 |---|-------|--------|
