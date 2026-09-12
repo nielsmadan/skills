@@ -176,7 +176,8 @@ harnesses, several providers, several backends).
 ### Occasional manual tests (`docs/tests/`) — also orthogonal to the profile
 
 Keep procedures and results for test operations run by hand from time to time, including
-performance measurements, under `docs/tests/<name>/`. Routine automated suite runs do not
+performance measurements, under `docs/tests/<name>/`. The gate is whether a later run will
+compare against this one. Routine automated suite runs and ordinary feature QA passes do not
 qualify. [manual-tests.md](manual-tests.md) defines the shared layout and evidence requirements
 used by `doc` and `perf-test`: a maintained `README.md` plus historical `runs/` records.
 One such procedure can warrant this folder at any repo size; accumulated runs do not count
@@ -244,16 +245,21 @@ over-structured-and-stale tree is the worst case and the strongest reason to shr
 - "It already exists and is maintained" is a **sunk-cost argument, not a reason to keep
   overhead.** Judge the tree on whether the split is *actually earning its keep* (repo big
   enough AND docs fresh/used), not on its mere existence.
-- Consolidation = **migrate and preserve, not delete.** Fold the genuinely non-derivable
-  content (rationale, cross-cutting flows, gotchas) down into a few `docs/<flow>.md` +
-  `decisions/`, and **drop the drift-prone exhaustive catalogs** (per-file/module tables
-  the agent can grep anyway — Principle 3/5). Those tables were the staleness.
-- It's a proposal under the Generate/structure lane; the user confirms before anything is
-  moved or removed.
+- Consolidation = **extract useful knowledge, then remove the superseded files.** Fold
+  rationale, cross-cutting flows, and gotchas into the chosen profile's canonical docs;
+  discard drift-prone catalogs that can be derived from code. Preserving the knowledge
+  does not require retaining the original file.
+- Define the retained set even when the profile stays the same. Extra files, duplicate
+  guides, legacy buckets, and completed scratch can require cleanup at any size.
+- Propose the target profile under Generate/structure and the concrete migrations and
+  removals under Cleanup. Follow [cleanup.md](cleanup.md), including lifecycle protections,
+  destination verification, link repair, and removal of the originals. The existing plan
+  approval covers the full cleanup.
 
 ### Doc lifecycles (which docs `--update` syncs to code)
-- **Live / current-state** — `features/`, `tech/`, `<flow>.md`, `overview.md`. `--update`
-  keeps these in sync with the code. The bulk of the tree.
+- **Live / current-state** — `features/`, `tech/`, `<flow>.md`, `overview.md`, and the
+  human-facing `user/` tree. `--update` keeps these in sync with the code, respecting
+  their audiences. The bulk of the tree.
 - **Manual test procedures and history** — `tests/<name>/README.md` is live;
   `tests/<name>/runs/` and its evidence are historical. Update the procedure as needed, but
   preserve past results and the setup used to obtain them. See [manual-tests.md](manual-tests.md).
@@ -268,11 +274,11 @@ over-structured-and-stale tree is the worst case and the strongest reason to shr
   describe past decisions/code). `--update` adds new entries and fixes broken links only; it
   does not sync their body. Extract any still-relevant lesson into a *live* doc so agents
   actually see it during related work.
-- **Owned elsewhere / frozen** — `product/`, `explain/`, `user/`, `superpowers/`. `doc`
+- **Owned elsewhere / frozen** — `product/`, `explain/`, `superpowers/`. `doc`
   doesn't sync these (see the Gotchas in SKILL.md). `docs/superpowers/` is gitignored scratch:
-  when assess meets it, offer to **harvest any embedded decisions into `decisions/` ADRs, then
-  (on confirmation) delete the completed/stale plans** to de-clutter — but never delete a plan
-  that may still be driving in-progress work.
+  when assess meets it, include completed plans in Cleanup: harvest useful decisions,
+  gotchas, and other durable knowledge into canonical docs, then remove the originals as
+  part of the approved action. Retain plans that may still be driving in-progress work.
 
 **Superseding an ADR.** A replaced decision is never deleted and its body is never rewritten
 — the record earns its keep by saying what was chosen and why, so a later reader doesn't

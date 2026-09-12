@@ -25,11 +25,12 @@ Extract and place five kinds of knowledge, using the SAME layout and conventions
    is a *documented* claim with a link, not a verified one. Correct-usage conventions for one
    library go to `library-docs` / `library-use` instead.
 5. **Occasional manual tests** — performance measurements, restore drills, compatibility
-   experiments, and other test operations outside the routine automated suite →
-   `docs/tests/<name>/`. Read [manual-tests.md](manual-tests.md) and preserve both the
-   reusable procedure and a dated run record. Routine suite/CI runs do not qualify just
-   because someone launched them manually. Keep missing historical details explicitly
-   unrecorded rather than reconstructing them from today's checkout.
+   experiments, and other operations whose results a later run will want to compare against
+   → `docs/tests/<name>/`. Read [manual-tests.md](manual-tests.md) and preserve both the
+   reusable procedure and a dated run record. Most testing does not qualify: routine suite/CI
+   runs do not become records because someone launched them by hand, and an ordinary feature
+   QA or exploratory pass belongs in the conversation, not in a file. Keep missing historical
+   details explicitly unrecorded rather than reconstructing them from today's checkout.
 
 ## Rules
 

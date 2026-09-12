@@ -1,10 +1,15 @@
 # Occasional Manual Test Records
 
-Use `docs/tests/` (plural) for test operations run manually from time to time: performance
-measurements, restore drills, compatibility experiments, or other checks outside the routine
-automated suite. A scripted operation qualifies; cadence and purpose decide. Running the
-normal unit/integration/E2E suite by hand does not qualify, and routine CI or scheduled
-benchmark runs do not get records here.
+Use `docs/tests/` (plural) only for a manual test operation whose **results a later run will
+want to compare against**, or whose setup is intricate enough that repeating it needs written
+instructions: performance measurements, restore drills, capacity or compatibility experiments,
+migration dry runs. A scripted operation qualifies; cadence and purpose decide.
+
+Most testing does not qualify. Running the normal unit/integration/E2E suite by hand, routine
+CI or scheduled benchmark runs, and ordinary feature QA or exploratory passes get no record
+here — report those in the conversation. Write a record because someone will read it later,
+not because a test was run. When the procedure is worth keeping but the outcome is not, write
+`README.md` and no run record.
 
 ## Layout
 
@@ -46,9 +51,10 @@ Maintain this as the current way to repeat the operation:
 
 ## Dated run (`runs/YYYY-MM-DD-<label>.md`)
 
-Create a separate record for each meaningful execution, including failures. Use a time or
-sequence suffix when needed to avoid overwriting another run on the same date. If the run
-date is missing, use `undated-<label>.md` and state the capture date separately. Record:
+Once an operation qualifies, create a separate record for each meaningful execution of it,
+including failures. Use a time or sequence suffix when needed to avoid overwriting another
+run on the same date. If the run date is missing, use `undated-<label>.md` and state the
+capture date separately. Record:
 
 - **Identity:** when the test ran, its purpose, code revision, and relevant local changes.
   A commit alone does not identify modified code; preserve the relevant patch or another

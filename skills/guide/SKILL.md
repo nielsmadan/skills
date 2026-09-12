@@ -21,9 +21,12 @@ in the message, so it stays pinned to the bottom. Format:
 ```
 ---
 ✓ Steps 1–4 done
-▶ 5. Open IAM → Roles  ← you are here
-  6. Add the principal and pick the role
-  7. Review and Save
+▶ 5. Open the Roles list  ← you are here
+    On the open IAM page, click Roles in the left sidebar.
+    You should see a list of roles.
+  6. Open the role's details
+    In the Roles list, click site-reader.
+    You should see that role's permissions.
 ```
 
 Rules for the block:
@@ -34,6 +37,11 @@ Rules for the block:
 - **Collapse done steps to one line**: `✓ Steps 1–N done` (omit the line if none are done).
 - Mark the current step with `▶` and `← you are here`.
 - List every remaining step in full after the current one, indented two spaces.
+- **Keep the instructions, not just their titles.** Include the navigation, action, and
+  expected result needed to carry out each remaining step. Use continuation lines indented
+  four spaces; there is no one-line limit. The user must not need to scroll up to recover
+  a URL, click path, value, or command. Put clickable links in the prose too, since links
+  inside the code block render as plain text.
 - If the user is stuck on the current step, append `(stuck)` to it: `▶ 5. … (stuck)`.
 - Nothing comes after the block — no sign-off, no extra prose.
 
@@ -43,45 +51,75 @@ Rules for the block:
 If the task touches a **third-party console, dashboard, or API that changes** (cloud
 providers, app stores, SaaS settings pages), look up the current official docs *before*
 producing the plan. Cover the full known flow, including prerequisites, required permissions,
-and whether actions belong to an account, project, or individual app. Use the console
-provider's docs for its UI; an integration tool's guide alone does not establish the
-provider's current navigation. Skip this check only for stable/local tasks with no changing
-external workflow.
+and whether actions belong to an account, project, or individual app. **A plan naming several
+consoles needs a verified navigation source for each** — one vendor's integration guide does
+not license another vendor's clicks, and the part you feel unsure about is not the only part
+that needs checking. Skip this check only for stable/local tasks with no changing external
+workflow.
 
-**Fetching a page verifies only what its contents support.** Before giving the steps:
-- Check each menu path, button, prerequisite, and role claim against the relevant passage or
-  an observed live UI. Ask lookup tools what the documented flow is without assuming an old
-  menu or required role in the question.
-- If a fetch summary cannot confirm the path, that path remains unverified. An example URL
-  or search snippet does not establish a current menu. Inspect the underlying passage when
-  a summary is ambiguous or conflicts with another source; never fill gaps from memory and
-  call them "confirmed."
-- Link the official sources in the intro or beside the steps they support. State which
-  details remain uncertain. If a required navigation step cannot be verified, resolve it
-  from the user's visible screen before sending them through it; independent verified steps
-  may proceed.
+**Fetching a page verifies only what its contents support.** Check each menu path, button,
+prerequisite, and role claim against the relevant passage or an observed live UI, and ask
+lookup tools what the documented flow is without naming the menu or role you expect. A
+summary, example URL, or search snippet does not establish a current menu; inspect the
+underlying passage when one is ambiguous or conflicts with another source. Quote sources by
+the global rule: paste the line, and read a canonical list in full instead of grepping for
+the items you expect to find.
 
-Apply this check to each new phase or branch before adding its instructions. Recheck a
-resumed guide when time has passed and its external flow may have changed. A check of one
-phase does not verify later phases, and the user need not request another lookup.
+**Any path not traceable to a fetched passage is unverified.** Mark it `(unverified)` in the
+plan and the tracker and keep it a pending verification step, never a confident click path.
+Resolve it from the user's visible screen before sending them through it; independent
+verified steps may proceed. Link the official sources beside the steps they support, and say
+which details remain uncertain.
 
-### Step 2: Produce the full numbered plan
-Give a one-line intro, then the **complete numbered list of steps**, then the tracker block
-with `▶ 1` as the current step. Keep steps:
-- **One action each** — a single, verifiable thing (click X, toggle Y). Fine-grained steps
-  make "remaining steps" meaningful and let the user report exactly where they're stuck.
-- **Concrete** — say where to click/navigate and **what they should see** after, so success is
-  checkable (e.g. "you should land on the Roles list").
+**A contradicted memory invalidates the domain.** A lookup that corrects your memory of one
+part of a product makes every remembered path for that product stale; re-verify each before
+use rather than treating the correction as isolated.
+
+Apply this check to each new phase or branch before adding its instructions — a check of one
+phase does not verify later phases, and the user need not request another lookup. **Re-run it
+for the remaining phases before advancing the tracker if the plan is more than a day old.**
+
+### Step 2: Do the opening agent actions, then produce the plan
+Decide who can perform each action using the tools, access, and authorization already
+available, and respect an explicit request to learn or do something themselves. Before
+presenting the guide, complete and verify every consecutive opening action you can take
+yourself; briefly report the results above the plan and omit them from its numbering. Start
+step 1 at the first action requiring the user's input, access, or interaction. If you can
+finish the whole task yourself, do so and report the result without starting a guide.
+
+For an agent action that depends on earlier user progress, keep its place in both the plan
+and tracker as a handoff: **"Tell me when you reach this step; I'll [specific action]."**
+Make clear what you will do and what result to expect. Do not give the user manual commands
+or clicks for work you can perform, or run it before its prerequisites are ready.
+
+Give a one-line intro, then the **complete numbered list of remaining steps**, then the
+tracker block with `▶ 1` as the current step. Keep steps:
+- **One action each** — a single, verifiable action or check. Include the navigation needed
+  to reach it as indented detail; split independently checkable actions into separate steps.
+- **Executable without guessing** — name the website or app, give its URL or launch path,
+  identify the relevant account/project/repository, then give the ordered clicks from the
+  user's current location. Use the visible menu and control labels, their locations, the
+  value to enter or inspect, and **what they should see** when done. Reuse a location already
+  established by the preceding step, but spell out navigation when the location changes.
+  Fill known names and URLs from context; explain any placeholders the user must replace.
+  "Confirm X", "configure Y", or "enable Z" alone is a title, not an instruction.
 - **In order** — number them stably; never renumber later (positions are how the user refers
   to a step).
 
-If part of the flow remains unverified after Step 1, include it as a pending verification
-step in the plan and tracker. Do not turn it into a concrete click instruction yet.
+Before sending, read the plan and tracker as someone unfamiliar with the interface: can
+they tell where to go, what to do there, and how to recognize success? Add missing detail
+to both. On later turns, expand an underspecified step within its existing number.
 
 ### Step 3: Advance as the user progresses
 When the user signals a step is done ("done", "next", "ok", "✓"), move `▶` to the next step,
 fold the finished one into the `✓ Steps 1–N done` line, and re-print the tracker. Keep any
 brief acknowledgement above the block.
+
+When the user reaches an agent handoff, perform and verify that action, then any consecutive
+agent actions whose prerequisites are ready. Confirmation that the preceding user step is
+done also counts as reaching the handoff; do not require another "ready" message. Mark agent
+steps done only after verifying success, then resume at the next user step with the existing
+numbering. If an agent action fails, keep it current and diagnose the failure before advancing.
 
 ### Step 4: Handle "this step isn't working" / clarifying questions
 When the user reports trouble or asks about a step, in this order:
@@ -93,12 +131,14 @@ Do **not** re-list steps the user already completed (beyond the one-line summary
 point is that they don't scroll — keep the answer tight and the remaining steps below it.
 
 If the user's screen contradicts a step, treat that as evidence against the instructions.
-Immediately recheck the relevant official docs or live UI before giving another route;
-do not merely offer a lookup or repeat the disputed path. Ask what they see if that is
-needed to identify the page. Verify any alternate route, including suggested search bars or
-direct links. Explain the correction and update affected remaining steps while preserving
-completion and numbering. If verification is still inconclusive, say so and keep the step
-stuck. Diagnose permissions or a changed UI only when evidence supports that explanation.
+Recheck the relevant official docs or live UI before giving another route; do not merely
+offer a lookup or repeat the disputed path. Ask what they see if that is needed to identify
+the page. Verify any alternate route, search bars and direct links included. **Never reverse
+a claim from memory** — if you told the user X and now believe the opposite, look it up
+before saying either. Explain the correction and update affected remaining steps while
+preserving completion and numbering. If verification is still inconclusive, say so and keep
+the step stuck. Diagnose permissions or a changed UI only when evidence supports that
+explanation.
 
 ### Step 5: Re-print on every turn
 Regardless of what the user says — a question, a tangent, a "wait, why?" — end the reply with
@@ -109,22 +149,22 @@ When the last step is done, confirm completion in one or two lines (and how to v
 result). No tracker block on the final message — the guide is over.
 
 The guide is not a persistent mode — it ends naturally at the last step, or the moment the
-user signals they're done ("done", "stop", "exit guide") or moves to an unrelated topic. On
-exit, stop re-printing the tracker. If the user just says "done" with steps remaining,
-confirm they want to stop early rather than assuming completion.
+user explicitly ends it ("stop", "exit guide") or moves to an unrelated topic. On exit, stop
+re-printing the tracker. A bare "done" with steps remaining means the current step is done;
+advance under Step 3 unless the context indicates they want to stop the guide.
 
 ## Examples
 
 ### Example 1: A fetch does not support the remembered path
 
-User asks how to create a service account for an integration. The fetched setup instructions
-describe creating it in a cloud console and inviting its email through the app provider's
-Users and permissions page. They contain no project-linking step.
+The fetched setup instructions describe creating a service account in a cloud console and
+inviting its email through the app provider's Users and permissions page. They contain no
+project-linking step.
 
-Build the guide from those documented actions, citing the relevant sources. Do not prepend
-a remembered "Setup → API access → Link project" step and say the flow was checked. If the
-docs do not establish the permissions needed to invite users, verify that separately before
-telling the user they must contact an account owner.
+Build the guide from those documented actions and cite them. Do not prepend a remembered
+"Setup → API access → Link project" step, and do not report the flow as checked. If the docs
+do not establish the permissions needed to invite users, verify that separately before
+telling the user to contact an account owner.
 
 ### Example 2: The user's screen contradicts the guide
 
@@ -149,22 +189,57 @@ explain the limit, and keep the tracker:
 If the recheck establishes a corrected route, cite it and replace step 3 with that route.
 Preserve the user's completed steps in either case.
 
-### Example 3: Simple advance
+### Example 3: A check needs a route and an observable result
 
-In a guide whose source and visible UI establish **Grant access** on the Permissions page,
-the user says: "ok done with 3, what's next"
+The user receives "2. Confirm Pages source is GitHub Actions" and does not know where to
+look. After verifying the route in the current
+[GitHub Pages documentation](https://docs.github.com/en/pages/getting-started-with-github-pages/configuring-a-publishing-source-for-your-github-pages-site),
+expand step 2 in place. Use the actual repository URL when known; `OWNER` and `REPO` below
+stand for its owner and name. Checking a value does not imply changing it.
 
-Reply:
-> On to granting access.
+Reply with a clickable repository link and the source above the tracker, then:
 >
 > ```
 > ---
-> ✓ Steps 1–3 done
-> ▶ 4. Click **Grant access** (top of the Permissions tab)  ← you are here
->   5. Paste the service account email in New principals
->   6. Role → Storage Object Viewer
->   7. Save and confirm
+> ✓ Step 1 done
+> ▶ 2. Confirm the GitHub Pages publishing source  ← you are here
+>     Open https://github.com/OWNER/REPO in your browser.
+>     Below the repository name, click Settings. If it is hidden,
+>     open the … menu in that row and choose Settings.
+>     In the left sidebar's Code, planning, and automation section, click Pages.
+>     Under Build and deployment, read the Source dropdown's selected value.
+>     It should say GitHub Actions. If it differs, tell me what it says.
 > ```
+
+### Example 4: Agent work before and during the guide
+
+The task requires preparing a local config, having the user choose an export folder in a
+desktop app, updating the config to use that folder, and having the user try an export.
+You have tools and authorization to prepare and update the config. In this example, the
+app is already open and its observed UI establishes the controls used below.
+
+Prepare and verify the config first. Report that it is ready, then start the guide:
+
+> 1. In the app, open Preferences → Export and click Choose folder. Select your export
+>    folder and confirm its path is displayed beside Choose folder.
+> 2. Tell me when you reach this step and which folder you chose; I'll update the config
+>    and check that it points to that folder.
+> 3. Close Preferences, then choose File → Export. Open your chosen folder in the file
+>    manager and confirm the exported file appears there.
+>
+> ```
+> ---
+> ▶ 1. Choose the export folder in the app  ← you are here
+>     Open Preferences → Export and click Choose folder.
+>     Select your folder; its path should appear beside Choose folder.
+>   2. Tell me when you're here and the folder path; I'll update and check the config
+>   3. Try an export
+>     Close Preferences, then choose File → Export.
+>     Open your chosen folder in the file manager and confirm the file appears.
+> ```
+
+When the user says "folder selected: /tmp/exports", update and verify the config, mark steps
+1–2 done, and resume at step 3. If the update fails, keep step 2 current until resolved.
 
 ## Troubleshooting
 

@@ -1,6 +1,6 @@
 ---
 name: doc
-description: "Assess documentation and run the right action: check changed code when the tree is dirty, otherwise review the whole repo for gaps, staleness, and quality. Explicit modes: --review, --update, --generate, or --session to capture durable knowledge from the current conversation or a transcript. Use for doc creation, freshness, quality, or saving occasional manual test procedures and results for future repetition; routine automated suite runs do not need test records."
+description: "Assess documentation for gaps, staleness, quality, and files outside the defined doc set. Preserve useful knowledge in canonical docs, then remove superseded or unnecessary files. Check changed code when the tree is dirty, otherwise assess the whole repo. Explicit modes: --review, --update, --generate, or --session to capture durable knowledge from a conversation or transcript. Use for doc creation, cleanup, freshness, quality, or saving occasional manual test procedures and results whose numbers a later run will compare against; routine suite runs and ordinary QA passes do not need test records."
 argument-hint: "[ (no args = context-aware assess) | --review | --update | --generate <target> | --session [--md <file>]] [--all | --staged | --unpushed]"
 effort: high
 ---
@@ -9,13 +9,14 @@ effort: high
 
 # Doc
 
-Assess, review, update, and generate documentation following consistent principles.
+Assess, review, update, generate, and prune documentation following consistent principles.
 
 ## Reference files (load what the run needs)
 
 | File | Load when |
 |------|-----------|
 | `references/principles.md` | Writing, sizing, or judging docs — the 8 principles and the Minimal/Lean/Structured profiles. Assess needs it to pick a profile; review/update/generate to apply it. |
+| `references/cleanup.md` | Assessing which docs belong, or applying a cleanup: extract useful knowledge, repair links, then remove the superseded files. |
 | `references/mode-review.md` | `--review` |
 | `references/mode-update.md` | `--update` |
 | `references/mode-generate.md` | `--generate` |
@@ -28,15 +29,15 @@ Routing (below) does not need any of them.
 ## Which mode runs (read first)
 
 **Bare `/doc` = context-aware assess.** It adapts its *scope* to git state but always runs
-all three lanes (Generate / Update / Review) and never writes without a plan, it proposes,
+all four lanes (Generate / Update / Review / Cleanup) and never writes without a plan, it proposes,
 then runs your picks.
 
 - **Dirty tree (staged or unstaged changes) → "is what I just did documented?"** Center the
   assess on the changed files: are the docs covering them still accurate (**Update** lane),
   and does new behavior need a doc (**Generate** lane)? Add a quick whole-repo glance for
-  structural gaps and obvious staleness so it doesn't tunnel-vision. Lead with the
-  changed-files verdict. Staged wins; fall back to unstaged.
-- **Clean tree → general review.** Whole-repo assess across all three lanes.
+  structural gaps, obvious staleness, and docs outside the defined set so it doesn't
+  tunnel-vision. Lead with the changed-files verdict. Staged wins; fall back to unstaged.
+- **Clean tree → general review.** Whole-repo assess across all four lanes.
 
 In either state, include uncaptured occasional manual tests from the current session in the
 Generate lane. Running a test may leave no code diff; apply `references/manual-tests.md` to
@@ -44,7 +45,7 @@ decide whether it warrants a record.
 
 **The guard that still holds** (this is why the skill used to force whole-repo): auto-scoping
 to the diff is fine, but **never collapse into a single silent action and never skip the
-Generate/structure question.** Dropping a lane, or writing without showing a plan, is the bug,
+Generate/structure or Cleanup question.** Dropping a lane, or writing without showing a plan, is the bug,
 not the narrowing. If the changed files reveal a missing docs tree or a bloated instruction
 file, that surfaces even on a one-file diff.
 
@@ -67,7 +68,7 @@ track today's code, while historical records describe the run or decision that p
 | `--session [--md <file>]` | Capture durable knowledge, including occasional manual tests | Yes — after preview | current conversation, or the supplied transcript |
 
 **Assess is the default** — it's what a bare `/doc` runs (see "Which mode runs"
-above). It surveys, classifies, and routes into the three modes above. The
+above). It surveys, classifies, and routes into the matching modes and cleanup workflow. The
 explicit modes are opt-in via their flag: `--review` and `--update` are the same
 comparison (review reports and lets you pick what to apply; update applies
 directly from a diff); `--generate` is for greenfield.
@@ -95,6 +96,9 @@ for an exported transcript. This includes occasional manual test procedures and 
   review. If the code is revised but the docs are committed alongside, they drift.
 - `--all` scope includes CLAUDE.md — the skill may propose edits to the project
   instructions file that governs its own behavior.
+- **Consolidation includes removing the originals.** Load `references/cleanup.md` and
+  name the files to retire and the destinations for their useful content in the plan.
+  A cleanup item already approved by the user needs no second confirmation.
 - **Not code-derived, not synced, and they don't count as a docs tree:** `docs/explain/`
   (the `explain` skill), `docs/product/` (`review-product`), and frozen `docs/superpowers/`
   (plans/specs). A repo whose only `docs/` content is `docs/superpowers/` is greenfield for
@@ -110,9 +114,10 @@ for an exported transcript. This includes occasional manual test procedures and 
 - `docs/reference/` is **externally anchored**: a source-scoped `--update` skips it, because
   our refactor cannot make it stale. It goes stale when a *dependency version* moves, and a
   verified claim is only re-stamped by re-running its probe.
-- `docs/tests/` is for **occasional manual operations**, including performance tests.
-  Procedures are live; dated `runs/` records and evidence are historical. Apply
-  `references/manual-tests.md`; routine automated suite runs do not belong here.
+- `docs/tests/` is for **occasional manual operations whose results a later run will compare
+  against**, performance tests above all. Procedures are live; dated `runs/` records and
+  evidence are historical. Apply `references/manual-tests.md`; routine automated suite runs
+  and ordinary feature QA passes do not belong here.
 
 ## Assess Mode (default)
 
@@ -148,18 +153,21 @@ It never writes without your go-ahead — the plan comes first.
    - **Owned elsewhere / frozen — do NOT count as the structured layer:**
      `docs/explain/` (the `explain` skill), `docs/product/` (`review-product`),
      and frozen planning artifacts like `docs/superpowers/` (plans/specs). Their presence
-     does **not** make a project "documented" — exclude them from the glob and never sync
-     them to code.
-   - Glob `docs/**/*.md` (minus the excluded dirs); note count and tree. Sketch
+     does **not** make a project "documented" — exclude them from the living-doc count
+     and code-sync review; inventory completed scratch separately for Cleanup.
+   - Inventory documentation in `docs/`, at the repo root, and in other documented
+     locations, including legacy folders and completed scratch. Classify ownership and
+     lifecycle before excluding anything; `references/cleanup.md` defines the retained set.
+     Count living docs separately from historical records and other owners' files. Sketch
      the code surface worth documenting: top-level modules, features, services,
      APIs.
    - For a large tree (>~15 docs or a big codebase), fan out — one sub-agent per
      check in step 2 — and merge. Workers return verdicts without editing files.
      Disable delegation tools where supported; any coordinating role needs explicit
-     subtasks, a descendant limit, and a stopping condition. Writing belongs in the
-     generate/update lanes.
+     subtasks, a descendant limit, and a stopping condition. Apply approved writes and
+     removals after merging the findings; keep cross-file migrations with one owner.
 
-2. **Run all three checks and reach a verdict for EACH lane.** Never silently
+2. **Run all four checks and reach a verdict for EACH lane.** Never silently
    skip a lane: if a lane has nothing, say so *and why* (this is what stops
    assess from quietly collapsing into "just review the existing docs").
    - **Gaps → Generate.** *The lane most often missed.* First answer the
@@ -175,11 +183,8 @@ It never writes without your go-ahead — the plan comes first.
          nearly every app does.
      If the repo **already has a tree heavier than its profile warrants** (Structured on a
      small/simple repo, especially if it's drifting), that is itself a Generate/structure
-     finding: **propose consolidating down** (migrate the non-derivable content into a few
-     `docs/<flow>.md` + `decisions/`, drop the drift-prone catalogs). Don't rubber-stamp an
-     over-sized tree just because it exists. When you meet gitignored `docs/superpowers/`,
-     offer to harvest embedded decisions into `decisions/` and then delete the completed
-     plans (on confirmation).
+     finding: **propose the smaller target structure**, with migrations and removals
+     listed in Cleanup. Don't rubber-stamp an over-sized tree just because it exists.
      Then check for an **external-reference gap**: knowledge about a dependency, platform,
      harness or external API that this repo keeps re-establishing — a quirk that cost an
      experiment to find, a version-specific behavior, a contradiction with upstream's docs,
@@ -200,11 +205,17 @@ It never writes without your go-ahead — the plan comes first.
    - **Quality → Review.** A light principles pass: local paths, restated
      signatures, verbatim duplication, placeholders/TODOs, missing required
      sections.
+   - **Outside the defined set / redundant → Cleanup.** Apply `references/cleanup.md`:
+     establish the retained doc set from project rules and the chosen profile, then
+     inspect extra files for useful knowledge. List each source, what to extract, its
+     canonical destination, and the original to remove. Include legacy buckets, redundant
+     docs, integrated session harvests, and completed scratch plans. Reach a verdict even
+     when the profile stays the same; cleanup is needed whenever extra files remain.
 
 3. **Report state + action plan.** Always emit *this* assess report (titled
    **Docs Assessment**) — not a plain "Documentation Review". Reviewing existing
    docs is only the Quality lane; it must never replace the Generate (structure/
-   gaps) and Update (staleness) lanes. One categorized, sequentially-numbered
+   gaps), Update (staleness), and Cleanup lanes. One categorized, sequentially-numbered
    list, with **every lane present even when empty**:
    ```markdown
    ## Docs Assessment: {repo/scope}
@@ -220,6 +231,11 @@ It never writes without your go-ahead — the plan comes first.
    ### Review (quality)
    3. {doc} — {issue}   (or: "none — checked, conforms")
 
+   ### Cleanup (outside the defined set / redundant)
+   Retain: {chosen profile, canonical destinations, and protected or separately owned docs}
+   4. {source} → {useful knowledge + destination, or reason nothing needs preserving}; remove {original path}
+      (or: "none — every in-scope doc belongs to the defined set and has a distinct purpose")
+
    ### Healthy
    - {what's already fine — so the user knows it was checked}
    ```
@@ -227,8 +243,10 @@ It never writes without your go-ahead — the plan comes first.
 
 4. **Offer to execute.** Ask which to run (numbers, `all`, or `none`;
    multi-select where supported). Each selection runs the matching mode — load that
-   mode's reference file and apply it to the target. `none` → stop. Nothing is
-   written without a selection.
+   mode's reference file and apply it to the target; Cleanup selections use
+   `references/cleanup.md`. Keep each extraction and its source removal in one action.
+   `none` → stop. An existing approval of the plan authorizes its full execution;
+   do not ask again for the listed removals.
 
 ### Scope
 
@@ -244,7 +262,16 @@ source. Override with `--all` (force whole repo), `--staged` / `--unpushed`, or 
 
 Surveys `docs/` and the code surface, then reports a numbered plan: which areas have no
 docs (Generate), which docs are stale vs the code (Update), which have quality issues
-(Review), and what's healthy. Asks which to run and executes your picks in place.
+(Review), which extra files to extract and remove (Cleanup), and what's healthy.
+Asks which to run and executes your picks in place.
+
+**Bring a legacy docs tree into the defined set:**
+> /doc --all
+
+For a Lean repo with `docs/api/`, `docs/prd/`, and an integrated session harvest,
+proposes retaining the needed flow docs and ADRs. After approval, merges useful behavior,
+rationale, and gotchas into those destinations, repairs links, and removes the superseded
+files. Reports preserved historical records and any unresolved candidates separately.
 
 **Sync docs after finishing a feature:**
 > /doc --update
@@ -286,6 +313,12 @@ bare `/doc`.
 refs) and can mis-fire. **Solution:** Assess only *proposes* — confirm before
 running Update. For a definitive check, run `--review <target>`, which compares
 the doc against the code directly.
+
+### Consolidation wrote the new docs but left the old files behind
+**Cause:** Treating migration as complete once the destination exists. **Solution:**
+Finish the approved Cleanup items: verify the extracted knowledge, repair incoming links,
+remove the superseded sources, and re-inventory the docs. Report any unresolved file and
+the specific reason it remains.
 
 ## Notes
 

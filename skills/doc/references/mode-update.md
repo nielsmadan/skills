@@ -44,8 +44,11 @@ in `references/principles.md`.
    Drop claims that stopped being true rather than archiving them; if the change forces
    one on us, propose an ADR.
 6. **Fan out**: if >5 affected files/docs, spawn one sub-agent per doc/area, merge.
-7. **Report**: which docs were edited and what was synced; any gaps left for
-   `--generate`.
+7. **Check for cleanup** in the affected area using [cleanup.md](cleanup.md). Apply
+   already-approved migrations and removals completely; otherwise report candidates with
+   their useful content, destinations, and proposed removals. Keep this within scope.
+8. **Report**: which docs were edited or removed, what was preserved and where; any gaps
+   left for `--generate` and any cleanup still needing a decision.
 
 ## Troubleshooting
 

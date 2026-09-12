@@ -52,10 +52,11 @@ Derive expected behavior from the request, specification, and existing contract;
 do not use the current implementation as the sole oracle. Read code to discover
 branches and dependencies, then translate them into observable scenarios.
 
-Create a scenario matrix using [the run template](assets/run.md). Each row needs a
-stable ID, priority, entry point/preconditions, actions/input, and expected
-intermediate and final outcome. Include the setup needed to reach each state.
-Show the compact matrix before execution and proceed without an approval gate.
+Create a scenario matrix in the conversation, shaped like
+[the run template](assets/run.md). Each row needs a stable ID, priority, entry
+point/preconditions, actions/input, and expected intermediate and final outcome.
+Include the setup needed to reach each state. Show the compact matrix before
+execution and proceed without an approval gate.
 
 Consider these dimensions, selecting cases relevant to this feature:
 
@@ -127,20 +128,29 @@ and stop only processes/sessions started for QA. Confirm cleanup rather than ass
 it happened. Preserve reproducible recipes and useful evidence before deleting temp
 fixtures. Never reset the user's checkout or clear unrelated app/device state.
 
-### 5. Save and report the result
+### 5. Report the result
 
-Follow the shared [manual test record convention](../doc/references/manual-tests.md):
-reuse or create `docs/tests/qa-FEATURE/README.md` for the repeatable procedure and
-`runs/YYYY-MM-DD-HHMM.md` for this run. Use a collision-safe suffix and relative
+Report in the conversation and write no file. A QA pass over a feature is routine
+work, so it gets no `docs/tests/` entry by default, however many scenarios it covered.
+
+Write a record only when asked for one, or when this run produced something a later
+run would refer back to: measurements worth comparing against, or a fixture/fault
+setup intricate enough that repeating it needs written instructions. A list of
+scenarios that passed is not such a result. When the procedure is worth keeping but
+the outcome is not, write the procedure alone.
+
+For a run that does warrant one, follow the shared
+[manual test record convention](../doc/references/manual-tests.md): reuse or create
+`docs/tests/qa-FEATURE/README.md` for the repeatable procedure and
+`runs/YYYY-MM-DD-HHMM.md` for this run, with a collision-safe suffix and relative
 evidence links. The procedure records setup, fixture/fault creation, expected
 outcomes, and cleanup; the dated record captures actual steps, the completed matrix,
-and findings. Keep previous run results intact. Routine suite-only checks need no
-new manual-test record; honor an explicit request for conversation-only output.
+and findings. Keep previous run results intact.
 
 End with the tested scope, coverage counts, highest-impact findings, blockers, and
-the report link. State whether coverage is complete or partial; “no bugs found” is
-qualified by what was actually exercised. Research provenance for maintainers is
-in [sources](references/sources.md).
+a link to the record if one was written. State whether coverage is complete or
+partial; “no bugs found” is qualified by what was actually exercised. Research
+provenance for maintainers is in [sources](references/sources.md).
 
 ## Examples
 
