@@ -36,7 +36,7 @@ Get input from three independent advisors on the current problem or question. Co
 - **The advisors are meant to read the code** — that's the point. All advisors run in *read-only* mode so they can read/explore the repo but cannot modify it. Point them at the relevant files in the prompt; reading them stays fast (~15–25s). Always close stdin with `</dev/null` on advisor commands.
 - **Claude** runs non-interactively in print mode (`claude -p`). Give it the read-only built-ins (`--tools "Read,Grep,Glob"`) so it can explore but not edit, and `--disable-slash-commands` so it can't recurse into skills.
 - **Codex** blocks on "Reading additional input from stdin..." unless stdin is closed (`</dev/null`), and prompts for confirmation outside a git repo unless given `--skip-git-repo-check`.
-- **The advisor's identity is the model, not the CLI.** Pi and OpenCode point at external models, deliberately from two different labs, so their opinions stay independent of each other.
+- **The advisor's identity is the model, not the CLI.** Pi and OpenCode use the explicit models in the commands below, from two different labs, so their opinions stay independent of each other.
 - **Pi** needs `-p` for non-interactive mode and `--no-session` so the consultation does not land in the session list. Restrict it with `--tools read,grep,find,ls`; the allowlist excludes write and delegation tools. A model newer than Pi's cached catalog warns `Model "…" not found for provider "openrouter". Using custom model id.` and then works normally — that warning is not a failure.
 - **OpenCode** bills through OpenRouter — models must use the `openrouter/` prefix (`opencode/*` is OpenCode Zen, which has no payment method and errors out). Use `--agent plan` with the per-run task denial below. Plan mode alone can delegate to other agents.
 - **Headless gotcha:** OpenCode evaluates each part of a compound (`;`/`&&`/`|`) bash command separately and takes the least-permitted verdict; with stdin closed there's no TTY to answer an `ask` prompt, so the whole call is auto-rejected and the run terminates before producing any prose. The classic trigger is a benign `echo ---` separator inside an otherwise-allowed read chain. The prompt template already tells the advisor to avoid chaining; if a run still dies with no output, suspect a chained command hitting an un-allowlisted token.
@@ -112,17 +112,19 @@ claude --tools "Read,Grep,Glob" --disable-slash-commands --no-session-persistenc
 command codex exec -s read-only --skip-git-repo-check --disable multi_agent --disable multi_agent_v2 -c agents.enabled=false "$(cat .second-opinion.md)" </dev/null
 ```
 
-Pi and OpenCode take a `--model` / `-m` flag. Point them at two models from different
-labs so the opinions stay independent; any capable coding model works.
+Use the Pi and OpenCode model ids and `max` reasoning settings below exactly,
+including in `--quick` mode. Change them only when the user explicitly requests it.
+If a selected model or reasoning level is unavailable, report that advisor as
+unavailable and continue with the others.
 
 **Pi:** `--tools` is the read-only guard (no `edit`/`write`/`bash`). Pi has no `-m` short flag — it is `--model`:
 ```bash
-command pi -p --no-session --tools read,grep,find,ls --model openrouter/<model-id> "$(cat .second-opinion.md)" </dev/null
+command pi -p --no-session --tools read,grep,find,ls --model openrouter/z-ai/glm-5.3 --thinking max "$(cat .second-opinion.md)" </dev/null
 ```
 
 **OpenCode:** use plan mode and deny its task tool for this consultation. The inline config applies only to this process:
 ```bash
-OPENCODE_CONFIG_CONTENT='{"agent":{"plan":{"permission":{"task":"deny"}}}}' command opencode run --agent plan -m openrouter/<model-id> "$(cat .second-opinion.md)" </dev/null
+OPENCODE_CONFIG_CONTENT='{"agent":{"plan":{"permission":{"task":"deny"}}}}' command opencode run --agent plan -m openrouter/moonshotai/kimi-k3 --variant max "$(cat .second-opinion.md)" </dev/null
 ```
 
 ### Step 3: Evaluate Confidence
