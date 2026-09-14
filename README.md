@@ -1,6 +1,6 @@
 # nlsmdn skills
 
-Opinionated agent skills for code review, research, and daily workflow. 45 skills, generated from
+Opinionated agent skills for code review, research, and daily workflow. 43 skills, generated from
 [nielsmadan/agentic-coding](https://github.com/nielsmadan/agentic-coding) — do not edit this repo
 directly, changes are overwritten.
 
@@ -60,9 +60,7 @@ Add `--skill <name>` to install one, or `--all` to cover every detected agent.
 | `review-library-use` | Review code for correct use of the repo's third-party libraries — checks the scoped files against the version-specific conventions recorded in the repo's `library-use` reference (docs-derived correct-usage rules, API contracts, footguns). Catches stale-API usage, deprecated patterns, and doc-violating misuse a general reviewer misses. Auto-invoked by `code-review` when a `library-use` reference exists. Triggers "review library use", "check library usage", "are we using this library correctly", "library convention review". |
 | `review-perf` | Performance analysis for algorithmic complexity, memory leaks, N+1 queries, and render issues. Use when code feels slow, after adding loops/queries, or before scaling up. |
 | `review-security` | Security audit for vulnerabilities, secrets, and unsafe patterns. Use before releases, after adding auth code, or when reviewing third-party integrations. |
-| `review-swift` | Swift-specific code review focused on JUDGMENT-level design a linter and the compiler can't decide — state modeling with enums and value types (make invalid states unrepresentable), optional and error modeling, concurrency isolation intent, ARC ownership, SwiftUI identity/lifetime/dependencies, and escape hatches (`!`, `as!`, `try!`, `@unchecked Sendable`) that compile but hide a modeling problem. Deliberately does NOT duplicate SwiftLint, swift-format, or Swift 6 strict-concurrency diagnostics. Auto-invoked by `code-review` on Swift projects. Triggers "review swift", "swift review", "swiftui review", "swift concurrency review". |
 | `review-todo` | Turn a completed code review into a persistent workflow that immediately proposes the complete ordered implementation plan, waits for whole-plan approval, then implements and commits every accepted finding. Use after a review when the user invokes review-todo, says "turn this review into a todo list", "work through these review findings", supplies directives such as "fix 2, 3; ignore 7", asks to revise or approve the plan, or resumes review work. Do not use to perform the original code review. |
-| `review-typescript` | TypeScript-specific code review focused on JUDGMENT-level type design a linter can't decide — type modeling (make invalid states unrepresentable), inference-vs-annotation calls, and casts/`any` that hide a real modeling problem. Deliberately does NOT duplicate typescript-eslint. Auto-invoked by `code-review` on TypeScript projects. Triggers "review typescript", "typescript review", "type design review". |
 | `second-opinion` | Get external AI opinions on a problem or question. Use when you want diverse perspectives from the agent CLIs you are not running (Claude, Codex, Pi, OpenCode). |
 
 ### Planning & research

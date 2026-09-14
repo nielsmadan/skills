@@ -73,18 +73,19 @@ Two further aspects are **conditional add-ons** — in the default (no-aspect-fl
 
 | Flag | Maps to |
 |------|---------|
-| `--typescript` / `--swift` | Agent 8: Language Review — delegates to the matching `review-<language>` skill (e.g. `review-typescript`, `review-swift`). Auto-included when the scoped files are of that language. |
+| `--cli` | Agent 8b: Project-Shape Review — delegates to `review-cli`. Auto-included when the repo ships a console entry point. Orthogonal to language: it composes with the language review rather than replacing it. |
+| `--typescript` / `--swift` / `--python` | Agent 8: Language Review — delegates to the matching `review-<language>` skill (e.g. `review-typescript`, `review-swift`, `review-python`). Auto-included when the scoped files are of that language. |
 | `--project` | Agent 9: Project-Specific Review — delegates to the project's own `review-project` skill. Auto-included when that skill exists in the repo. |
 | `--library-use` | Agent 10: Library-Use Review — delegates to `review-library-use` (checks code against the repo's `library-use` conventions). Auto-included when the repo has a `library-use` reference. |
 
 **Aspect rules:**
 - In comprehensive mode, no aspect flags → run all 8 core agents, **plus** any detected language review, the project review, and the library-use review if present.
-- One or more aspect flags → run only those agents, skip the rest. The conditional add-ons run only if `--typescript` / `--project` / `--library-use` (or another `--<language>`) is among the flags.
+- One or more aspect flags → run only those agents, skip the rest. The conditional add-ons run only if `--typescript` / `--cli` / `--project` / `--library-use` (or another `--<language>`) is among the flags.
 - `--quick` is a complete preset and cannot be combined with aspect flags.
 - `--multi` composes with any aspect selection.
 - The non-flag portion of `$ARGUMENTS` is the review target (e.g. `src/auth/`).
 
-Agents 8–10 are the plug-and-play extension layer (add a language by creating a `review-<language>` skill; a project adds its own `review-project`). Details in `references/agents.md`.
+Agents 8–10 are the plug-and-play extension layer (add a language by creating a `review-<language>` skill; add a shape by creating one like `review-cli`; a project adds its own `review-project`). Details in `references/agents.md`.
 
 ## Scope Selection
 
@@ -128,7 +129,7 @@ Strip aspect flags (`--logic`, `--architecture`, `--security`, `--performance`, 
 
 If `--quick` appears with any aspect flag or with `--multi`, abort with `--quick is a complete review preset; remove the aspect flags or --multi.` It may compose with a target, one scope flag, and `--rereview`.
 
-In comprehensive mode, if any aspect flags are present, launch ONLY the corresponding agents (including the conditional add-ons only when `--typescript`/`--project`/`--library-use` is passed). Otherwise launch all 8 core agents plus whatever Step 3b.5 detects. In quick mode, follow the single-reviewer branch in Step 3c.
+In comprehensive mode, if any aspect flags are present, launch ONLY the corresponding agents (including the conditional add-ons only when a `--<language>`/`--cli`/`--project`/`--library-use` flag is passed). Otherwise launch all 8 core agents plus whatever Step 3b.5 detects. In quick mode, follow the single-reviewer branch in Step 3c.
 
 ### 3b. Resolve scope
 
@@ -160,7 +161,7 @@ This file list is passed to inline agents and is also used to build the target a
 
 ### 3b.5. Detect language & project reviews
 
-Determine which conditional add-on reviews apply. In comprehensive mode these become additional agents. In quick mode their skill/reference text becomes guidance for the single integrated reviewer. Skip this entirely if explicit aspect flags were passed **and** none of them is `--typescript`/`--project`/`--library-use`/another `--<language>` — in that case the user asked for a specific subset and add-ons don't run.
+Determine which conditional add-on reviews apply. In comprehensive mode these become additional agents. In quick mode their skill/reference text becomes guidance for the single integrated reviewer. Skip this entirely if explicit aspect flags were passed **and** none of them is `--typescript`/`--cli`/`--project`/`--library-use`/another `--<language>` — in that case the user asked for a specific subset and add-ons don't run.
 
 **Language detection registry.** For each language below, it applies if the resolved file list matches its extensions, or (for the `all` scope / when the file list is empty) the repo root has its marker file. If it applies **and** a `review-<language>` skill is installed, include that agent in comprehensive mode or record its `SKILL.md` as guidance for quick mode.
 
@@ -168,8 +169,16 @@ Determine which conditional add-on reviews apply. In comprehensive mode these be
 |---|---|---|---|
 | TypeScript | `.ts` `.tsx` `.mts` `.cts` | `tsconfig.json` | `review-typescript` |
 | Swift | `.swift` | `Package.swift`, `*.xcodeproj`, `*.xcworkspace` | `review-swift` |
+| Python | `.py` `.pyi` | `pyproject.toml`, `setup.py` | `review-python` |
+| Rust | `.rs` | `Cargo.toml` | `review-rust` |
 
 *(To add a language: create a `review-<language>` skill and add a row here.)*
+
+**Project-shape detection.** Shapes are orthogonal to language — a CLI is reviewed the same way whether it is Python or Rust. If the shape applies **and** the matching skill is installed, include that agent in comprehensive mode or record its `SKILL.md` as guidance for quick mode. If the skill is not installed, skip silently.
+
+| Shape | Detected by | Skill |
+|---|---|---|
+| CLI | `[project.scripts]` / `[project.entry-points."console_scripts"]` in `pyproject.toml`, `[[bin]]` or `src/main.rs` in a Cargo project, `bin` in `package.json`, or a `main`-package `cobra`/`urfave` import in Go | `review-cli` |
 
 **Project review detection.** If the repo defines its own project review skill at `.claude/skills/review-project/SKILL.md` **or** `.agents/skills/review-project/SKILL.md`, include the project review agent in comprehensive mode or record its `SKILL.md` as guidance for quick mode. If neither exists, skip silently.
 
@@ -177,7 +186,7 @@ Determine which conditional add-on reviews apply. In comprehensive mode these be
 
 Check both paths — `.claude/skills/` is where Claude Code puts project skills; `.agents/skills/` is where the other harnesses discover them. In some projects the latter is a symlink to the former, so either check finds it; others may only have `.agents/skills/`.
 
-Announce what got auto-included. In comprehensive mode, use messages such as `Detected TypeScript — adding review-typescript`. In quick mode, say `Detected TypeScript — applying review-typescript guidance in the quick review` (and likewise for project and library-use guidance).
+Announce what got auto-included. In comprehensive mode, use messages such as `Detected TypeScript — adding review-typescript` or `Detected a CLI entry point — adding review-cli`. In quick mode, say `Detected TypeScript — applying review-typescript guidance in the quick review` (and likewise for project and library-use guidance).
 
 ### 3b.6. Clean up comments
 
