@@ -2,7 +2,7 @@
 name: resolve-conflicts
 description: Resolve git conflicts from any operation (merge, rebase, cherry-pick, stash, revert). Use when encountering conflicted files during git operations.
 argument-hint: '[file path]'
-effort: xhigh
+effort: high
 ---
 
 <!-- Generated from https://github.com/nielsmadan/agentic-coding — edits here are overwritten. -->

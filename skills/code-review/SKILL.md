@@ -2,7 +2,7 @@
 name: code-review
 description: Clean up code comments, then review code with comprehensive and quick modes. Use when reviewing code changes, PRs, or specific files for quality, bugs, and best practices.
 argument-hint: '[target] [--quick] [--logic] [--architecture] [--security] [--performance] [--history] [--test] [--interface] [--clean-code] [--typescript] [--project] [--library-use] [--staged] [--unpushed] [--all] [--changed] [--multi] [--rereview]'
-effort: xhigh
+effort: high
 ---
 
 <!-- Generated from https://github.com/nielsmadan/agentic-coding — edits here are overwritten. -->

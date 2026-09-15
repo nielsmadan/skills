@@ -2,7 +2,7 @@
 name: longshot
 description: Run a long autonomous build session from a brief — interview the user with `blind-spots`, prepare the plan, and wait for explicit final approval to start implementation. Only then decide later ambiguities as recorded rulings and execute without check-ins. Per task a fresh implementer subagent, an independent spec+quality reviewer, a fix loop, then a whole-branch review and a handoff report with rulings, deferred questions and a squash proposal. Use when the user says "longshot", "work on this independently", "run with this", "ask me everything up front then go", "I'll be away", or hands over a multi-hour feature or package to build end to end. Do NOT use for a single small change — use `plan` for that.
 argument-hint: '[--plan FILE] [--no-worktree] [--repos a,b] (brief, or blank to take it from the conversation)'
-effort: xhigh
+effort: high
 ---
 
 <!-- Generated from https://github.com/nielsmadan/agentic-coding — edits here are overwritten. -->
