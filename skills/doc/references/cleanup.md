@@ -6,7 +6,13 @@ are removed. Apply this during assess and to cleanup findings selected from revi
 ## Define the retained set
 
 Use the project's explicit documentation rules first, then the chosen profile in
-[principles.md](principles.md). State the intended destinations in the plan. The set is
+[principles.md](principles.md). When the user requests the standard layout, treat legacy
+folder references in project instructions (such as `docs/prd/`) as migration candidates,
+not a reason to preserve that layout. Include the instruction-reference updates in the
+plan; retain a legacy layout only when the user explicitly chooses it. Edit generated
+instructions through their authoritative source.
+
+State the intended destinations in the plan. The set is
 the doc types the repo needs and the files with a distinct purpose within them; it is
 not a filename whitelist. A Lean flow doc needs to earn its place even when its path fits.
 

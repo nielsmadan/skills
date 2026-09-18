@@ -54,6 +54,15 @@ file, that surfaces even on a one-file diff.
 - Mode: `--update` / `--review` / `--generate <target>` / `--session` force that action
   regardless of git state.
 
+**Requests to “create/apply our standard doc format” are structural.** Assess the
+repository's documentation against the current profiles in `references/principles.md`,
+even when the tree is dirty or existing docs need updating. Propose the missing docs and
+folders warranted by the chosen profile, folder moves, index/link repairs, and updates to
+instruction references. Existing documents or legacy folders do not satisfy this request
+by themselves. Use the assess plan-and-approval workflow, then create or migrate the
+approved layout; reformatting one document does not complete it. A request explicitly
+limited to formatting one document keeps that scope.
+
 ## Modes
 
 All modes use code and session evidence according to each doc's lifecycle: current procedures

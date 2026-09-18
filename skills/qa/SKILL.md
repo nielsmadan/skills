@@ -11,7 +11,8 @@ effort: high
 
 Exercise the product as a user or consumer would. Default to reproducing and
 reporting findings. `--fix` or an explicit repair request authorizes fixing confirmed
-bugs and retesting. Run this workflow yourself; do not dispatch agents by default.
+bugs and retesting. Keep small checks in the current agent; choose the execution
+context below for substantial passes.
 
 ## Instructions
 
@@ -45,6 +46,30 @@ For mixed features, follow the affected path across boundaries. Existing tests
 inform coverage; they do not prove the running build works. If there is no changed
 consumer behavior and relevant tests already cover the internal change, explain
 that runtime exploration adds little and run the appropriate checks instead.
+
+#### Choose the execution context
+
+For a substantial pass requiring many interactions in a large coding conversation,
+prefer one fresh QA worker when the harness supports it. Give it this skill and only
+the relevant adapters, repository/build/device identifiers, feature requirements and
+expected outcomes, relevant changes, fixture state, launch commands, authorization
+boundaries (including whether fixes are allowed), and evidence requirements. Link
+supporting files instead of copying the coding transcript. Explicitly request a fresh
+context through the dispatch tool's inheritance option (`fork_turns="none"` where
+available); a subagent that forks the full conversation carries the same history.
+
+The worker owns the remaining workflow, including the scenario matrix, execution,
+retests, and cleanup. Reuse it across screens and related cases. Tell it: "Do not
+dispatch sub-agents or launch other agent CLIs; do this work yourself." A worker
+already assigned QA proceeds directly to step 2. Keep one owner of each device or
+shared test environment; the parent must not drive it concurrently.
+
+Return coverage, findings, blockers, cleanup status, and evidence paths to the parent,
+keeping raw trees and image history in the worker. The parent closes unresolved
+coverage with that worker before reporting completion. For short checks, tasks that
+need extensive conversation history, or harnesses without fresh workers, run locally.
+If context becomes unwieldy, compact at a phase boundary while preserving the matrix,
+expected behavior, current state, and evidence paths; do not reset after every screen.
 
 ### 2. Enumerate paths before exercising them
 

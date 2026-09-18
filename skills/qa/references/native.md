@@ -2,8 +2,9 @@
 
 Start with `agent-device --version`, `agent-device help manual-qa`, and the relevant
 command's `--help`. Read `agent-device help macos` or `help physical-device` for
-those targets. These examples were checked against 0.19.3; installed help governs
-flags and platform support.
+those targets. Reuse help already read for the installed version; consult specific
+commands as needed. Efficiency guidance was checked against 0.21.0; installed help
+governs flags and platform support.
 
 ## Select the right build and device
 
@@ -28,6 +29,35 @@ Replace the identifier, refs, expected text, timeout, and artifact path. Use
 `--platform android` for Android. Keep device mutations serial. Settled output can
 serve as the next observation, but settling is UI quietness, not proof that async
 work completed. Observe actual outcomes and open screenshots for visual checks.
+
+## Keep the interaction loop small
+
+- Continue from the settled diff. Refresh `snapshot -i` when the next target is
+  missing or the UI did not settle. For a specific expectation, use `get text`, `is`,
+  or a selector/text `wait`; use snapshot scope/depth options when appropriate.
+  Keep normal text output for navigation; request JSON only when its fields are
+  needed. Preserve the complete selected result rather than piping it through
+  `head` or `tail`.
+- Let the host shell tool wait for ordinary device operations to complete, typically
+  10–15 seconds before yielding, with bounded timeouts. If it returns a running
+  process, await completion inside the same orchestration when supported. Avoid
+  one-second polling that needs a model turn each time; surface failures promptly.
+- Capture and open a screenshot in one host orchestration when supported: await
+  successful capture, then use the harness's image reader on that path. A returned
+  filename is not visual evidence. Reuse a current fallback screenshot if the
+  snapshot already produced one. Keep image checkpoints for appearance, clipping,
+  spacing, and ambiguous states; combining calls does not remove image token cost.
+- Batch familiar setup/navigation with `batch --steps-file … --on-error stop` and
+  durable selectors. Include `wait` or `is` guards for expected states; `get` only
+  reads. Keep each batch to one related flow and stop at states requiring inspection,
+  especially loading, error, and visual checkpoints. Reuse documented recorded routes
+  with a destination guard for recurring setup; verify the destination before QA.
+- Keep the default response level for exploratory checks. `--level digest` omits
+  changed text from settled results and limits snapshot refs, so reserve it for
+  known intermediate steps where those details are unnecessary. For larger batches,
+  evaluate `--level full`, which digests intermediate results and retains the full
+  final result; ensure required intermediate evidence is still captured. Agent-device's
+  `--cost` reports wall-clock latency, not model token usage.
 
 ## States and lifecycle
 

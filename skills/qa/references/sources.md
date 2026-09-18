@@ -20,3 +20,12 @@ The adapters were checked against installed agent-browser 0.27.0 and agent-devic
 The synthesis uses feature-scoped coverage and evidence. Upstream bug quotas,
 arbitrary health scores, automatic git operations, mandatory browser use for
 backends, and blanket video requirements do not fit this workflow.
+
+Efficiency guidance reviewed 2026-09-17 against agent-device 0.21.0 help and its
+[batching docs](https://github.com/callstack/agent-device/blob/v0.21.0/website/docs/docs/batching.md),
+[snapshot docs](https://github.com/callstack/agent-device/blob/v0.21.0/website/docs/docs/snapshots.md),
+and [response views](https://github.com/callstack/agent-device/blob/v0.21.0/src/daemon/response-views.ts).
+Fresh-worker handoffs and phase-boundary compaction draw on
+[Claude subagents](https://code.claude.com/docs/en/sub-agents#how-forks-differ-from-other-subagents)
+and [OpenAI subagents](https://developers.openai.com/codex/subagents#why-subagent-workflows-help).
+These are workflow recommendations, not measured token-savings guarantees.
