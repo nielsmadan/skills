@@ -29,8 +29,9 @@ exit code. Do not report success without it.
 Do not dispatch sub-agents; do this work yourself.
 Do not commit. Do not push. Do not touch any repo other than the one above.
 
-Report: what you changed (file by file), the check output, and anything the plan
-got wrong that you had to work around.
+Report in 15 lines or fewer: the outcome, the check command's summary line and exit
+code, and anything the plan got wrong that you had to work around. No file-by-file
+narration — the diff is the record and it is reviewed independently.
 ```
 
 ## Reviewer
@@ -41,10 +42,11 @@ independent read of the diff.
 ```
 Review one task's implementation against its plan. You have no prior context.
 
-REPO: {{path}}
-PLAN: {{path}}
-TASK: {{number and title}}
-DIFF: {{git diff command that scopes to this task's work}}
+REPO:     {{path}}
+PLAN:     {{path}}
+TASK:     {{number and title}}
+DIFF:     {{git diff command that scopes to this task's work}}
+FINDINGS: {{absolute path to write findings to}}
 
 Judge two things, separately:
 
@@ -54,20 +56,24 @@ Judge two things, separately:
    quality (are the tests asserting what the code does, or only that it does not
    crash?), and fit with the surrounding code's conventions.
 
-For each finding give: file:line, what is wrong, and the concrete failure it causes.
-Rank by severity. Say plainly if there are none — do not manufacture findings.
+Write your findings to FINDINGS, numbered, ranked by severity. Each one gives:
+file:line, what is wrong, and the concrete failure it causes. Write the file even if
+there is nothing to report — say plainly that there are none, and do not manufacture
+findings to fill it.
 
-Do not dispatch sub-agents. Do not modify anything.
+Return to whoever dispatched you only: the FINDINGS path, the number of findings, and
+their severities. Do not restate or summarise the findings in your reply.
+
+Do not dispatch sub-agents. Do not modify anything other than FINDINGS.
 ```
 
 ## Fixer
 
-Type: `general-purpose`. Give it the findings and nothing else about the review.
+Type: `general-purpose`. Give it the findings *path* and nothing else about the review.
 
 ```
-Fix these review findings in {{repo}}. Nothing else — do not refactor around them.
-
-{{findings, verbatim, numbered}}
+Fix the review findings recorded in {{absolute path to the findings file}}, in
+{{repo}}. Read that file first. Nothing else — do not refactor around them.
 
 For each, either fix it or explain in one line why it is not a real problem.
 Run {{check command}} afterwards and paste the summary line and exit code.
@@ -76,8 +82,9 @@ Do not dispatch sub-agents; do this work yourself. Do not commit.
 ```
 
 Re-review after a fix wave is the **Reviewer** prompt with `DIFF` scoped to the fix
-commits and a leading line: `Only assess whether these findings were correctly
-resolved: {{findings}}. Do not open new topics.`
+commits, a fresh `FINDINGS` path, and a leading line: `Only assess whether the
+findings in {{path to the previous round's findings}} were correctly resolved. Do not
+open new topics.`
 
 ## Cross-repo contract reviewer
 
@@ -88,8 +95,9 @@ per-task reviewer can make.
 Two or more repos changed together and must agree at their boundary. You have no
 prior context.
 
-REPOS: {{path — role, per repo}}
-SPEC:  {{plan or protocol doc}}
+REPOS:    {{path — role, per repo}}
+SPEC:     {{plan or protocol doc}}
+FINDINGS: {{absolute path to write findings to}}
 
 Verify the boundary itself, by reading both sides:
 - wire formats: field names, types, optionality, encodings, version discriminators
@@ -98,10 +106,13 @@ Verify the boundary itself, by reading both sides:
 - identity semantics: what makes two records the same thing, agreed on both sides
 - error and failure behaviour: what one side does when the other is absent or old
 
-Report each disagreement with the two file:line locations that disagree. Then run
-each repo's own check command and report the results.
+Write each disagreement to FINDINGS with the two file:line locations that disagree.
+Then run each repo's own check command and append its summary line and exit code.
 
-Do not dispatch sub-agents. Do not modify anything.
+Return only: the FINDINGS path, the number of disagreements, and each repo's check
+result as one line. Do not restate the disagreements in your reply.
+
+Do not dispatch sub-agents. Do not modify anything other than FINDINGS.
 ```
 
 ## The ledger

@@ -140,6 +140,12 @@ Open the ledger at `docs/plans/<YYYY-MM-DD>-<slug>-ledger.md` (see
 actual start-approval message before the first ruling. Append to it for the rest
 of the run; it lives on disk so the phase and approval survive compaction.
 
+Create the run directory `RUN=${TMPDIR:-/tmp}/longshot-<slug>` for check logs and
+review findings. Those are working artifacts, not the record — anything that
+outlives its fix loop goes in the ledger. **Keeping them on disk instead of in this
+session's context is what lets a long run finish without compacting**, so route
+them there even when a report looks short enough to read inline.
+
 ## Phase 3 — Isolation
 
 Follow the workflow file. Default:
@@ -161,15 +167,26 @@ is the skill's own and needs no further dispatch approval; do not widen it.
    `references/prompts.md`.
 2. **Review.** One read-only subagent (`Explore`), which has not seen the
    implementer's reasoning, checks the diff against that task's plan section on
-   **both** spec compliance and code quality.
-3. **Fix loop.** Findings → a fix subagent, then a re-review scoped to the fixes
-   only. Repeat until clean, **max 3 rounds**; then rule on what is left, record it,
-   and move on.
+   **both** spec compliance and code quality. It writes its findings to
+   `$RUN/review-task-<n>.md` and returns only the path, a count and the severities.
+   The findings themselves never enter this session's context.
+3. **Fix loop.** Hand the fixer the findings *path*, not the findings — passing the
+   text through here bills it twice. Then re-review, scoped to those fixes only.
+   **Two rounds by default**, a third only if round 2 actually closed findings; then
+   rule on what is left, record it in the ledger, and move on.
 4. **Verify yourself.** Run the project's own check command (`just check`,
-   `npm test`, `cargo test` …) in this session and read the whole output — the
-   summary line and exit code, not a grep for the outcome you expect. A subagent
-   reporting "all tests pass" is not evidence. Failures get fixed, never labelled
-   pre-existing.
+   `npm test`, `cargo test` …) in this session. Never delegate this — a subagent
+   reporting "all tests pass" is not evidence. Redirect it and read the end:
+
+   ```
+   just check > "$RUN/check-task-<n>.log" 2>&1; echo "exit=$?"; tail -30 "$RUN/check-task-<n>.log"
+   ```
+
+   The exit code and the summary line are the verdict, and a green suite costs you
+   thirty lines instead of thousands. **A non-zero exit, or a summary naming
+   failures, means you open the log and read it properly** — that is not optional,
+   and it is where the tokens belong. What you must never do is grep the log for the
+   outcome you expect. Failures get fixed, never labelled pre-existing.
 5. **Commit** the task's work, per the project's commit convention.
 6. **Ping.** One line (see below), then straight into the next task.
 
@@ -195,6 +212,11 @@ repo (`--quick` only if the whole longshot was small), then a fix wave, then a
 re-review scoped to those fixes. Cross-repo runs get one reviewer whose job is
 **contract coherence** — wire formats, manifest shapes, command strings, identity
 semantics agreeing across repo boundaries.
+
+These are the largest reports in the run, so the same rule binds hardest here:
+findings go to `$RUN/review-branch.md` and `$RUN/review-contract.md`, the fix wave
+gets the path, and this session reads the count and the severities. Pull a finding
+into context only when you need to rule on it.
 
 ## Phase 6 — Handoff
 
