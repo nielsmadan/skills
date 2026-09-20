@@ -29,6 +29,7 @@ class SearchAgentLogsTests(unittest.TestCase):
             claude_projects=root / "claude-projects",
             claude_archive=root / "claude-archive",
             codex_sessions=root / "codex-sessions",
+            droid_sessions=root / "droid-sessions",
             opencode_db=root / "opencode" / "opencode.db",
             pi_sessions=root / "pi-sessions",
         )
@@ -39,6 +40,7 @@ class SearchAgentLogsTests(unittest.TestCase):
             self.roots.claude_archive, "claude-archived", self.sibling, "needle archived"
         )
         self.make_codex_session("codex-session", self.cwd, "needle codex")
+        self.make_droid_session("droid-session", self.cwd, "needle droid")
         self.make_pi_session("pi-session", self.sibling, "needle pi")
         self.make_opencode_db("opencode-session", self.cwd, "needle opencode")
 
@@ -101,6 +103,46 @@ class SearchAgentLogsTests(unittest.TestCase):
                         "type": "message",
                         "role": "user",
                         "content": [{"type": "input_text", "text": text}],
+                    },
+                },
+            ],
+        )
+
+    def make_droid_session(self, session_id: str, cwd: str, text: str) -> None:
+        folder = self.roots.droid_sessions / search_agent_logs.encode_claude_path(cwd)
+        self.write_jsonl(
+            folder / f"{session_id}.jsonl",
+            [
+                {
+                    "type": "session_start",
+                    "id": session_id,
+                    "title": f"Title {session_id}",
+                    "cwd": cwd,
+                },
+                {
+                    "type": "message",
+                    "timestamp": "2026-08-10T10:04:00Z",
+                    "message": {
+                        "role": "user",
+                        "content": [],
+                        "visibility": "user_only",
+                        "hookEventName": "SessionStart",
+                    },
+                },
+                {
+                    "type": "message",
+                    "timestamp": "2026-08-10T10:05:00Z",
+                    "message": {"role": "user", "content": [{"type": "text", "text": text}]},
+                },
+                {
+                    "type": "message",
+                    "timestamp": "2026-08-10T10:06:00Z",
+                    "message": {
+                        "role": "assistant",
+                        "content": [
+                            {"type": "tool_use", "name": "Bash", "input": {"command": "grep needle"}},
+                            {"type": "tool_result", "content": "needle in tool output"},
+                        ],
                     },
                 },
             ],
@@ -172,6 +214,7 @@ class SearchAgentLogsTests(unittest.TestCase):
             "claude:claude-live",
             "claude:claude-archived",
             "codex:codex-session",
+            "droid:droid-session",
             "opencode:opencode-session",
             "pi:pi-session",
         ):
@@ -235,6 +278,94 @@ class SearchAgentLogsTests(unittest.TestCase):
         self.assertEqual(status, 0)
         self.assertIn("No matching sessions", stdout)
 
+    def test_droid_session_is_read_with_title_and_visible_messages(self):
+        status, stdout, _ = self.run_main(["--read", "droid:droid-session"])
+        self.assertEqual(status, 0)
+        self.assertIn("ref    : droid:droid-session", stdout)
+        self.assertIn("title  : Title droid-session", stdout)
+        self.assertIn(f"cwd    : {self.cwd}", stdout)
+        self.assertIn("needle droid", stdout)
+        self.assertEqual(stdout.count("[user/message]"), 1)
+
+    def test_kind_filter_separates_conversation_from_tool_traffic(self):
+        status, stdout, _ = self.run_main(
+            ["needle", "--droid", "--cwd", self.cwd, "--kind", "message", "--max-snippets", "9"]
+        )
+        self.assertEqual(status, 0)
+        self.assertIn("needle droid", stdout)
+        self.assertNotIn("needle in tool output", stdout)
+        status, stdout, _ = self.run_main(
+            ["needle", "--droid", "--cwd", self.cwd, "--kind", "tool", "--max-snippets", "9"]
+        )
+        self.assertEqual(status, 0)
+        self.assertIn("needle in tool output", stdout)
+        self.assertNotIn("[user/message] needle droid", stdout)
+
+    def test_score_ranks_conversation_above_tool_traffic(self):
+        status, stdout, _ = self.run_main(
+            ["needle", "--droid", "--cwd", self.cwd, "--format", "json"]
+        )
+        self.assertEqual(status, 0)
+        result = json.loads(stdout)["results"][0]
+        self.assertEqual(result["by_kind"], {"message": 1, "tool": 2})
+        self.assertEqual(result["score"], 3.0 * 1 + 1.0 * 2)
+
+    def test_json_search_output_carries_stable_fields(self):
+        status, stdout, _ = self.run_main(
+            ["needle", "--codex", "--cwd", self.cwd, "--format", "json"]
+        )
+        self.assertEqual(status, 0)
+        payload = json.loads(stdout)
+        self.assertEqual(payload["count"], 1)
+        self.assertEqual(payload["sort"], "score")
+        result = payload["results"][0]
+        self.assertEqual(result["ref"], "codex:codex-session")
+        self.assertEqual(result["cwd"], self.cwd)
+        self.assertEqual(result["branch"], "feature")
+        self.assertTrue(result["snippets"])
+
+    def test_read_mode_controls_transcript_density(self):
+        status, stdout, _ = self.run_main(["--read", "droid:droid-session", "--format", "json"])
+        self.assertEqual(status, 0)
+        lite = json.loads(stdout)
+        self.assertEqual(lite["mode"], "lite")
+        self.assertNotIn("needle in tool output", lite["body"])
+        status, stdout, _ = self.run_main(
+            ["--read", "droid:droid-session", "--mode", "log", "--format", "json"]
+        )
+        self.assertEqual(status, 0)
+        log = json.loads(stdout)
+        self.assertIn("needle in tool output", log["body"])
+        self.assertGreater(log["total_chars"], lite["total_chars"])
+
+    def test_read_truncates_with_a_resumable_offset(self):
+        status, stdout, _ = self.run_main(
+            ["--read", "droid:droid-session", "--format", "json", "--max-chars", "20"]
+        )
+        self.assertEqual(status, 0)
+        first = json.loads(stdout)
+        self.assertTrue(first["truncated"])
+        self.assertEqual(first["returned_chars"], 20)
+        self.assertEqual(first["next_offset"], 20)
+        status, stdout, _ = self.run_main(
+            [
+                "--read",
+                "droid:droid-session",
+                "--format",
+                "json",
+                "--offset",
+                str(first["next_offset"]),
+            ]
+        )
+        self.assertEqual(status, 0)
+        rest = json.loads(stdout)
+        self.assertFalse(rest["truncated"])
+        self.assertEqual(first["body"] + rest["body"], self.read_body("droid:droid-session"))
+
+    def read_body(self, ref: str) -> str:
+        _, stdout, _ = self.run_main(["--read", ref, "--format", "json"])
+        return json.loads(stdout)["body"]
+
     def test_read_renders_jsonl_and_opencode_sessions(self):
         status, stdout, _ = self.run_main(["--read", "codex:codex-session"])
         self.assertEqual(status, 0)
@@ -251,6 +382,7 @@ class SearchAgentLogsTests(unittest.TestCase):
             self.roots.claude_projects,
             self.roots.claude_archive,
             self.roots.codex_sessions.parent / "missing",
+            self.roots.droid_sessions,
             self.roots.opencode_db,
             self.roots.pi_sessions,
         )

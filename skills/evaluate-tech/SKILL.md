@@ -56,9 +56,21 @@ without another interview or confirmation.
 
 ### Step 3: Enumerate wide — do not evaluate yet
 
-Target **5-8 candidates** before any filtering. Resist narrowing early; the point of this step is coverage.
+Target **5-8 candidates** before any filtering — a floor, not a stopping condition. Resist narrowing early; the point of this step is coverage.
 
-Sources: registry search · ecosystem awesome-lists and curated directories · "alternatives to ⟨incumbent⟩" · what comparable projects depend on · the framework's own docs (an official/first-party option often exists) · `research-tech` in Product/Market mode if the space is unfamiliar. Pass nested research the settled brief and a focused factual question.
+**Run at least two independent modalities, one of which must be faceted registry search.** Prose search alone reliably misses tools whose name is short or generic and whose pitch is written in capability terms rather than product terms. The miss is silent: the field still comes back looking full.
+
+| Modality | How |
+|---|---|
+| **Faceted registry** (required) | `gh search repos "<term>" --topic <ecosystem-topic> --sort stars`; npm/PyPI/crates category browse. Facets surface what prose ranking buries. |
+| Prose / web search | Capability phrasing, then again in a competitor's sales vocabulary |
+| Curated lists | `awesome-*` and ecosystem directories — **if one appears in your results, open it**; it is a field someone else already enumerated by hand |
+| Incumbent-relative | "alternatives to ⟨incumbent⟩"; the incumbent's own README "similar projects" section |
+| Dependency-relative | What comparable projects depend on; the framework's own docs, where a first-party option often hides |
+
+`research-tech` in Product/Market mode if the space is unfamiliar. Pass nested research the settled brief and a focused factual question.
+
+**Write queries from the capability, not from your implementation.** Queries built out of the harnesses, formats, or APIs the current code handles return tools that describe themselves the way the current code does — the Step 2 anchoring failure, relocated into the search box where nothing checks for it.
 
 Always include these, explicitly, even if they lose:
 
@@ -66,6 +78,8 @@ Always include these, explicitly, even if they lose:
 - **Build it ourselves** — with a rough size estimate. Sometimes the honest answer for 80 lines of logic.
 - **Do nothing / defer** — is this needed now?
 - **At least one candidate that violates a soft constraint.** If every candidate fits current architecture perfectly, the search was anchored. Go back to Step 3.
+
+**Before leaving this step, answer one question in writing:** *which modality I ran would have found a tool with a short generic name and no product terms in its description?* If the honest answer is "none of them", enumeration is not finished, whatever the candidate count says.
 
 List candidates with a one-liner each. Do not research them yet — mixing enumeration with evaluation causes early anchoring on the first plausible option.
 
@@ -158,6 +172,8 @@ State confidence, and name anything that stayed unknown. "Could not determine wh
 **Cannot determine last release** — No GitHub releases does not mean no releases; check the registry (`references/criteria.md` has per-ecosystem commands) and tags. If neither resolves, mark UNKNOWN — never assume current.
 
 **An agent returns an unusable or empty report** — Re-dispatch that one candidate. Do not fill the gap from memory; training data is exactly the stale source this rubric exists to route around.
+
+**The field looks complete and the recommendation still gets blindsided** — a candidate arrives from outside the process and beats everything scored. The cause is almost always Step 3 run in a single modality: rigor downstream of thin enumeration produces confident, well-evidenced, incomplete answers, which are worse than obviously thin ones because they do not invite challenge. Re-run Step 3 under the two-modality rule before re-scoring anything; the per-candidate work already done stays valid.
 
 **Candidates are not comparable** — They solve different-sized problems. Return to Step 1: the job statement was too loose. Re-scope and re-enumerate.
 
