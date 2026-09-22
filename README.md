@@ -1,6 +1,6 @@
 # nlsmdn skills
 
-Opinionated agent skills for code review, research, and daily workflow. 43 skills, generated from
+Opinionated agent skills for code review, research, and daily workflow. 44 skills, generated from
 [nielsmadan/agentic-coding](https://github.com/nielsmadan/agentic-coding) — do not edit this repo
 directly, changes are overwritten.
 
@@ -55,6 +55,7 @@ Add `--skill <name>` to install one, or `--all` to cover every detected agent.
 | `review-architecture` | Review system architecture — layering, module boundaries, coupling/cohesion, pattern fit, quality attributes (scalability, resilience, evolvability), and architectural smells. Triggers "review architecture", "architecture review", "system design review", "check architecture". |
 | `review-cleancode` | Review code for clean-code principles — SOLID, DRY, YAGNI, KISS, code smells. Triggers "review clean code", "check DRY/SOLID", "code smells". |
 | `review-comments` | Review and clean up code comments for necessity, accuracy, non-duplication, clarity, and concise explanation of rationale. Use when comments may restate code, repeat a "why" already explained in the file, contain stale or vague claims, or need tightening before a PR. |
+| `review-functional` | Review code against pragmatic functional principles — effects pushed to the edges, no hidden shared state, no mutation of a caller's data, deterministic functions, declarative transforms. Deliberately non-dogmatic: currying, point-free style, recursion and monads are out of scope and are never findings. Triggers "review functional", "functional review", "check for side effects", "is this pure", "too much mutable state", "check global state". |
 | `review-history` | Analyze how code changed over time. Use when investigating regressions, understanding why code was written a certain way, or finding when a behavior changed. |
 | `review-interfaces` | Review interface design for functions, classes, modules, components — naming, params, encapsulation, YAGNI, usability. Triggers "review interfaces". |
 | `review-library-use` | Review code for correct use of the repo's third-party libraries — checks the scoped files against the version-specific conventions recorded in the repo's `library-use` reference (docs-derived correct-usage rules, API contracts, footguns). Catches stale-API usage, deprecated patterns, and doc-violating misuse a general reviewer misses. Auto-invoked by `code-review` when a `library-use` reference exists. Triggers "review library use", "check library usage", "are we using this library correctly", "library convention review". |

@@ -66,8 +66,14 @@ analysis and a recommendation** in the first round. Do not hand it back.
 
 ## Phase 1 — The interrogation
 
-Invoke `blind-spots` on the brief and run it to completion. Phase 0 already did the
-recon its step 2 calls for — do not repeat it.
+**Check the brief is one run first.** If it describes several independent subsystems,
+say so before interviewing: propose the decomposition and its order, and run longshot
+on the first piece. One run that plans three projects at once produces a plan whose
+shape nobody approved. The opposite failure is a brief too small to pay for the
+overhead — say so and offer `plan` (see Examples).
+
+Then invoke `blind-spots` on the brief and run it to completion. Phase 0 already did
+the recon its step 2 calls for — do not repeat it.
 
 **The user is still needed through planning and the final start gate.** The
 interrogation ends when every consequential decision is settled by existing
@@ -100,7 +106,18 @@ Never turn an unanswered question into a ruling to close the frontier.
 frontier and ask any dependent questions; it does not bypass the final start gate.
 When the frontier is empty, proceed to planning while remaining in preparation.
 
-## Phase 2 — Plan (auto-detect)
+## Phase 2 — Plan
+
+**Settle the approach before drafting tasks.** Where the settled decisions still leave
+a genuine fork in how the thing is built — the same requirements reachable two or
+three structurally different ways — present those options with their trade-offs, lead
+with your recommendation and the reason, and wait. `blind-spots` establishes what the
+work must do; this establishes the shape it takes, and a plan drafted before it is
+answered bakes in a choice the user never made. Cut each option to what the definition
+of done requires before presenting it. If there is no such fork, say so in one line
+and move on rather than inventing alternatives.
+
+Then draft or validate the plan itself:
 
 - **A plan doc exists** → read it, then validate it against the *current* repo state:
   which steps are already done, which paths moved, what the plan asserts that is no
@@ -111,6 +128,19 @@ When the frontier is empty, proceed to planning while remaining in preparation.
   over the draft and fold the findings in. Keep the draft in the conversation or
   planner output until approval; save it afterwards to
   `docs/plans/<YYYY-MM-DD>-<slug>.md`.
+
+**Review your own draft before the gate**, whether you wrote it or found it on disk:
+
+- **Placeholders** — a `TBD`, an empty section, a task whose verb has no object.
+- **Contradictions** — two tasks assuming different shapes of the same thing, or an
+  order in which a task needs output from a later one.
+- **Scope** — anything the definition of done does not require. Cut it and say what
+  you cut; an autonomous run builds whatever is on the list.
+- **Ambiguity** — a task an implementer could read two ways. It will be read by a
+  fresh subagent with none of this conversation, so pick a reading and write it down.
+
+Fix these inline; no second pass. A consequential choice the review exposes goes back
+to Phase 1.
 
 Longshot owns the final start gate; nested planning and review workflows must stay
 read-only and return here without implementing. Any new consequential decision

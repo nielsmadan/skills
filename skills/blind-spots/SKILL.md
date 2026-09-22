@@ -37,13 +37,31 @@ research which candidates support it.
 
 ### 3. Build the decision tree, then prune it
 
-Map the work as decisions, each branching into the decisions that hang off it. Pruning
-is what separates a useful round from an interrogation:
+**First, check the target is one piece of work.** A brief describing several
+independent subsystems needs splitting before it needs questions — refining the
+details of something that should be three projects spends a round on the wrong
+thing. Say so, propose the split and the order, and probe only the first piece.
+
+Then map the work as decisions, each branching into the decisions that hang off it.
+Sweep the categories below rather than working from intuition — a whole category is
+easier to miss than a question inside one:
+
+- **Building something** — purpose, constraints, success criteria; then the shape:
+  component boundaries and interfaces, where state lives and how data moves, failure
+  behaviour, and what counts as tested.
+- **Researching something** — purpose, population, region, timeframe, and the outcome
+  being compared. A request to learn about a topic need not serve an adoption decision.
+
+Most categories come back already settled, by the context or by a default nobody
+would argue with. The sweep exists to catch the ones that do not.
+
+Pruning is what separates a useful round from an interrogation:
 
 - **Keep** a decision that changes the work — different answers lead to different
   structure, interfaces, candidate pools, evidence to gather, or success criteria.
-  For research, this can mean purpose, population, region, timeframe, or the outcome
-  being compared. A request to learn about a topic need not serve an adoption decision.
+- **Cut** scope the brief carries that its stated purpose does not require, and ask
+  whether it is wanted instead of designing around it. Unrequested scope is a fork
+  the user cannot see, and the cheapest one to close.
 - **Drop** a decision that is cheap to reverse and constrains nothing downstream.
   Naming, log wording, which of two equivalent helpers to use: decide those yourself
   during the work.
