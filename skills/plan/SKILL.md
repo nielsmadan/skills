@@ -1,6 +1,6 @@
 ---
 name: plan
-description: Lightweight planning workflow — delegate read-only planning to a Fable subagent, then implement in auto mode after a single go-ahead gate. The middle tier between "just do it" (tiny tasks) and heavyweight superpowers planning (big features). Never enters plan mode, so it sidesteps the plan-mode permission prompts. Use when the user invokes /plan, or wants a plan for a medium-sized task before implementing.
+description: Lightweight planning workflow — delegate read-only planning to an Opus subagent, then implement in auto mode after a single go-ahead gate. The middle tier between "just do it" (tiny tasks) and heavyweight superpowers planning (big features). Never enters plan mode, so it sidesteps the plan-mode permission prompts. Use when the user invokes /plan, or wants a plan for a medium-sized task before implementing.
 argument-hint: '[--review] <task, or blank to infer from conversation>'
 effort: high
 ---
@@ -21,8 +21,8 @@ Two design choices make it work:
 - **Never enter plan mode / never call `ExitPlanMode`.** Everything runs in the
   session's normal (auto) mode. This is intentional: it avoids plan mode's read-only
   permission prompts entirely, and a subagent's own tool calls never prompt you.
-- **Fable plans, Opus implements.** A single read-only subagent pinned to the Fable
-  model does the exploring and drafts the plan; the main session implements it.
+- **A subagent plans, the main session implements.** A single read-only subagent
+  pinned to Opus does the exploring and drafts the plan; the main session implements it.
 
 The argument is the task. If blank, infer the task from the current conversation.
 
@@ -47,22 +47,19 @@ The argument is the task. If blank, infer the task from the current conversation
 Judge the task's size first.
 
 - **Trivial** (one-liner, obvious fix, rename, config flip): planning is overhead.
-  Say so in one line and offer to just do it directly — do not spend a Fable
+  Say so in one line and offer to just do it directly — do not spend a planning
   round-trip. Respect the user if they still want a plan.
 - **Too big** (multi-subsystem, architectural, multi-session): this is above the
   middle tier. Point at `superpowers:brainstorming` and stop.
 - **Middle** (a few files, a new endpoint/component, a contained refactor): proceed.
 
-### Step 2: Dispatch the Fable planning agent
+### Step 2: Dispatch the planning agent
 
 Dispatch **one** subagent via the `Agent` tool:
 - `subagent_type: Plan` — read-only by construction (no Edit/Write/NotebookEdit).
-- `model: fable`.
-- **Fallback:** if the dispatch fails because `fable` is unavailable, re-dispatch the
-  same `Plan` agent with **no** `model` override (inherits the session model). Say
-  once that you fell back off Fable.
+- `model: opus`.
 
-The `Plan` agent starts **fresh** (it is not a fork — forks can't be pinned to Fable),
+The `Plan` agent starts **fresh** (it is not a fork),
 so brief it fully. Its prompt MUST contain:
 - The task statement (from the argument or inferred from the conversation).
 - Relevant context from this conversation and pointers to the files/dirs to start from.
@@ -109,7 +106,7 @@ you from barreling into implementation.
 
 Once the user approves, implement the plan directly in the main session (auto mode),
 incorporating any answers they gave to the open questions. Do not enter plan mode and
-do not re-dispatch to Fable — the main (Opus) session does the implementation.
+do not re-dispatch to a subagent — the main session does the implementation.
 
 ## Notes
 

@@ -1,11 +1,55 @@
 # Longshot templates
 
-Subagent prompts, the ledger, and the handoff report. Fill the `{{...}}` slots; keep
+The plan format, subagent prompts, the ledger, and the handoff report. Fill the `{{...}}` slots; keep
 the fixed lines verbatim — each one is there because its absence broke a run.
+
+## Plan
+
+`docs/plans/<YYYY-MM-DD>-<slug>.md`. Each task is handed to a fresh subagent with
+none of the conversation, so everything it must honour is written here.
+
+```markdown
+# <Project> plan
+
+Brief: <one line>
+Definition of done: <what "complete" means, concretely>
+
+## Global Constraints
+- Writable: <repo path — role>; read-only: <repo path — role>
+- Decided: <each settled answer that constrains implementation, one line each>
+- Conventions: <TDD or not, formatter, lint, commit style, repo gotchas>
+- Check: <check command per repo>
+
+## Shared interfaces
+<Real code for every type, signature, wire format or file shape that more than one
+task touches — declarations only, no bodies.>
+
+## Tasks
+
+### Task 1 — <title>
+- [ ] done
+
+**Tier:** standard | design
+**Independent:** yes | no — needs Task <n>
+**Repo:** <path>
+**Files:** <path — what changes>
+**Do:** <what to build, in prose specific enough to allow one reading>
+**Tests:** <each test to write and what it asserts>
+**Accept when:** <observable criteria, including the check passing>
+**Out of scope:** <the adjacent work a reasonable agent would drift into>
+```
+
+**Tier** picks the implementer's model (see SKILL.md, Model per role). `design` is a
+task needing judgment across several files, a call on a shared interface's
+semantics, or broad codebase understanding; everything else is `standard`.
+
+**Independent: yes** only when the task neither needs another's output nor touches a
+file another pending task touches.
 
 ## Implementer
 
-Type: `general-purpose` (write-capable). One per task, always fresh.
+Type: `general-purpose` (write-capable). One per task, always fresh. Model from the
+task's `Tier`.
 
 ```
 You are implementing one task from an implementation plan. You have no prior
@@ -16,12 +60,11 @@ PLAN: {{absolute path to the plan doc}}
 TASK: {{task number and title}}
 
 Read the plan's section for this task and implement exactly it. The plan's Global
-Constraints section binds you.
+Constraints and Shared interfaces sections bind you; do not change a shared
+interface — if it cannot work as written, say so in your report.
 
-{{project conventions that matter here: TDD or not, commit style, formatter,
- lint command, test command, any repo-specific gotcha from AGENTS.md}}
-
-Out of scope: {{adjacent things a reasonable agent would drift into}}
+{{anything this task needs beyond the plan: a ruling made since, a gotcha found in
+ an earlier task}}
 
 Before you report back, run {{check command}} and paste its final summary line and
 exit code. Do not report success without it.
@@ -36,8 +79,10 @@ narration — the diff is the record and it is reviewed independently.
 
 ## Reviewer
 
-Type: `Explore` (read-only). Never give it the implementer's report — the point is an
-independent read of the diff.
+Type: `general-purpose`, told to modify nothing but its findings file. Not `Explore`:
+it skims excerpts to locate code rather than audit it, and cannot write a file. Model
+`sonnet`, `opus` for a `design` task or a risky diff. Never give it the implementer's
+report — the point is an independent read of the diff.
 
 ```
 Review one task's implementation against its plan. You have no prior context.
@@ -69,7 +114,8 @@ Do not dispatch sub-agents. Do not modify anything other than FINDINGS.
 
 ## Fixer
 
-Type: `general-purpose`. Give it the findings *path* and nothing else about the review.
+Type: `general-purpose`, model `sonnet` (`opus` in round 3). Give it the findings
+*path* and nothing else about the review.
 
 ```
 Fix the review findings recorded in {{absolute path to the findings file}}, in
@@ -89,7 +135,7 @@ open new topics.`
 ## Cross-repo contract reviewer
 
 Runs once in Phase 5 when a longshot touched more than one repo. This is the check no
-per-task reviewer can make.
+per-task reviewer can make. Type `general-purpose`, model `opus`.
 
 ```
 Two or more repos changed together and must agree at their boundary. You have no
@@ -164,6 +210,8 @@ A ruling that is later overturned by evidence is edited in place with a
 |---|---|---|---|
 | <name> | <path> | <branch> | <n>, <test count>, <lint state> |
 
+Plan harvested into <doc paths — what each received>; the plan was deleted.
+
 ## Two things only you can do
 1. **<blocked check>** — <one line on why>
    ```
@@ -175,7 +223,7 @@ A ruling that is later overturned by evidence is edited in place with a
 ## Rulings I made on your behalf
 **Scope:** <ruling — why — cost if wrong.> …
 **Design:** <ruling — why — cost if wrong.> …
-Full ledger: `<path>`
+Full ledger: `<path>` — deleted with the squash once you confirm it.
 
 ## Deferred questions
 <the ones worth an answer before the next round of work>

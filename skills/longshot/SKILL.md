@@ -1,6 +1,6 @@
 ---
 name: longshot
-description: Run a long autonomous build session from a brief — interview the user with `blind-spots`, prepare the plan, and wait for explicit final approval to start implementation. Only then decide later ambiguities as recorded rulings and execute without check-ins. Per task a fresh implementer subagent, an independent spec+quality reviewer, a fix loop, then a whole-branch review and a handoff report with rulings, deferred questions and a squash proposal. Use when the user says "longshot", "work on this independently", "run with this", "ask me everything up front then go", "I'll be away", or hands over a multi-hour feature or package to build end to end. Do NOT use for a single small change — use `plan` for that.
+description: Run a long autonomous build session from a brief — interview the user with `blind-spots`, prepare the plan, and wait for explicit final approval to start implementation. Only then decide later ambiguities as recorded rulings and execute without check-ins. Per task a fresh implementer subagent, an independent spec+quality reviewer, a fix loop, then a whole-branch review, the plan harvested into the repo's docs and deleted, and a handoff report with rulings, deferred questions and a squash proposal. Use when the user says "longshot", "work on this independently", "run with this", "ask me everything up front then go", "I'll be away", or hands over a multi-hour feature or package to build end to end. Do NOT use for a single small change — use `plan` for that.
 argument-hint: '[--plan FILE] [--no-worktree] [--repos a,b] (brief, or blank to take it from the conversation)'
 effort: high
 ---
@@ -117,17 +117,22 @@ answered bakes in a choice the user never made. Cut each option to what the defi
 of done requires before presenting it. If there is no such fork, say so in one line
 and move on rather than inventing alternatives.
 
-Then draft or validate the plan itself:
+Then draft or validate the plan itself, in the **plan format** in
+`references/prompts.md`. Every task goes to a fresh subagent that has none of this
+conversation, so the plan is its whole brief: Global Constraints carrying the settled
+decisions, real code for the interfaces tasks share, and per task the files, tests,
+acceptance criteria, a model tier and an independence marker. Function bodies stay
+prose — writing them here does the implementation twice, on the most expensive model.
 
 - **A plan doc exists** → read it, then validate it against the *current* repo state:
   which steps are already done, which paths moved, what the plan asserts that is no
-  longer true. Fold factual drift into the draft; ask about consequential choices
-  the drift exposes before seeking start approval.
-- **No plan doc** → draft one now with checkbox tasks. Use only `plan`'s read-only
-  planning step for a moderate scope; for a large one run `review-plan` (multi-agent)
-  over the draft and fold the findings in. Keep the draft in the conversation or
-  planner output until approval; save it afterwards to
-  `docs/plans/<YYYY-MM-DD>-<slug>.md`.
+  longer true. Fold factual drift into the draft and bring it to the plan format;
+  ask about consequential choices the drift exposes before seeking start approval.
+- **No plan doc** → draft one now. Use only `plan`'s read-only planning step for the
+  exploration on a moderate scope, then recast its output into the plan format; for a
+  large one run `review-plan` (multi-agent) over the draft and fold the findings in.
+  Keep the draft in the conversation or planner output until approval; save it
+  afterwards to `docs/plans/<YYYY-MM-DD>-<slug>.md`.
 
 **Review your own draft before the gate**, whether you wrote it or found it on disk:
 
@@ -138,6 +143,8 @@ Then draft or validate the plan itself:
   you cut; an autonomous run builds whatever is on the list.
 - **Ambiguity** — a task an implementer could read two ways. It will be read by a
   fresh subagent with none of this conversation, so pick a reading and write it down.
+- **Missing brief** — no Global Constraints, a shared type described in prose, or a
+  task without its tier, independence marker, tests or acceptance criteria.
 
 Fix these inline; no second pass. A consequential choice the review exposes goes back
 to Phase 1.
@@ -195,11 +202,13 @@ is the skill's own and needs no further dispatch approval; do not widen it.
    prompt from scratch — it inherits nothing. It must carry the literal line
    *"Do not dispatch sub-agents; do this work yourself."* Template in
    `references/prompts.md`.
-2. **Review.** One read-only subagent (`Explore`), which has not seen the
-   implementer's reasoning, checks the diff against that task's plan section on
-   **both** spec compliance and code quality. It writes its findings to
-   `$RUN/review-task-<n>.md` and returns only the path, a count and the severities.
-   The findings themselves never enter this session's context.
+2. **Review.** One fresh `general-purpose` subagent that has not seen the
+   implementer's reasoning checks the diff against that task's plan section on
+   **both** spec compliance and code quality. It modifies nothing but its findings
+   file — not `Explore`, which skims excerpts to locate code rather than audit it,
+   and cannot write a file. It writes its findings to `$RUN/review-task-<n>.md` and
+   returns only the path, a count and the severities. The findings themselves never
+   enter this session's context.
 3. **Fix loop.** Hand the fixer the findings *path*, not the findings — passing the
    text through here bills it twice. Then re-review, scoped to those fixes only.
    **Two rounds by default**, a third only if round 2 actually closed findings; then
@@ -227,6 +236,25 @@ different worktrees — max 3 at once, still one implementer each.
 suite) is compile-verified as far as possible, recorded, and carried to the handoff's
 "only you can do" list. It is not a reason to stop.
 
+### Model per role
+
+Pass `model` on every dispatch. An omitted one inherits the session model — usually
+the most expensive — and that silently puts routine implementation on the top tier.
+The names are Claude Code's; on another harness use its equivalent tier.
+
+| Role | Model |
+|---|---|
+| Implementer, `Tier: standard` | `sonnet` |
+| Implementer, `Tier: design` | `opus` |
+| Reviewer | `sonnet`; `opus` for a `design` task, or a diff touching concurrency, security, a persisted format or a repo boundary |
+| Scoped re-review | `sonnet` |
+| Fixer | `sonnet`; `opus` in round 3 |
+| Phase 5 contract reviewer and fix wave | `opus` — `code-review` picks its own models |
+
+`haiku` is left out on purpose: working from prose over several steps it takes more
+turns than it saves in price. The tier comes from the approved plan, not from a
+judgment made mid-run.
+
 ### Milestone pings
 
 After each task's verify, exactly one line. No question, no invitation to respond:
@@ -248,11 +276,27 @@ findings go to `$RUN/review-branch.md` and `$RUN/review-contract.md`, the fix wa
 gets the path, and this session reads the count and the severities. Pull a finding
 into context only when you need to rule on it.
 
-## Phase 6 — Handoff
+## Phase 6 — Harvest and handoff
 
-One report. Template in `references/prompts.md`. It must contain:
+**Harvest the plan into the docs, then delete it.** A dated plan is stale the day
+the work lands, and whoever reads the repo next will not find it. Move what is still
+true and still useful into the repo's canonical docs — architecture or design docs,
+README, `AGENTS.md`, wherever the repo keeps such things (`doc --session` if it has a
+doc set): the design decisions and why they were made, the shared interfaces as
+built, and any constraint on future work. Leave behind the task list, the
+checkboxes and anything the code now says. Then delete the plan the run saved and
+commit both. A plan the user supplied was theirs before the run — harvest it the
+same way but propose its deletion in the handoff rather than doing it.
+
+The ledger stays until the user has read the handoff: it is the record of what was
+decided on their behalf. Its rulings that constrain future work are harvested now;
+the file itself is deleted once the user confirms the squash, and folds into it.
+Remove `$RUN` at the same time.
+
+Then one report. Template in `references/prompts.md`. It must contain:
 
 - **What exists, where** — a repo / path / branch / commit-count table.
+- **Where the plan went** — which docs received what, and that the plan was deleted.
 - **Only you can do** — each blocked check with the exact command to run.
 - **Rulings** — the ledger, grouped scope vs. design, each as
   decision — why — cost if wrong.
@@ -330,9 +374,10 @@ ruling. A conflict between the plan and the spec is a ruling — the spec wins.
 
 **Cause:** the reviewer inherited the implementer's framing, or you accepted a
 subagent's word for a green suite.
-**Solution:** the reviewer must be a fresh read-only agent given the diff and the
-plan section, never the implementer's report. And run the check command yourself in
-Phase 4 step 4 — that step is not delegable.
+**Solution:** the reviewer must be a fresh agent given the diff and the plan
+section, never the implementer's report, running on at least `sonnet` — an
+undeclared model or an `Explore` agent can quietly downgrade the gate. And run the
+check command yourself in Phase 4 step 4 — that step is not delegable.
 
 ### Context runs out mid-run
 

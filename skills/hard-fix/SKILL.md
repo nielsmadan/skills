@@ -89,15 +89,14 @@ Launch ALL of these simultaneously using the Task tool:
 
 For detailed agent prompt templates, see `references/templates.md`.
 
-### Phase 3: Synthesize Findings (Fable)
+### Phase 3: Synthesize Findings (Opus)
 
-Wait for all Phase 2 agents. This synthesis is the reasoning crux of the whole workflow, so it runs on the most capable model rather than inline: dispatch **one** read-only subagent to produce the root-cause theory.
+Wait for all Phase 2 agents. This synthesis is the reasoning crux of the whole workflow, so it runs in a fresh subagent pinned to Opus rather than inline: dispatch **one** read-only subagent to produce the root-cause theory.
 
 - `subagent_type: Plan` — read-only by construction (no Edit/Write/NotebookEdit), retains Read/Grep/Glob for confirming evidence against real files.
-- `model: fable`.
-- **Fallback:** if the dispatch fails because `fable` is unavailable, re-dispatch the same `Plan` agent with **no** `model` override (inherits the session model). Say once that you fell back off Fable.
+- `model: opus`.
 
-The `Plan` agent starts **fresh** (not a fork — forks can't be pinned to Fable), so its prompt MUST contain:
+The `Plan` agent starts **fresh** (not a fork), so its prompt MUST contain:
 - The problem statement and everything Phase 1 established.
 - The **full findings from all five Phase 2 agents** (research, debug-log traces, git history, library source, second-opinion) — paste them in; the subagent cannot see your context.
 - Pointers to the specific files / line ranges the theory will hinge on.
