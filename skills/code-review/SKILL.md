@@ -1,7 +1,7 @@
 ---
 name: code-review
 description: Clean up code comments, then review code with comprehensive and quick modes. Use when reviewing code changes, PRs, or specific files for quality, bugs, and best practices.
-argument-hint: '[target] [--quick] [--logic] [--architecture] [--security] [--performance] [--history] [--test] [--interface] [--clean-code] [--typescript] [--project] [--library-use] [--staged] [--unpushed] [--all] [--changed] [--multi] [--rereview]'
+argument-hint: '[target] [--quick] [--logic] [--architecture] [--security] [--performance] [--history] [--test] [--interface] [--clean-code] [--functional] [--typescript] [--project] [--library-use] [--staged] [--unpushed] [--all] [--changed] [--multi] [--rereview]'
 effort: high
 ---
 
@@ -23,10 +23,11 @@ Flag parsing, scope resolution, and comment cleanup (Steps 1–3b.6) need neithe
 ## Usage
 
 ```
-/code-review                          # Comment cleanup + all 8 review aspects, default scope
+/code-review                          # Comment cleanup + all 9 review aspects, default scope
 /code-review --quick                  # One integrated review pass, no scorer-agent round
-/code-review <target>                 # Comment cleanup + all 8 aspects, scoped to target
+/code-review <target>                 # Comment cleanup + all 9 aspects, scoped to target
 /code-review --architecture           # Architecture only
+/code-review --functional             # Functional principles only
 /code-review --security --performance # Two aspects
 /code-review --logic src/auth/        # One aspect, scoped to target
 /code-review --typescript             # TypeScript-specific review only
@@ -56,7 +57,7 @@ Every mode first runs `review-comments --fix` over the resolved scope. Comment c
 
 ## Aspect Selection
 
-Aspect flags let you run a subset of the review agents instead of all 8. Flags are additive — pass as many as you want. Comment quality is absent from this list because its fix pass always runs before the selected review.
+Aspect flags let you run a subset of the review agents instead of all 9. Flags are additive — pass as many as you want. Comment quality is absent from this list because its fix pass always runs before the selected review.
 
 | Flag | Maps to |
 |------|---------|
@@ -68,6 +69,7 @@ Aspect flags let you run a subset of the review agents instead of all 8. Flags a
 | `--test` | Agent 5: Test Quality (delegates to `/test --review`) |
 | `--interface` | Agent 6: Interface Design (delegates to `/review-interfaces`) |
 | `--clean-code` | Agent 7: Clean Code (delegates to `/review-cleancode`) |
+| `--functional` | Agent 7b: Functional Review (delegates to `/review-functional`) |
 
 Two further aspects are **conditional add-ons** — in the default (no-aspect-flag) run they are included automatically when they apply; with explicit aspect flags they run only if their own flag is passed (see Step 3b.5 for detection):
 
@@ -79,7 +81,7 @@ Two further aspects are **conditional add-ons** — in the default (no-aspect-fl
 | `--library-use` | Agent 10: Library-Use Review — delegates to `review-library-use` (checks code against the repo's `library-use` conventions). Auto-included when the repo has a `library-use` reference. |
 
 **Aspect rules:**
-- In comprehensive mode, no aspect flags → run all 8 core agents, **plus** any detected language review, the project review, and the library-use review if present.
+- In comprehensive mode, no aspect flags → run all 9 core agents, **plus** any detected language review, the project review, and the library-use review if present.
 - One or more aspect flags → run only those agents, skip the rest. The conditional add-ons run only if `--typescript` / `--cli` / `--project` / `--library-use` (or another `--<language>`) is among the flags.
 - `--quick` is a complete preset and cannot be combined with aspect flags.
 - `--multi` composes with any aspect selection.
@@ -125,11 +127,11 @@ Search for and identify all files related to "$ARGUMENTS". Use Glob and Grep to 
 
 If the removed `--comments` aspect flag is passed, abort with `Comment cleanup now runs automatically before every code review. Use review-comments directly for a standalone comment report.`
 
-Strip aspect flags (`--logic`, `--architecture`, `--security`, `--performance`, `--history`, `--test`, `--interface`, `--clean-code`, `--typescript`, `--project`, `--library-use`), scope flags (`--staged`, `--unpushed`, `--all`, `--changed`), `--quick`, `--multi`, and `--rereview` from `$ARGUMENTS`. The remainder is the review target.
+Strip aspect flags (`--logic`, `--architecture`, `--security`, `--performance`, `--history`, `--test`, `--interface`, `--clean-code`, `--functional`, `--typescript`, `--project`, `--library-use`), scope flags (`--staged`, `--unpushed`, `--all`, `--changed`), `--quick`, `--multi`, and `--rereview` from `$ARGUMENTS`. The remainder is the review target.
 
 If `--quick` appears with any aspect flag or with `--multi`, abort with `--quick is a complete review preset; remove the aspect flags or --multi.` It may compose with a target, one scope flag, and `--rereview`.
 
-In comprehensive mode, if any aspect flags are present, launch ONLY the corresponding agents (including the conditional add-ons only when a `--<language>`/`--cli`/`--project`/`--library-use` flag is passed). Otherwise launch all 8 core agents plus whatever Step 3b.5 detects. In quick mode, follow the single-reviewer branch in Step 3c.
+In comprehensive mode, if any aspect flags are present, launch ONLY the corresponding agents (including the conditional add-ons only when a `--<language>`/`--cli`/`--project`/`--library-use` flag is passed). Otherwise launch all 9 core agents plus whatever Step 3b.5 detects. In quick mode, follow the single-reviewer branch in Step 3c.
 
 ### 3b. Resolve scope
 
@@ -244,7 +246,7 @@ Each agent should output a list of issues. For each issue, include: what the pro
 | `all` | `--all` |
 | target given | the target itself (e.g. `src/auth/`) |
 
-All delegated review sub-skills (`review-architecture`, `review-security`, `review-perf`, `review-interfaces`, `review-cleancode`, `review-typescript`, `test --review`) accept `--staged | --unpushed | --changed | --all`. No special-casing needed. The project's `review-project` skill is expected to accept the same scope flags — if it doesn't, pass it the target/file list instead.
+All delegated review sub-skills (`review-architecture`, `review-security`, `review-perf`, `review-interfaces`, `review-cleancode`, `review-functional`, `review-typescript`, `test --review`) accept `--staged | --unpushed | --changed | --all`. No special-casing needed. The project's `review-project` skill is expected to accept the same scope flags — if it doesn't, pass it the target/file list instead.
 
 Inline agents (no delegation) work directly against the file list computed in step 3b.
 
@@ -305,10 +307,10 @@ Without `--rereview`, Step 6 ends the run after fixes are applied — the user m
 
 ## Examples
 
-**Clean comments, then review the default scope with all 8 agents:**
+**Clean comments, then review the default scope with all 9 agents:**
 > /code-review
 
-Runs `review-comments --fix`, then 8 parallel review agents (bug/logic, architecture, security, performance, historical context, test quality, interface design, clean code) against staged changes (or unstaged changes if nothing is staged). Comment cleanup is summarized separately; review findings are prioritized by severity.
+Runs `review-comments --fix`, then 9 parallel review agents (bug/logic, architecture, security, performance, historical context, test quality, interface design, clean code, functional principles) against staged changes (or unstaged changes if nothing is staged). Comment cleanup is summarized separately; review findings are prioritized by severity.
 
 **Quick review of a routine small change:**
 > /code-review --quick
@@ -323,12 +325,12 @@ Runs only the architecture & patterns agent. Use this when you already know whic
 **Whole-repo review:**
 > /code-review --all
 
-Runs comment cleanup and all 8 agents against every file in the repo (`git ls-files`). Use this for a fresh audit of an unfamiliar project, before a major release, or when nothing in the working tree is changed. Composes with aspect flags and `--multi`, e.g. `/code-review --all --architecture --multi`.
+Runs comment cleanup and all 9 agents against every file in the repo (`git ls-files`). Use this for a fresh audit of an unfamiliar project, before a major release, or when nothing in the working tree is changed. Composes with aspect flags and `--multi`, e.g. `/code-review --all --architecture --multi`.
 
 **Cross-model consensus review:**
 > /code-review --multi
 
-Runs the same 8 review agents plus external reviews from every advisor `second-opinion` has configured, after comment cleanup. The output includes a cross-model agreement section highlighting issues where the internal agents and external advisors converge, giving higher confidence to consensus findings. `--multi` composes with aspect and scope flags, e.g. `/code-review --multi --architecture` or `/code-review --all --multi`.
+Runs the same 9 review agents plus external reviews from every advisor `second-opinion` has configured, after comment cleanup. The output includes a cross-model agreement section highlighting issues where the internal agents and external advisors converge, giving higher confidence to consensus findings. `--multi` composes with aspect and scope flags, e.g. `/code-review --multi --architecture` or `/code-review --all --multi`.
 
 **Review, fix, then re-review automatically:**
 > /code-review --rereview

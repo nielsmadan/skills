@@ -63,6 +63,13 @@ Invoke `review-cleancode` with the scope-translated arguments.
 - Identify code smells (god classes, long methods, feature envy, primitive obsession, shotgun surgery)
 - Check design principles (Law of Demeter, separation of concerns, composition over inheritance)
 
+## Agent 7b: Functional Review (`--functional`)
+Read `review-functional` and apply its checklist to the resolved scope or file list. Do this work yourself; do not dispatch sub-agents or launch other agent CLIs.
+- Check effect placement, hidden shared state, mutation of caller-owned data, and determinism
+- Check whether transformations are expressed directly and queries hide side effects
+- Apply the skill's exclusions for local mutation, I/O entry points, language idioms, and justified hot-path mutation
+- Exclude currying, point-free style, recursion, and monads
+
 ## Agent 8: Language Review (`--typescript` / other `--<language>`) — conditional
 Only if Step 3b.5 detected a language (or the flag was passed explicitly). For each applicable language, invoke its `review-<language>` skill with the scope-translated arguments.
 - TypeScript → `review-typescript`: judgment-level type design a linter can't decide — type modeling (make invalid states unrepresentable, unions of interfaces, outputs no wider than needed), inference-vs-annotation calls, and casts/`any` that compile but hide a wrong upstream type or unvalidated boundary data. Deliberately non-overlapping with typescript-eslint.
@@ -78,7 +85,7 @@ Only if Step 3b.5 found a `library-use` reference in the repo (or the flag was p
 
 ## The extensible layer (how 8, 9 and 10 plug in)
 
-Language reviews and the project review sit on top of the 8 language-agnostic aspects:
+Language reviews and the project review sit on top of the 9 language-agnostic aspects:
 
 - **Language reviews** live globally in `claude/skills/review-<language>/`. They hold checks that apply to *every* project in that language. To add a new language, create a `review-<language>` skill and add a row to the detection registry in Step 3b.5 — `code-review` will auto-route to it. Nothing else to wire.
 - **The project review** is a skill the *project* defines at `.claude/skills/review-project/` for issues unique to that one codebase (conventions, gotchas, house rules that don't generalize). `code-review` calls it only when it exists — projects without one are unaffected. Minimal shape:

@@ -31,8 +31,9 @@ is recoverable from the branch reflog after the verified ref move.
 ## Hard rules
 
 - **Never rewrite pushed commits.** Only squash commits not present on any remote.
-- **Never reorder commits.** Groups are contiguous runs in original order. Reordering
-  risks conflicts and changes intent.
+- **Never reorder commits.** Groups are contiguous runs in original order. Each new
+  commit is the snapshot at its group's last commit, so a non-contiguous group would
+  silently absorb every commit between its members.
 - **The final tree must be byte-identical** to the original tip before the branch is
   moved. Squashing changes *history*, never *content*. Verify this and abort if it differs.
 - **Require a clean working tree.** If there are uncommitted changes, stop without
@@ -145,62 +146,57 @@ Do not create anything. Keep the recorded `ORIG_TIP`: the original branch still 
 there until Step 7, and the branch reflog records that tip when the ref moves. This gives
 the user an undo point without a backup tag, branch, stash, or temporary file.
 
-### Step 6: Rebuild the history (detached HEAD + merge --squash)
+### Step 6: Rebuild the history (commit-tree)
 
 Determine each group's **tip** = the newest (last) original commit in that group, in order.
-Then rebuild on a detached HEAD starting from `BASE`:
+The last group's tip must be `ORIG_TIP`.
+
+Build one new commit per group directly from its tip's tree, oldest group first. Each
+command prints the new commit's SHA, which is the parent of the next:
 
 ```bash
-git checkout --detach <BASE>
-# For each group, in original order, with its tip SHA and subject:
-git merge --squash <group1_tip>
-git commit -m '<group1-subject>'
-git merge --squash <group2_tip>
-git commit -m '<group2-subject>'
-# ...one merge --squash + commit pair per group
+git commit-tree '<group1_tip>^{tree}' -p <BASE> -m '<group1-subject>'   # prints N1
+git commit-tree '<group2_tip>^{tree}' -p <N1> -m '<group2-subject>'     # prints N2
+# ...one command per group; the last SHA printed is NEWTIP
 ```
 
-`git merge --squash <tip>` stages the cumulative diff from the current HEAD up to `<tip>`
-— i.e. exactly that group's changes — without committing. Then commit it with the new
-message. Because the history is linear and groups are contiguous and in order, this never
-conflicts.
+Each new commit is exactly the snapshot at its group's tip, so nothing is merged and
+nothing can conflict. Do **not** use `git merge --squash` for this: a squash merge records
+no parent, so every group after the first merges against `BASE` and conflicts wherever it
+edits lines an earlier group touched.
 
-Pass each approved subject as a single `git commit -m` argument. Do not create commit
-message files.
+`commit-tree` touches no working tree, index, HEAD or ref; the new commits stay
+unreferenced until Step 7. If a command fails, fix it and re-run from that group — there
+is nothing to clean up.
 
-Save `NEWTIP = git rev-parse HEAD`.
+Run one command per group with literal SHAs, copying each printed SHA into the next
+command. Do not drive the rebuild or the checks below with a shell loop, array, or
+word-split variable: zsh does not split unquoted variables, so a list of pairs arrives as
+one argument.
 
-If any merge or commit fails, abort the rebuild, return to `BRANCH`, and report the
-failure. Since the precondition required a clean tree, remove only the rebuild's pending
-index/worktree changes before returning:
-```bash
-git reset --merge HEAD
-git checkout <BRANCH>
-git status --short         # should be clean
-```
-The original branch is still untouched. Do not use a stash or leave the user detached.
+`commit-tree` runs no commit hooks. The content already passed them, but a `commit-msg`
+hook enforcing a message format does not run, so each subject must follow the commit
+policy on its own.
 
 ### Step 7: Verify, then move the branch
 
 **Verify the content is identical** before touching the branch:
 ```bash
-git diff <ORIG_TIP> <NEWTIP> --stat
+git rev-parse '<ORIG_TIP>^{tree}' '<NEWTIP>^{tree}'   # MUST print the same hash twice
+git log --oneline <BASE>..<NEWTIP>                     # MUST show exactly the planned subjects
 ```
-This **must be empty**. If it shows anything, the rebuild changed content — abort without
-moving the branch:
-```bash
-git checkout <BRANCH>      # discards the detached rebuild; original branch untouched
-```
-Report what diverged. Do **not** proceed.
+If the tree hashes differ, the last group's tip was not `ORIG_TIP` — do **not** move the
+branch. Report what diverged; the branch is untouched and nothing needs cleaning up.
 
-If the diff is empty, point the branch at the rebuilt history:
+If both checks pass, point the branch at the rebuilt history:
 ```bash
-git checkout <BRANCH>
-git reset --soft <NEWTIP>
+git update-ref -m 'squash-commits: <N> → <M> commits' refs/heads/<BRANCH> <NEWTIP> <ORIG_TIP>
 git status --short         # should be clean
 ```
-`reset --soft` moves the branch ref to `NEWTIP` while leaving the working tree (already
-identical) untouched — so status is clean.
+`update-ref` with the old value moves the branch only if it still points at `ORIG_TIP`. If
+it moved since Step 2 (a new commit, a pull), it fails with `cannot lock ref … expected
+<ORIG_TIP>` and changes nothing — stop and re-plan from Step 2. The working tree and index
+already match `NEWTIP`'s tree, so status stays clean.
 
 ### Step 8: Report
 
@@ -233,10 +229,10 @@ do not expire reflogs or run GC as part of this skill.
 Auto-detects 6 unpushed commits via `git rev-list HEAD --not --remotes`. Reading them
 shows two features: an export button (impl + 2 fixups + a test) and an unrelated config
 tweak. Proposes Group 1 → `feat: add CSV export button` (5 commits) and Group 2 →
-`chore: bump lint config` (1 commit, kept as-is). After confirmation, rebuilds on a
-detached HEAD with two `merge --squash` + commit steps, verifies the tree is identical,
-and `reset --soft`s `main` onto the result — 6 commits become 2 with the original tip
-retained only in the reflog.
+`chore: bump lint config` (1 commit, kept as-is). After confirmation, builds two commits
+with `git commit-tree` from the two group tips' trees, verifies the final tree matches the
+original tip, and `update-ref`s `main` onto the result — 6 commits become 2 with the
+original tip retained only in the reflog.
 
 ### Example 2: conservative, only fold fixups
 
@@ -269,13 +265,19 @@ range walks back to the root commit.
 **Solution:** Pass an explicit base ref (e.g. `/squash-commits main` or a SHA) bounding
 the commits you want to squash.
 
-### Verify step shows a non-empty diff
+### Verify step shows different tree hashes
 
-**Cause:** Something in the rebuild changed final content (very unusual on linear history —
-possibly a merge commit slipped into the range, or a group tip was misidentified).
-**Solution:** Abort immediately — `git checkout <BRANCH>` (the branch ref was never moved,
-so history is intact). Re-examine the range with `git log --stat BASE..HEAD`, exclude any
-merge commits, and re-run. Never move the branch when the diff is non-empty.
+**Cause:** The last `commit-tree` did not use `ORIG_TIP`'s tree — a group tip was
+misidentified, or the plan dropped the newest commit.
+**Solution:** Do not move the branch; it was never touched, so there is nothing to undo.
+Re-check each group's tip against `git log --reverse --format='%h %s' BASE..HEAD` and
+rebuild from Step 6.
+
+### `update-ref` fails with "cannot lock ref"
+
+**Cause:** The branch no longer points at `ORIG_TIP` — a commit landed or the branch was
+reset after the range was read.
+**Solution:** Nothing changed. Re-run from Step 2 so the plan covers the current tip.
 
 ### Range contains merge commits
 
