@@ -124,13 +124,50 @@ operation, so complete it yourself:
    | Autostash re-apply | nothing to run — the `git add` is the completion (rebase already finished — never `git rebase --continue` here) |
    | Manual / committed | nothing to run — the `git add` is the completion |
 
+### Step 6: Loop Until the Operation Finishes
+
+A rebase, or a cherry-pick or revert of a range, replays commits one at a time,
+and **any later commit can stop on its own conflict**. When that happens the
+continue command exits non-zero and prints `CONFLICT (...)` and
+`could not apply <sha>...`. This is a normal stop, not a failure. The user asked
+for the whole operation to be finished, so keep going:
+
+1. After every continue command, check the state again:
+   ```bash
+   git status; echo "=== UNMERGED ==="; git diff --name-only --diff-filter=U
+   ```
+2. **Sentinel gone** (no `rebase-merge/`, `rebase-apply/`, `CHERRY_PICK_HEAD`,
+   `REVERT_HEAD`) → the operation is done. Go to the output.
+3. **Still in progress with unmerged paths from a new commit** → go back to
+   Step 2 and resolve this round. Check which commit is being replayed now
+   (`git show --stat REBASE_HEAD`, or `CHERRY_PICK_HEAD` / `REVERT_HEAD`). Each
+   round has a different "theirs", so work out its intent again before you
+   resolve anything. For a rebase, `git status` shows progress
+   ("Last commands done" / "Next commands to do").
+4. Repeat until step 2 applies. Do not stop to ask between rounds unless a
+   round needs a decision you can't make (see guardrails).
+
+**Empty after resolution:** sometimes your resolution leaves the replayed commit
+with no changes, because its change is already upstream. A default
+(`rebase-merge/`) rebase drops that commit on its own and keeps going. Cherry-pick
+and revert stop with "The previous cherry-pick is now empty", and a
+`rebase-apply/` rebase stops with "No changes". Once `git diff --cached HEAD` is
+confirmed empty, run `git cherry-pick --skip` / `git revert --skip` /
+`git rebase --skip` and continue the loop. A commit that still has changes must
+never be skipped.
+
 **Guardrails — do not run these automatically:**
 - **Aborts** (`git merge/rebase/cherry-pick/revert --abort`) discard work. If
   resolution isn't viable, stop and tell the user the abort command to run.
 - **`git reset --hard`** (the stash abort path) discards work and nothing blocks
   it — the user must run it themselves.
-- If a continue command fails (remaining unmerged paths, a rejected pre-commit
-  hook, etc.), surface the error and stop. Do not force it through.
+- If a continue command fails for any reason other than a new conflict stop or
+  an empty commit, surface the error and stop. Examples: the *same* files are
+  still unmerged, a pre-commit hook rejected the commit, or a rebase `exec` step
+  failed. Do not force it through.
+- If a later round's conflict is genuinely ambiguous (you can't tell which
+  side's intent should win), stop mid-operation and report which commit it is
+  and the options. Leave the operation in progress for the user.
 
 ## Output Format
 
@@ -147,9 +184,13 @@ operation, so complete it yourself:
 |------|------|------------|
 | {path} | UU | {simple/moderate/complex} |
 
+### Rounds (one per stop; a single row for merge/stash)
+| # | Replayed commit | Files resolved | Result |
+|---|-----------------|----------------|--------|
+| 1 | {sha} {subject} | {paths} | {continued / next conflict / skipped empty / finished} |
+
 ### Completion
-- Staged: {resolved files}
-- Ran: `{continue_command}` → {result}
+- Final state: {operation finished | stopped at round N: reason}
 
 If resolution wasn't viable, abort manually:
 - `{abort_command}`
@@ -165,7 +206,7 @@ Detects a merge operation, reads the conflict markers in the session file, and d
 **Rebase conflict with inverted ours/theirs:**
 > /resolve-conflicts
 
-Detects a rebase operation and reminds that ours/theirs semantics are inverted during rebase. Walks through each conflicted file, explains what the rebased commit intended versus the target branch state, resolves the conflicts in the files, stages them, and runs `git add` + `GIT_EDITOR=true git rebase --continue` to finish.
+Detects a rebase operation and reminds that ours/theirs semantics are inverted during rebase. Walks through each conflicted file, explains what the rebased commit intended versus the target branch state, resolves the conflicts in the files, stages them, and runs `GIT_EDITOR=true git rebase --continue`. When the next commit stops on its own conflict (`could not apply <sha>`), it resolves that round the same way and keeps going until the rebase finishes. It then reports every round.
 
 **Autostash re-apply conflict after `git pull --rebase`:**
 > /resolve-conflicts
