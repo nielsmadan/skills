@@ -73,7 +73,8 @@ Do not dispatch sub-agents; do this work yourself.
 Do not commit. Do not push. Do not touch any repo other than the one above.
 
 Report in 15 lines or fewer: the outcome, the check command's summary line and exit
-code, and anything the plan got wrong that you had to work around. No file-by-file
+code, anything the plan got wrong that you had to work around, and anything you
+could not run or confirm, with where you looked. No file-by-file
 narration — the diff is the record and it is reviewed independently.
 ```
 
@@ -206,27 +207,26 @@ A ruling that is later overturned by evidence is edited in place with a
 
 <One sentence: what state everything is in.>
 
-| Repo | Where | Branch | Commits |
-|---|---|---|---|
-| <name> | <path> | <branch> | <n>, <test count>, <lint state> |
-
-Plan harvested into <doc paths — what each received>; the plan was deleted.
-
-## Two things only you can do
+## Blocked on you
 1. **<blocked check>** — <one line on why>
    ```
    <exact command>
    ```
 2. **Confirm the squash plan** — <n> commits fold to <m>:
    <the resulting subject lines>
+3. **<deferred question>** — <what it blocks if the answer is X>
+
+## What exists
+| Repo | Where | Branch | Commits |
+|---|---|---|---|
+| <name> | <path> | <branch> | <n>, <test count>, <lint state> |
+
+Plan harvested into <doc paths — what each received>; the plan was deleted.
 
 ## Rulings I made on your behalf
 **Scope:** <ruling — why — cost if wrong.> …
 **Design:** <ruling — why — cost if wrong.> …
 Full ledger: `<path>` — deleted with the squash once you confirm it.
-
-## Deferred questions
-<the ones worth an answer before the next round of work>
 
 ## What was not touched
 Nothing was pushed. <Which checkouts were left alone.>
