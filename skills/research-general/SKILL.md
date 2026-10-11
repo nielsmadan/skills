@@ -82,18 +82,18 @@ Pick the relevant agents from the table below and launch each batch together as 
 
 | Agent | Spawn when | Search strategy |
 |-------|------------|-----------------|
-| **Encyclopedic** | Almost always | `site:en.wikipedia.org {topic}`, then `mcp__jina__read_url` top 1-2. Note cited sources as leads. |
+| **Encyclopedic** | Almost always | `site:en.wikipedia.org {topic}`, then `jina-fetch` top 1-2. Note cited sources as leads. |
 | **Academic** | Scientific, scholarly, social-science, economic | `mcp__jina__parallel_search_arxiv` (STEM) or `parallel_search_ssrn` (econ/finance/law/social). Fall back to `{topic} systematic review meta-analysis`. |
-| **News** | Current events, contemporaneous reporting | WebSearch filtered to NYT, BBC, Reuters, AP, Guardian, Economist, FT. Then `mcp__jina__read_url` top 2-3. |
+| **News** | Current events, contemporaneous reporting | WebSearch filtered to NYT, BBC, Reuters, AP, Guardian, Economist, FT. Then `jina-fetch` top 2-3. |
 | **Primary** | Statistics, regulatory, official positions | `{topic} site:.gov` / `site:.int` / `{org} report {topic}`. WebFetch for plain HTML/PDF. |
 | **General** | Always | `{topic}` plain — explainers, longreads, expert blogs. |
-| **Forum** | Opinion-heavy, lived experience, unsettled | `site:reddit.com {topic}`, then `mcp__jina__read_url` top 2-3 (Reddit is JS-heavy). |
+| **Forum** | Opinion-heavy, lived experience, unsettled | `site:reddit.com {topic}`, then `jina-fetch --proxy` top 2-3 (Reddit needs the proxy). |
 | **Comparison** | "vs", "or", "compare", "which is better" | `{A} vs {B} {context}`. Flag affiliate / "Top 10" sites. |
 | **Specific** | Exact claim/quote to verify (in quotes) | `"{claim}"` plus `"{claim}" fact check` and `"{claim}" debunked`. |
 | **Historical** | Topic is historical | `{topic} primary sources` / `archive` / `declassified`. Try news archives. |
 | **Regional** | Country/city/locale-specific (regulations, prices, services) | `{topic} site:{country_TLD}` plus locale-specific authority sites. **Search in the local language** for non-English locales. |
 
-**Fetching**: prefer `mcp__jina__read_url` for JS-heavy pages; `WebFetch` for plain HTML, government PDFs, `.gov`/`.int`. See "Web Fetching" in CLAUDE.md. `WebSearch`/`WebFetch` are Claude Code's tool names — on another harness, use its equivalent search and fetch tools.
+**Fetching**: `WebFetch` for short plain pages, government PDFs, `.gov`/`.int`; `jina-fetch <url> "<what to extract>"` for long-form reading and whenever `WebFetch` fails, since it returns only the extract. Without `jina-fetch` on PATH, use the Jina MCP `read_url` with its `question` parameter, which likewise returns only the matching passages. See "Web Search & Fetching" in CLAUDE.md. `WebSearch`/`WebFetch` are Claude Code's tool names — on another harness, use its equivalent search and fetch tools.
 
 For full agent prompts including the Regional locale playbook (DE/FR/UK/US/AU), see `references/agent-prompts.md`.
 

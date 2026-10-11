@@ -4,14 +4,14 @@ Full prompt templates for the research workers selected in Step 4. Apply that st
 
 ## Fetching web content
 
-When an agent needs to read a URL, prefer `mcp__jina__read_url` over `WebFetch` — Jina renders JS server-side and returns clean markdown, avoiding the empty-shell problem `WebFetch` has on SPAs (Reddit, Stack Overflow, many modern docs sites).
+Follow "Web Search & Fetching" in CLAUDE.md. In short:
+- `github.com` (issues, PRs, repo files): use `gh`, not a fetcher.
+- Short plain pages (HTML blogs, RSS feeds, PDFs): `WebFetch`.
+- Long-form reading (docs, articles, threads), and any page `WebFetch` refuses, truncates or returns as an empty shell: `jina-fetch <url> "<what to extract>"`. It returns only the extract, so the page never enters your context. Pass several URLs before the question to read them in parallel.
+- Stack Overflow: straight to `jina-fetch`. Reddit: `jina-fetch --proxy`.
+- When exact text matters (code, config, a quote), ask for short verbatim anchor phrases and grep the cache path `jina-fetch` prints on stderr.
 
-Exceptions where plain `WebFetch` is fine or better:
-- `github.com` URLs (issues, PRs, repo files) — no JS hydration needed
-- Plain HTML blogs, RSS feeds, PDFs
-- When Jina is unavailable or returns thin content — fall back to `WebFetch`
-
-Use `mcp__jina__parallel_read_url` when fetching several URLs at once.
+Without `jina-fetch` on PATH, use the Jina MCP `read_url` with its `question` parameter, which likewise returns only the matching passages.
 
 ## Docs Agent (Context7)
 
@@ -52,7 +52,7 @@ Look for:
 - Pull requests with relevant changes
 
 If you find relevant results:
-1. Use WebFetch to read the top 2-3 most relevant
+1. Read the top 2-3 most relevant with `gh issue view <url> --comments` or `gh pr view <url> --comments` (discussions need `gh api graphql`)
 2. Extract: problem/question, any solutions posted, recommended approaches
 
 For each result, note:
@@ -128,7 +128,7 @@ Search Stack Overflow for solutions and implementations.
 Use WebSearch to search: site:stackoverflow.com {library_name} {keywords}
 
 For the top 2-3 relevant questions:
-1. Use `mcp__jina__read_url` to read the accepted/top answers (Stack Overflow is JS-heavy; plain WebFetch often returns an empty shell)
+1. Use `jina-fetch <url> "accepted and top answers: approach, code, caveats"` (Stack Overflow blocks WebFetch)
 2. Extract the solution approach
 
 For each answer, note:
@@ -204,7 +204,7 @@ Focus on:
 - "Don't do this" advice from experience
 
 For the top 2-3 relevant threads:
-1. Use `mcp__jina__read_url` to read the thread (Reddit is JS-heavy; plain WebFetch often returns an empty shell)
+1. Use `jina-fetch --proxy <url> "<what to extract>"` to read the thread (Reddit blocks every fetcher without the proxy)
 2. Focus on highly-upvoted comments, not just the original post
 
 For each source, note:

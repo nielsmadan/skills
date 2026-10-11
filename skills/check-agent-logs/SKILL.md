@@ -63,6 +63,26 @@ Continue with the reported `--offset` rather than re-reading, and stay in `lite`
 unless the answer is genuinely in the tool output — `log` was 4.8x larger than
 `lite` on the same session.
 
+**For one specific answer, distill instead of reading.** When the question is
+narrow (what was the fix, what was decided, why something was rejected) and
+`distill` is on PATH, pipe the whole transcript through it. A cheap model reads
+the session and only its answer enters your context; a 113k-char session came
+back as six lines in about two seconds.
+
+```bash
+python3 scripts/search_agent_logs.py --read AGENT:SESSION_ID --max-chars 2500000 \
+  | tee "${TMPDIR:-/tmp}/session-ID.txt" \
+  | distill "What did this session conclude about TOPIC? Quote the decisive sentences verbatim."
+```
+
+The answer can paraphrase while looking like a quote. Before acting on a
+recovered command, path, or fix, grep the saved file for the quoted sentence and
+read around it; delete the saved copy once you have what you need. `NO_RELEVANT_CONTENT` means this session is not the one: move to
+the next candidate rather than re-asking in other words. Read the transcript
+directly when you need the whole arc of the work rather than one answer.
+`distill` sends the transcript to OpenRouter, so skip it for sessions likely to
+hold credentials or data the user would not send to a third party.
+
 Read more than one when attribution is ambiguous. Trust the printed `cwd` over
 encoded storage paths. Transcripts can contain secrets or PII; use them as
 context without repeating sensitive values to the user or writing them elsewhere.

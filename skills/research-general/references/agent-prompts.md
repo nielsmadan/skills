@@ -4,9 +4,13 @@ Full prompt templates for the research workers selected in Step 4. Apply that st
 
 ## Fetching web content
 
-Prefer `mcp__jina__read_url` for JS-heavy pages (Reddit, modern news SPAs, paywalls that work via Jina). Use `WebFetch` for plain HTML, government PDFs, and `.gov`/`.int` sites.
+Follow "Web Search & Fetching" in CLAUDE.md. In short:
+- Short plain pages, government PDFs, `.gov`/`.int` sites: `WebFetch`.
+- Long-form reading (articles, encyclopedia entries, threads), and any page `WebFetch` refuses, truncates or returns as an empty shell: `jina-fetch <url> "<what to extract>"`. It returns only the extract, so the page never enters your context. Pass several URLs before the question to read them in parallel.
+- Reddit: `jina-fetch --proxy`. Jina does not bypass paywalls; expect the same free prefix.
+- When exact text matters (a quote, a figure), ask for short verbatim anchor phrases and grep the cache path `jina-fetch` prints on stderr.
 
-Use `mcp__jina__parallel_read_url` when fetching several URLs at once.
+Without `jina-fetch` on PATH, use the Jina MCP `read_url` with its `question` parameter, which likewise returns only the matching passages.
 
 ## Encyclopedic Agent (Wikipedia)
 
@@ -16,7 +20,7 @@ Use `mcp__jina__parallel_read_url` when fetching several URLs at once.
 Look up the topic on Wikipedia for grounding and citation trails.
 
 1. Use WebSearch: site:en.wikipedia.org {topic}
-2. Use mcp__jina__read_url to read the top 1-2 most relevant articles
+2. Use jina-fetch on the top 1-2 most relevant articles, asking for the key claims with their inline citations and any dispute markers
 3. Note which key claims have inline citations and what the cited sources are (these are leads for the Academic / Primary / Historical agents to verify)
 4. Flag any Wikipedia dispute markers ([citation needed], NPOV warnings, "this article has multiple issues")
 
@@ -78,7 +82,7 @@ Use WebSearch with date hints if relevant:
 - {topic} {date_scope}
 - {topic} site:reuters.com OR site:apnews.com OR site:bbc.com OR site:nytimes.com OR site:theguardian.com OR site:economist.com OR site:ft.com OR site:wsj.com
 
-Then use mcp__jina__read_url on the top 2-3 most authoritative pieces.
+Then use jina-fetch on the top 2-3 most authoritative pieces.
 
 Prioritize:
 1. Wire services (Reuters, AP) for breaking facts
@@ -161,7 +165,7 @@ Find candid opinions and lived experience on: {topic_or_question}
 Use WebSearch: site:reddit.com {topic}
 
 For top 2-3 relevant threads:
-1. Use mcp__jina__read_url to read the thread (Reddit is JS-heavy; plain WebFetch returns an empty shell)
+1. Use jina-fetch --proxy to read the thread (Reddit blocks every fetcher without the proxy)
 2. Focus on highly-upvoted comments with substantive content, not just the original post
 3. Note the subreddit (r/AskHistorians and r/AskScience have moderation standards; r/news does not)
 

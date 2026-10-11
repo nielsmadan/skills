@@ -50,8 +50,10 @@ RULES
   job, a limit that might not hold at scale). If reading the source already answers it,
   say so and skip the benchmark — a confirmatory benchmark of a settled fact is waste.
 
-Fetching: WebFetch for plain HTML and github.com. `mcp__jina__read_url` for JS-heavy pages
-(modern docs, SPAs) and for Reddit/StackOverflow, which block WebFetch.
+Fetching: `gh` for github.com; WebFetch for short plain HTML. `jina-fetch <url> "<question>"`
+for docs and other long pages and for Stack Overflow, which blocks WebFetch; it returns only the
+extract. `jina-fetch --proxy` for Reddit. Without `jina-fetch` on PATH, use the Jina MCP
+`read_url` with its `question` parameter.
 
 RETURN exactly this structure, nothing else (if the hard-constraint check FAILS, return only
 the first three lines plus Sources — see the STOP rule above):
