@@ -1,6 +1,6 @@
 ---
 name: code-review
-description: Clean up code comments, then review code with comprehensive and quick modes. Use when reviewing code changes, PRs, or specific files for quality, bugs, and best practices.
+description: Clean up comments and mechanical loose ends, then review code with comprehensive and quick modes. Use when reviewing code changes, PRs, or specific files for quality, bugs, and best practices.
 argument-hint: '[target] [--quick] [--logic] [--architecture] [--security] [--performance] [--history] [--test] [--interface] [--clean-code] [--functional] [--defensive] [--typescript] [--project] [--library-use] [--staged] [--unpushed] [--all] [--changed] [--multi] [--rereview]'
 effort: high
 ---
@@ -16,16 +16,16 @@ Review the code related to: **$ARGUMENTS**
 | File | Load when |
 |------|-----------|
 | `references/agents.md` | Step 3c in comprehensive mode — the per-agent briefs for Agents 1–10, plus how language / project / library-use reviews plug in. |
-| `references/scoring-and-output.md` | Steps 4, 4.5 and 5 in comprehensive mode — confidence scoring, likelihood/blast-radius triage, and the output format. |
+| `references/scoring-and-output.md` | Steps 4 to 5 in comprehensive mode — confidence scoring, likelihood/blast-radius triage, applying `autofix` items, and the output format. |
 
-Flag parsing, scope resolution, and comment cleanup (Steps 1–3b.6) need neither.
+Flag parsing, scope resolution, and the preflight cleanup (Steps 1–3b.6) need neither.
 
 ## Usage
 
 ```
-/code-review                          # Comment cleanup + all 10 review aspects, default scope
+/code-review                          # Preflight cleanup + all 10 review aspects, default scope
 /code-review --quick                  # One integrated review pass, no scorer-agent round
-/code-review <target>                 # Comment cleanup + all 10 aspects, scoped to target
+/code-review <target>                 # Preflight cleanup + all 10 aspects, scoped to target
 /code-review --architecture           # Architecture only
 /code-review --functional             # Functional principles only
 /code-review --defensive              # Defensive-programming checks only
@@ -50,7 +50,7 @@ Flag parsing, scope resolution, and comment cleanup (Steps 1–3b.6) need neithe
 
 The default mode is comprehensive: run all selected perspectives independently, then independently score and triage their findings.
 
-Every mode first runs `review-comments --fix` over the resolved scope. Comment cleanup is a preflight edit, not a review perspective: its results are reported separately and are never confidence-scored or promoted into Critical/Should Fix findings.
+Every mode first runs `review-tidy --fix` over the resolved scope; it coordinates comment cleanup through `review-comments` and then mechanical cleanup, with formatting last. The cleanup is a preflight edit, not a review perspective: its results are reported separately and are never confidence-scored or promoted into Critical/Should Fix findings.
 
 `--quick` is an explicit low-latency preset for routine small changes. It keeps the normal scope resolution, project-guideline checks, severity output, fix prompt, and optional `--rereview` loop, but uses one integrated read-only reviewer and no separate scorer agents. It does not activate automatically from diff size: a tiny auth, migration, or concurrency change may still deserve the comprehensive mode.
 
@@ -111,8 +111,10 @@ Scope flags determine *which files* the reviewers inspect. The resolved scope is
 
 ## Gotchas
 - Both modes silently drop findings below the 80-point confidence threshold. Comprehensive mode uses independent scorers; quick mode trades that independent validation for a single reviewer's self-filter.
+- Confidence means "is this claim true", never "does it matter". A verified duplication or leaky interface scores as high as a verified crash and lands in Suggestions or Should Fix by impact. Scoring true design findings low because they are "not a bug" silently deletes most clean-code and interface output.
 - In comprehensive mode, Step 4.5's triage never drops anything silently — every issue routed out of the main severity sections appears in the `Improbable / Not Worth Handling` appendix with its `file:line` and a one-line reason. Quick mode omits low/medium-impact improbable findings entirely to stay concise.
-- With `--staged`, the comment preflight edits the working-tree copies and does not stage them. Announce that the cleanup must be staged separately; never run `git add` implicitly.
+- With `--staged`, the preflight edits the working-tree copies and does not stage them. Announce that the cleanup must be staged separately; never run `git add` implicitly.
+- Reviewers run in parallel on one checkout. A reviewer that edits a file, even briefly to mutation-test, makes the others report its edit as a real bug. Every reviewer is read-only; experiments run in a disposable copy (see `references/agents.md`).
 
 ## Step 1: Locate and Read Project Guidelines
 First, find and read any CLAUDE.md files in the repository root and relevant directories to understand project-specific conventions and rules.
@@ -192,20 +194,20 @@ Check both paths — `.claude/skills/` is where Claude Code puts project skills;
 
 Announce what got auto-included. In comprehensive mode, use messages such as `Detected TypeScript — adding review-typescript` or `Detected a CLI entry point — adding review-cli`. In quick mode, say `Detected TypeScript — applying review-typescript guidance in the quick review` (and likewise for project and library-use guidance).
 
-### 3b.6. Clean up comments
+### 3b.6. Preflight cleanup
 
-Before launching any review agent, invoke `review-comments --fix` exactly once against the resolved scope:
+Before launching any review agent, invoke `review-tidy --fix` exactly once against the resolved scope. It owns the `review-comments` invocation and runs formatting after all cleanup edits; do not invoke comment cleanup separately.
 
-| Resolved scope | Invocation |
+| Resolved scope | Arguments for review-tidy |
 |---|---|
-| `staged` | `review-comments --staged --fix` |
-| `unpushed` | `review-comments --unpushed --fix` |
-| `changed` | `review-comments --changed --fix` |
-| `all` | `review-comments --all --fix` |
-| local path target | `review-comments <target> --fix` |
-| other target, such as a PR | `review-comments <resolved local source file list> --fix` |
+| `staged` | `--staged --fix` |
+| `unpushed` | `--unpushed --fix` |
+| `changed` | `--changed --fix` |
+| `all` | `--all --fix` |
+| local path target | `<target> --fix` |
+| other target, such as a PR | `<resolved local source file list> --fix` |
 
-Treat its output as a preflight cleanup summary, not as review findings. Report how many comments were removed or rewritten and list any comment issues it could not safely fix, but do not send those items through confidence scoring or severity triage. Continue immediately when it finds nothing.
+Treat its combined output as a preflight cleanup summary, not as review findings. Report how many comments were removed or rewritten and what mechanical fixes were applied, and list the deferred items, but do not send those items through confidence scoring or severity triage. Continue immediately when they find nothing.
 
 If a non-file target has no writable local source files, skip the cleanup and state that it requires a local checkout; do not turn that limitation into a review finding.
 
@@ -223,10 +225,12 @@ Give the reviewer this integrated brief:
 - Review correctness, edge cases, error handling, regressions, catch-all `else`/`default` branches that would silently absorb a newly added enum or API value, missing or weak tests, security red flags, and interface compatibility. Flag obvious performance hazards only when directly supported by the changed path.
 - If Step 3b.5 detected language, project, or library-use guidance, read those matching `SKILL.md` files as review references and apply their checks directly. Do not invoke them as skills.
 - Return only actionable findings supported by a concrete code path. For each finding, include severity (`Critical`, `Should Fix`, or `Nice to Have`), `file:line`, what is wrong, why it matters, a concise fix, self-confidence from 0–100, likelihood (`routine`, `plausible`, `rare`, or `theoretical`), and blast radius (`low`, `medium`, or `high`). For `rare` or `theoretical`, name the reachability reason and cite any excluding guard.
-- Self-filter aggressively: omit findings below 80 confidence and omit `rare`/`theoretical` findings with low or medium blast radius. Keep rare high-blast-radius findings and tag them with the short reachability reason.
+- Self-filter aggressively: omit findings below 80 confidence and omit `rare`/`theoretical` findings with low or medium blast radius. Keep rare high-blast-radius findings and tag them with the short reachability reason. Confidence means the claim is true; a true finding that matters little is `Nice to Have`, not low-confidence.
+- Tag a finding `autofix` only when its fix has one right answer, changes no behaviour, and stays local: a doc line naming a symbol or flag the diff renamed, an import the diff orphaned, a test name that no longer matches.
+- Do not edit any file, even temporarily.
 - Return `No actionable findings.` if nothing survives.
 
-After the agent returns, deduplicate its findings and render the surviving items under `Critical Issues (Must Fix)`, `Improvements (Should Fix)`, and `Suggestions (Nice to Have)`, omitting empty sections. Explain what is wrong, why it matters, and how to fix it. Do not show self-confidence metadata and do not launch scorer agents. Then continue to Step 6.
+After the agent returns, apply its `autofix` findings yourself after checking each still meets that test, and list them under `Applied automatically`; a finding that fails the test goes to its severity section instead. Deduplicate the rest and render the surviving items under `Critical Issues (Must Fix)`, `Improvements (Should Fix)`, and `Suggestions (Nice to Have)`, omitting empty sections. Explain what is wrong, why it matters, and how to fix it. Do not show self-confidence metadata and do not launch scorer agents. Then continue to Step 6.
 
 #### Comprehensive mode
 
@@ -234,9 +238,11 @@ After the agent returns, deduplicate its findings and render the surviving items
 
 Launch the selected review perspectives in parallel, queuing successive batches when runtime capacity requires it.
 
-**Launch workers that return findings without editing files.** Disable delegation tools for ordinary reviewers where supported; read-only access alone does not prevent delegation. If a reviewer coordinates verification, name the checks, bound the descendants, and define when it should stop. Workers can read the relevant sub-skill directly when their harness has no Skill tool.
+**Claude Code caps concurrent subagents** at `CLAUDE_CODE_MAX_CONCURRENT_SUBAGENTS`. Launch up to that many at once, then launch each remaining reviewer as soon as one returns. A launch refused with `Concurrent subagent limit reached` never ran: despite the message's "Do not retry", queue it and launch it when a slot frees, and never drop the aspect. The same limit applies to the scorer round.
 
-Each agent should output a list of issues. For each issue, include: what the problem is, where it is (file + line), and why it matters. Do NOT assign confidence scores — scoring happens in a separate pass.
+**Launch workers that return findings without editing files**, including temporary edits: a reviewer that mutates a file to test something and restores it still corrupts what the parallel reviewers read. Include the shared rules from `references/agents.md` in every brief. Disable delegation tools for ordinary reviewers where supported; read-only access alone does not prevent delegation. If a reviewer coordinates verification, name the checks, bound the descendants, and define when it should stop. Workers can read the relevant sub-skill directly when their harness has no Skill tool.
+
+Each agent should output a list of issues. For each issue, include: what the problem is, where it is (file + line), and why it matters, and tag mechanical ones `autofix` as defined in `references/agents.md`. Do NOT assign confidence scores — scoring happens in a separate pass.
 
 **Sub-agent invocation pattern.** When a sub-agent delegates to a sub-skill, pass the resolved scope through directly:
 
@@ -268,9 +274,9 @@ Then append: "Provide a focused code review in 300 words or less covering: poten
 
 **IMPORTANT:** Do NOT proceed to Step 4 until the second-opinion results have been fully received. Wait for all background commands to complete and collect their output before continuing. This prevents completion notifications from appearing after the review summary. If an advisor is missing or errors out, continue with whichever responded — don't drop the others.
 
-## Steps 4, 4.5 and 5: Score, Triage, Format (comprehensive mode only)
+## Steps 4 to 5: Score, Triage, Autofix, Format (comprehensive mode only)
 
-Skip these steps in quick mode; Step 3c already produced the filtered, formatted review. In comprehensive mode, **load `references/scoring-and-output.md`** and follow it. In short: score every issue with independent parallel scorers (>= 80 passes), have those same scorers return likelihood + blast radius so improbable findings route to an appendix instead of the work list, then render the severity sections.
+Skip these steps in quick mode; Step 3c already produced the filtered, formatted review. In comprehensive mode, **load `references/scoring-and-output.md`** and follow it. In short: score every issue with independent parallel scorers using the exact prompt there (>= 80 passes, and confidence means only "is this true"), have those same scorers return impact, likelihood and blast radius so improbable findings route to an appendix instead of the work list, apply the `autofix` items, then render the severity sections.
 
 When that reference is done, **come back here and do Step 6** — the rendered output is not the end of the run.
 
@@ -292,7 +298,7 @@ AskUserQuestion takes at most 4 options, so when all tiers are populated drop th
 
 Skip this step entirely (no prompt) only when there are no Critical and no Should Fix findings — a run that surfaced nothing but suggestions has nothing worth gating on.
 
-Build the options only from the `Critical Issues`, `Improvements`, and `Suggestions` sections. **Never include `Improbable / Not Worth Handling` items** — not even under "Fix everything". Step 4.5 already judged them not worth doing, and offering to fix them reintroduces exactly the noise the appendix exists to remove.
+Build the options only from the `Critical Issues`, `Improvements`, and `Suggestions` sections. `Applied automatically` items are already done and are never offered. **Never include `Improbable / Not Worth Handling` items** — not even under "Fix everything". Step 4.5 already judged them not worth doing, and offering to fix them reintroduces exactly the noise the appendix exists to remove.
 
 When the user selects a fix option, apply the fixes for exactly the chosen severity tier(s) — no more, no less.
 
@@ -309,10 +315,10 @@ Without `--rereview`, Step 6 ends the run after fixes are applied — the user m
 
 ## Examples
 
-**Clean comments, then review the default scope with all 10 agents:**
+**Clean up, then review the default scope with all 10 agents:**
 > /code-review
 
-Runs `review-comments --fix`, then 10 parallel review agents (bug/logic, architecture, security, performance, historical context, test quality, interface design, clean code, functional principles, defensive programming) against staged changes (or unstaged changes if nothing is staged). Comment cleanup is summarized separately; review findings are prioritized by severity.
+Runs `review-tidy --fix` (including comment cleanup), then 10 parallel review agents (bug/logic, architecture, security, performance, historical context, test quality, interface design, clean code, functional principles, defensive programming) against staged changes (or unstaged changes if nothing is staged). The cleanup is summarized separately; review findings are prioritized by severity.
 
 **Quick review of a routine small change:**
 > /code-review --quick
@@ -327,12 +333,12 @@ Runs only the architecture & patterns agent. Use this when you already know whic
 **Whole-repo review:**
 > /code-review --all
 
-Runs comment cleanup and all 10 agents against every file in the repo (`git ls-files`). Use this for a fresh audit of an unfamiliar project, before a major release, or when nothing in the working tree is changed. Composes with aspect flags and `--multi`, e.g. `/code-review --all --architecture --multi`.
+Runs the preflight cleanup and all 10 agents against every file in the repo (`git ls-files`). Use this for a fresh audit of an unfamiliar project, before a major release, or when nothing in the working tree is changed. Composes with aspect flags and `--multi`, e.g. `/code-review --all --architecture --multi`.
 
 **Cross-model consensus review:**
 > /code-review --multi
 
-Runs the same 10 review agents plus external reviews from every advisor `second-opinion` has configured, after comment cleanup. The output includes a cross-model agreement section highlighting issues where the internal agents and external advisors converge, giving higher confidence to consensus findings. `--multi` composes with aspect and scope flags, e.g. `/code-review --multi --architecture` or `/code-review --all --multi`.
+Runs the same 10 review agents plus external reviews from every advisor `second-opinion` has configured, after the preflight cleanup. The output includes a cross-model agreement section highlighting issues where the internal agents and external advisors converge, giving higher confidence to consensus findings. `--multi` composes with aspect and scope flags, e.g. `/code-review --multi --architecture` or `/code-review --all --multi`.
 
 **Review, fix, then re-review automatically:**
 > /code-review --rereview

@@ -198,6 +198,10 @@ lane; run it explicitly to review without running the suite first.)
    findings without editing files. Disable delegation tools where supported;
    any coordinating role needs explicit subtasks, a descendant limit, and a
    stopping condition.
+   Review never edits the checkout, not even to mutation-test and restore:
+   other reviewers may be reading the same files. Run mutation probes in a
+   disposable copy (`git worktree add --detach <scratch dir> HEAD`, then apply
+   `git diff HEAD --binary` there) and remove it afterwards.
 3. **Report findings** by priority
 
 ### Checklist

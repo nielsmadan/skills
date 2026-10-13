@@ -15,9 +15,12 @@ self-contained commits, each adhering to the commit policy (`feat`/`fix`/`chore`
 commits — initial work, follow-up fixes, tests, docs — that belong together as one
 higher-level feature commit.
 
-This skill rewrites history, so it **proposes a plan and only proceeds after the user
-confirms**. It never touches the branch ref until the very last step, and only ever
-operates on **unpushed** commits. It creates no backup tags or stashes; the original tip
+An explicit request to squash commits authorizes this workflow: choose the grouping
+and proceed without a separate plan-approval step. Ask only when materially different
+groupings or scope choices are genuinely a toss-up after reading the diffs, or when
+the user explicitly requested a plan for review. Merely discussing or editing this
+skill does not authorize a squash. It never touches the branch ref until the very
+last step, and only ever operates on **unpushed** commits. It creates no backup tags or stashes; the original tip
 is recoverable from the branch reflog after the verified ref move.
 
 ## Usage
@@ -97,7 +100,7 @@ git log --reverse --stat BASE..HEAD     # add -p for full diffs if grouping is u
 For each commit note: its subject, the files it touches, and whether it's substantive
 work, a fixup of an earlier commit, tests, or docs.
 
-### Step 4: Propose a grouping plan
+### Step 4: Choose the grouping
 
 Partition the commits into **contiguous groups**, each becoming one new commit.
 
@@ -119,26 +122,13 @@ For each group, write a new message per the commit policy:
 - Omit the body. Use a single subject line so this workflow needs no temporary message
   files.
 
-Present the plan as a before→after table and stop for confirmation:
+Briefly summarize the chosen groups and continue to Step 5 without waiting for approval.
+Routine message wording and clear feature/fixup boundaries are yours to decide.
 
-```markdown
-## Squash plan (BASE = <short-sha or ref>, <N> commits → <M> commits)
-
-### Group 1 → `feat: <new subject>`
-- `abc123` wip feat1
-- `def456` fix feat1 typo
-- `ghi789` add tests for feat1
-
-### Group 2 → `feat: <new subject>`
-- `jkl012` start feat2
-- `mno345` fix feat2
-
-Proceed? This rewrites unpushed history. The original tip will remain recoverable from
-the branch reflog; no backup tag or stash will be left behind.
-```
-
-**Wait for explicit user confirmation.** Do not proceed otherwise. If the user wants
-edits to the grouping or messages, revise and re-present.
+If reading the diffs leaves a genuine toss-up between materially different groupings
+or scopes, present the concrete alternatives, recommend one, and ask the user to resolve
+that choice. Pause only for that decision; their answer authorizes proceeding without
+another confirmation. If the user asked only for a plan, present it and wait for approval.
 
 ### Step 5: Preserve the recovery point without helper refs
 
@@ -228,8 +218,8 @@ do not expire reflogs or run GC as part of this skill.
 
 Auto-detects 6 unpushed commits via `git rev-list HEAD --not --remotes`. Reading them
 shows two features: an export button (impl + 2 fixups + a test) and an unrelated config
-tweak. Proposes Group 1 → `feat: add CSV export button` (5 commits) and Group 2 →
-`chore: bump lint config` (1 commit, kept as-is). After confirmation, builds two commits
+tweak. Chooses Group 1 → `feat: add CSV export button` (5 commits) and Group 2 →
+`chore: bump lint config` (1 commit). Without another approval step, builds two commits
 with `git commit-tree` from the two group tips' trees, verifies the final tree matches the
 original tip, and `update-ref`s `main` onto the result — 6 commits become 2 with the
 original tip retained only in the reflog.

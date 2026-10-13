@@ -7,6 +7,23 @@ it matters. Agents do **NOT** assign confidence scores; scoring is a separate pa
 Delegating agents pass the resolved scope through per the translation table in
 Step 3c. Inline agents work directly against the file list computed in Step 3b.
 
+## Rules for every agent
+
+Include these in every brief, delegated or inline.
+
+**Read-only, including temporarily.** Do not edit, create, delete, revert, stage or format any file in the checkout, not even to mutation-test and restore it. The other reviewers read the same files at the same time, and in past runs they reported a test agent's mutation as a real bug. To run an experiment, make a disposable copy in a scratch directory (`$SCRATCH` below) and work there:
+
+```bash
+git worktree add --detach "$SCRATCH/cr-<aspect>" HEAD
+git diff HEAD --binary | git -C "$SCRATCH/cr-<aspect>" apply
+# copy any untracked files in scope, run the experiment, then:
+git worktree remove --force "$SCRATCH/cr-<aspect>"
+```
+
+If you cannot make a copy, describe the experiment in the finding instead of running it.
+
+**Tag mechanical findings `autofix`.** A finding is `autofix` only when its fix has one right answer, changes no behaviour, and stays local. Examples: a doc or help line naming a symbol, flag or path the diff renamed or removed; an unexported import or helper whose last use the diff removed, with grep (string literals included) finding no other reference; a test name that names a renamed symbol. Anything that needs a design choice, touches exported or public code, or could change behaviour is a normal finding. `autofix` items skip scoring and are applied by the main thread.
+
 ## Agent 1: Bug & Logic Review (`--logic`) — inline
 Operate on the file list from step 3b.
 - Look for potential bugs, edge cases, race conditions
@@ -44,6 +61,7 @@ Operate on the file list from step 3b.
 
 ## Agent 5: Test Quality Review (`--test`)
 Invoke `test --review` with the scope-translated arguments.
+- Mutation-test only in a disposable copy (see Rules for every agent), never in the shared checkout
 - Check for missing edge cases and coverage gaps
 - Identify brittle or flaky test patterns
 - Flag over-mocking and testing implementation instead of behavior

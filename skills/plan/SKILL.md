@@ -2,7 +2,7 @@
 name: plan
 description: Lightweight planning workflow — delegate read-only planning to an Opus subagent, then implement in auto mode after a single go-ahead gate. The middle tier between "just do it" (tiny tasks) and heavyweight superpowers planning (big features). Never enters plan mode, so it sidesteps the plan-mode permission prompts. Use when the user invokes /plan, or wants a plan for a medium-sized task before implementing.
 argument-hint: '[--review] <task, or blank to infer from conversation>'
-effort: high
+effort: xhigh
 ---
 
 <!-- Generated from https://github.com/nielsmadan/agentic-coding — edits here are overwritten. -->
@@ -58,6 +58,7 @@ Judge the task's size first.
 Dispatch **one** subagent via the `Agent` tool:
 - `subagent_type: Plan` — read-only by construction (no Edit/Write/NotebookEdit).
 - `model: opus`.
+- `effort: xhigh`.
 
 The `Plan` agent starts **fresh** (it is not a fork),
 so brief it fully. Its prompt MUST contain:
