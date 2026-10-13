@@ -1,6 +1,6 @@
 ---
 name: review-todo
-description: Turn a completed code review into a persistent workflow that immediately proposes the complete ordered implementation plan, waits for whole-plan approval, then implements and commits every accepted finding. Use after a review when the user invokes review-todo, says "turn this review into a todo list", "work through these review findings", supplies directives such as "fix 2, 3; ignore 7", asks to revise or approve the plan, or resumes review work. Do not use to perform the original code review.
+description: Explicitly invoked workflow for large completed reviews spanning multiple areas. Proposes a persistent implementation plan, waits for approval, then implements and commits accepted findings. Start or resume only when the user names review-todo; ordinary requests to fix review findings do not activate it.
 argument-hint: '[fix 2,3 | ignore 7 | resume | go]'
 effort: high
 ---
@@ -8,6 +8,10 @@ effort: high
 <!-- Generated from https://github.com/nielsmadan/agentic-coding — edits here are overwritten. -->
 
 # Review Todo
+
+Use this workflow only when the user explicitly names `review-todo` (including `$review-todo` or `/review-todo`). It is intended for large reviews spanning multiple areas that benefit from a persistent plan. Review size alone, an existing `.review-todo.md`, and replies such as "fix them all", "fix 2, 3; ignore 7", or "please address them all" do not start or resume it. Handle ordinary review fixes directly without creating this file.
+
+Once explicitly invoked in the current conversation, follow-up decisions and approvals continue that active workflow without requiring the user to repeat its name.
 
 Turn the most recent completed review into a stateful plan-to-implementation workflow. Keep `.review-todo.md` at the repository root as the source of truth across turns and context compaction. It is temporary working state: never commit it, and remove it only after the workflow completes successfully.
 
@@ -19,7 +23,7 @@ The first response for a new review must contain the complete proposed dispositi
 
 1. Find the repository root. If the current directory is not in a Git repository, ask for the target repository before creating state; the workflow ends by committing changes.
 2. Check for `.review-todo.md`:
-   - If it contains an active workflow, resume it by default. Read it before using conversational context.
+   - After explicit invocation, if it contains an active workflow, resume it by default. Read it before using conversational context.
    - If the user clearly supplied a new review while an active workflow exists, do not overwrite it. Ask whether to resume the existing workflow or replace it with the new review.
    - If it is marked complete after an interrupted cleanup, report the recorded result and remove it.
    - If it uses an older one-finding-at-a-time format, preserve all recorded decisions and implementation results, inspect every remaining finding, and upgrade it to the complete-plan format before continuing.
