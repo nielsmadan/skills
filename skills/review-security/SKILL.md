@@ -96,6 +96,11 @@ For code examples, grep patterns, false-positive rules, and dependency audit com
 - [ ] CORS properly configured (not `*` for sensitive APIs)
 - [ ] Security headers set (CSP, X-Frame-Options, etc.)
 
+### Resource Exhaustion
+
+- Trace attacker-controlled payload/read sizes, recursion, queues, and concurrency to effective admission and resource limits. Check existing framework and upstream limits before claiming a missing bound.
+- Report the attack path and security consequence. Ordinary workload growth belongs to `review-perf`; operation termination and cancellation belong to `review-correctness`.
+
 ### Dependency Vulnerabilities
 
 Run ecosystem-specific audit commands — see `references/security-checklist.md` for commands by ecosystem.

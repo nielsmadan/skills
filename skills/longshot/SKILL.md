@@ -73,17 +73,20 @@ shape nobody approved. The opposite failure is a brief too small to pay for the
 overhead — say so and offer `plan` (see Examples).
 
 Then invoke `blind-spots` on the brief and run it to completion. Phase 0 already did
-the recon its step 2 calls for — do not repeat it.
+the recon its step 2 calls for — do not repeat it. Include its intent exploration,
+framing challenge, and follow-up on promising answers before closing decisions.
 
 **The user is still needed through planning and the final start gate.** The
-interrogation ends when every consequential decision is settled by existing
-context, a user answer, or the user's explicit delegation of that decision.
+interrogation ends when the intended outcome is understood, the framing and credible
+alternatives have been examined, and every consequential decision is settled by
+existing context, a user answer, or the user's explicit delegation of that decision.
 
-`blind-spots` supplies the mechanics: dependency-ordered rounds, a recommendation on
-every question so an explicit "use your recommendations" can settle the round, and
-pruning to decisions that fork the design. Longshot sharpens its fork test — *would
-a wrong guess here cost a rewrite, or just a follow-up commit?* Follow-up commit →
-do not ask it, rule on it during the run.
+`blind-spots` supplies the mechanics: dependency-ordered rounds, recommendations on
+decision questions, and focused exploration where an answer could change the brief.
+Keep questions that materially affect usefulness, user workflow, priorities, or the
+design, even when the implementation would be cheap to change. Rule on routine
+implementation details during the run. Distinguish the user's stated needs from your
+assumptions; an explicit "use your recommendations" settles the choices offered.
 
 These are mandatory wherever they sit in the tree, because the run cannot proceed
 correctly without them. Put any still open into the first round:
@@ -104,11 +107,14 @@ Never turn an unanswered question into a ruling to close the frontier.
 
 "Use your recommendations" settles the questions it refers to. Recompute the
 frontier and ask any dependent questions; it does not bypass the final start gate.
-When the frontier is empty, proceed to planning while remaining in preparation.
+When the closing checks above are satisfied, proceed to planning while remaining in
+preparation.
 
 ## Phase 2 — Plan
 
-**Settle the approach before drafting tasks.** Where the settled decisions still leave
+**Settle the approach before drafting tasks.** Carry forward the alternatives and
+rationale from `blind-spots`; do not reopen an approach already settled there.
+Where the settled decisions still leave
 a genuine fork in how the thing is built — the same requirements reachable two or
 three structurally different ways — present those options with their trade-offs, lead
 with your recommendation and the reason, and wait. `blind-spots` establishes what the

@@ -91,7 +91,7 @@ Does the interface guide callers toward correct usage?
 
 - Parameters, props, or configuration that no current caller uses
 - Over-abstracted interfaces solving hypothetical future requirements
-- Under-constrained types that allow invalid states (e.g., `status: string` instead of `status: 'active' | 'inactive'`)
+- Under-constrained public contracts that allow invalid states (e.g., `status: string` instead of `status: 'active' | 'inactive'`). Review caller usability here; language reviewers own representation details. A demonstrated bad transition or result belongs to `review-correctness`, even when a type change is the repair.
 - Premature abstraction — generic framework for a single use case
 - Configuration surface area that exceeds what callers actually vary
 

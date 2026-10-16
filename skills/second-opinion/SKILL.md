@@ -1,7 +1,7 @@
 ---
 name: second-opinion
-description: Get external AI opinions on a problem or question. Use when you want diverse perspectives from the agent CLIs you are not running (Claude, Codex, Pi, OpenCode).
-compatibility: Requires at least one of claude, codex, pi or opencode on PATH besides the one you are running as. Pi and OpenCode advisors need an OpenRouter key.
+description: Get external AI opinions on a problem or question. Use when you want diverse perspectives from the agent CLIs you are not running (Claude, Codex, Pi, OpenCode, Droid).
+compatibility: Requires at least one of claude, codex, pi, opencode or droid on PATH besides the one you are running as. Pi and OpenCode advisors need an OpenRouter key.
 argument-hint: '[--quick] [--timeout=300] [--words=500] <question or context>'
 effort: high
 ---
@@ -10,7 +10,7 @@ effort: high
 
 # Second Opinion Command
 
-Get input from three independent advisors on the current problem or question. Consult the advisor CLIs you are *not* — from `claude`, `codex`, `pi` and `opencode`, skip whichever one you are running as, and query the rest. By default, iterates if responses lack confidence.
+Get input from the available independent advisors on the current problem or question. Consult the advisor CLIs you are *not* — from `claude`, `codex`, `pi`, `opencode` and `droid`, skip whichever one you are running as, and query the rest. By default, iterates if responses lack confidence.
 
 ## Usage
 
@@ -127,6 +127,13 @@ command pi -p --no-session --tools read,grep,find,ls --model openrouter/z-ai/glm
 OPENCODE_CONFIG_CONTENT='{"agent":{"plan":{"permission":{"task":"deny"}}}}' command opencode run --agent plan -m openrouter/moonshotai/kimi-k3 --variant max "$(cat .second-opinion.md)" </dev/null
 ```
 
+**Droid:** Gemini 4 Argon at high effort, with file-reading and search tools only:
+```bash
+command droid exec --model gemini-4-argon --reasoning-effort high --only-tools Read,Glob,Grep,LS -f .second-opinion.md </dev/null
+```
+
+Use this model and reasoning level in quick mode too. If unavailable, report Droid as unavailable and continue with the other advisors.
+
 ### Step 3: Evaluate Confidence
 
 After receiving responses, evaluate each for confidence level:
@@ -172,9 +179,14 @@ Format the responses for the user:
 ### {advisor 3}
 {advisor_3_response}
 
+### {advisor 4}
+{advisor_4_response}
+
 ### My Take
 {your brief synthesis - where they agree, disagree, and your recommendation}
 ```
+
+Include one heading per responding advisor.
 
 Name each advisor heading after the CLI and the model it ran (e.g. `Codex`, `Pi (<model>)`).
 

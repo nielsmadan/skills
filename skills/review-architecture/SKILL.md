@@ -100,7 +100,7 @@ Wait for all external results before proceeding to step 7.
 For each attribute the project cares about, check whether the architecture actively supports it. Don't grade attributes the project doesn't claim.
 
 - **Scalability**: Stateless vs stateful boundaries; horizontal scale points; cache layers; data partitioning; single points of contention.
-- **Resilience**: Failure isolation between modules; timeouts, retries, circuit breakers at integration points; graceful degradation paths.
+- **Resilience**: Failure isolation between modules; timeouts, retries, circuit breakers at integration points; graceful degradation paths. Trace nested retry layers for traffic amplification, shared retry budgets, backoff/jitter policy where contention warrants it, and cascading failures. Check existing dependency policies before proposing another layer. Individual operation termination, cancellation, and duplicate side effects belong to `review-correctness`.
 - **Evolvability**: Seams for change at the points the project says will change. Are the modules likely to change together actually together?
 - **Observability**: Consistent logging, tracing, metrics — established at module boundaries, not bolted on per-call.
 - **Security boundaries**: Trust zones (untrusted input vs internal); auth checks at the edge; sensitive data minimized in transit between modules.
@@ -114,7 +114,7 @@ For each attribute the project cares about, check whether the architecture activ
 - **Error handling**: A coherent strategy across modules (e.g., domain errors → application layer translates → transport layer serializes), not ad-hoc per file.
 - **Configuration**: Centralized loading and typing; not scattered `process.env` reads.
 - **Logging/tracing**: Established once, used uniformly; correlation IDs flow across module boundaries.
-- **Validation**: At trust boundaries, not sprinkled throughout the domain.
+- **Validation**: Parse at module boundaries into contracts the interior can trust; flag validation scattered or repeated across modules. Representation details belong to language review; conflicting rules or validation after an irreversible effect belong to `review-correctness`.
 
 ### 6. Conventions, Decisions & Debt
 

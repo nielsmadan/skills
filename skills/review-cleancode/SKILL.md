@@ -79,7 +79,7 @@ Wait for all external results before proceeding to step 6.
 - **YAGNI**: Is there code, parameters, or abstraction for hypothetical future needs that nothing currently uses?
 - **Reuse-first (anti-reinvention)**: Before accepting hand-written code, walk the ladder — could it be replaced by (1) a helper/util/pattern already in this codebase, (2) the standard library, (3) a native platform feature (`<input type="date">` over a date-picker lib, CSS over JS, a DB constraint over app code), or (4) an already-installed dependency? Hand-rolling what one of these already ships is the most common avoidable bloat; a new dependency added for what a few lines or a present dep covers is its inverse. When flagging, name the specific replacement, not just "this is complex."
 - **KISS**: Could a simpler approach achieve the same result? Are there clever tricks that obscure intent?
-- **Fail Fast**: Are inputs validated early, before expensive work?
+- **Validation clarity**: Repeated checks, redundant guards, and parallel case lists that could share one contract or representation. Do not demand checks already guaranteed by callers. Cross-module placement belongs to architecture; measurable wasted work belongs to performance; contradictory validation, silently skipped work, or validation after irreversible effects belongs to `review-correctness`.
 
 ### 3. Design Principles
 

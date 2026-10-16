@@ -1,6 +1,6 @@
-# Defensive Review — Examples, Mechanisms, Sources
+# Correctness Review — Defensive Examples, Mechanisms, Sources
 
-BAD/GOOD examples per category, the exhaustiveness mechanism in each language, and the sources behind the checklist. Quotes were checked against the linked pages in October 2026.
+Examples for the failure-path pass, the exhaustiveness mechanism in each language, and the sources behind the checklist. Quotes were checked against the linked pages in October 2026.
 
 ---
 
@@ -155,7 +155,7 @@ resp = requests.get(url)
 resp = requests.get(url, timeout=(3.05, 10))  # connect, read
 ```
 
-Retries: cap the attempts, back off exponentially, add jitter, and keep one retry layer rather than stacking them.
+For retry correctness, check termination, cancellation, and duplicate effects after an ambiguous result. Inspect inherited deadlines and client defaults before requesting a timeout. Architecture review owns cross-layer retry amplification and backoff/jitter policy; performance owns capacity growth.
 
 ---
 

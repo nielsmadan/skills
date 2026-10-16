@@ -24,12 +24,12 @@ If you cannot make a copy, describe the experiment in the finding instead of run
 
 **Tag mechanical findings `autofix`.** A finding is `autofix` only when its fix has one right answer, changes no behaviour, and stays local. Examples: a doc or help line naming a symbol, flag or path the diff renamed or removed; an unexported import or helper whose last use the diff removed, with grep (string literals included) finding no other reference; a test name that names a renamed symbol. Anything that needs a design choice, touches exported or public code, or could change behaviour is a normal finding. `autofix` items skip scoring and are applied by the main thread.
 
-## Agent 1: Bug & Logic Review (`--logic`) — inline
-Operate on the file list from step 3b.
-- Look for potential bugs, edge cases, race conditions
-- Check null/undefined handling
-- Verify error handling completeness
-- Look for off-by-one errors
+## Agent 1: Correctness Review (`--correctness`, aliases `--logic` / `--defensive`)
+Read `review-correctness` and apply both passes to the resolved scope and file list. Do this work yourself; do not dispatch sub-agents or launch other agent CLIs.
+- Trace normal behavior, edge cases, state transitions, races, null handling, and off-by-one errors.
+- Trace failure paths and changing assumptions: exhaustiveness, external unknowns, swallowed errors, masking defaults, invariants, deadlines, cancellation, and retry safety.
+- When a diff extends a type or status set, search all consumers, including branches outside the initial file list.
+- Verify concrete triggers and existing guarantees. Apply the skill's ownership boundaries; structural advice and capacity checks go to their specialist reviewers.
 
 ## Agent 2: Architecture Review (`--architecture`)
 Invoke `review-architecture` with the scope-translated arguments.
@@ -45,12 +45,14 @@ Operate on the file list from step 3b. Optionally also invoke `review-security` 
 - Verify input validation at trust boundaries
 - Look for sensitive data exposure (secrets, PII, tokens in logs)
 - Check auth/authz gaps
+- Check attacker-controlled resource exhaustion and missing security bounds, including payload/read size and queue admission
 
 ## Agent 3b: Performance Review (`--performance`)
 Operate on the file list from step 3b. Optionally also invoke `review-perf` with the scope-translated arguments.
 - Identify performance bottlenecks (N+1 queries, unnecessary loops)
 - Check algorithmic complexity
-- Check for memory leaks
+- Check for memory leaks and accumulated handles/listeners; inspect unbounded caches, buffers, queues, pagination, and file/payload reads against expected workloads
+- Leave operation termination, cancellation, rollback, and lock release failures to correctness; check capacity and growth here
 - Look for expensive work in hot paths
 
 ## Agent 4: Historical Context Review (`--history`) — inline
@@ -88,13 +90,6 @@ Read `review-functional` and apply its checklist to the resolved scope or file l
 - Apply the skill's exclusions for local mutation, I/O entry points, language idioms, and justified hot-path mutation
 - Exclude currying, point-free style, recursion, and monads
 
-## Agent 7c: Defensive Review (`--defensive`)
-Read `review-defensive` and apply its checklist to the resolved scope or file list. Do this work yourself; do not dispatch sub-agents or launch other agent CLIs.
-- Flag closed-world branching: a catch-all `else`/`default`/wildcard handling one known case by elimination, or silencing the language's exhaustiveness check; when the diff adds a value to an enum/union/status set, grep the repo for every branch over that type
-- Check that externally sourced values (API, DB, config, messages) have an explicit unknown-value path rather than being coerced into a known case
-- Flag swallowed errors, masking defaults, unchecked returns, missing timeouts/bounds, and assertions used as input validation
-- Apply the skill's over-defense category and its exclusions (security, aliasing, and type design belong to other agents)
-
 ## Agent 8: Language Review (`--typescript` / other `--<language>`) — conditional
 Only if Step 3b.5 detected a language (or the flag was passed explicitly). For each applicable language, invoke its `review-<language>` skill with the scope-translated arguments.
 - TypeScript → `review-typescript`: judgment-level type design a linter can't decide — type modeling (make invalid states unrepresentable, unions of interfaces, outputs no wider than needed), inference-vs-annotation calls, and casts/`any` that compile but hide a wrong upstream type or unvalidated boundary data. Deliberately non-overlapping with typescript-eslint.
@@ -110,7 +105,7 @@ Only if Step 3b.5 found a `library-use` reference in the repo (or the flag was p
 
 ## The extensible layer (how 8, 9 and 10 plug in)
 
-Language reviews and the project review sit on top of the 10 language-agnostic aspects:
+Language reviews and the project review sit on top of the 9 language-agnostic aspects:
 
 - **Language reviews** live globally in `claude/skills/review-<language>/`. They hold checks that apply to *every* project in that language. To add a new language, create a `review-<language>` skill and add a row to the detection registry in Step 3b.5 — `code-review` will auto-route to it. Nothing else to wire.
 - **The project review** is a skill the *project* defines at `.claude/skills/review-project/` for issues unique to that one codebase (conventions, gotchas, house rules that don't generalize). `code-review` calls it only when it exists — projects without one are unaffected. Minimal shape:

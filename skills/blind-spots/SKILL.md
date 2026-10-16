@@ -9,7 +9,8 @@ effort: high
 
 # Blind Spots
 
-Find the decisions the user does not know they have left open, then get each one made.
+Understand the intended outcome, challenge the framing, then settle the decisions
+the user does not know they have left open.
 
 A plan or research brief can feel complete because its gaps were filled in silently.
 Make those decisions visible before they steer implementation or research.
@@ -30,8 +31,9 @@ decisions supplied by a calling workflow. For an unfamiliar topic, a short direc
 can establish the terminology or options needed to ask useful questions.
 
 **Finding facts is your job, never the user's.** Anything discoverable from the
-filesystem, the git history, or a tool is yours to look up. Ask the user only for
-*decisions*. Open empirical questions remain research tasks; the user need not settle
+filesystem, the git history, or a tool is yours to look up. Ask the user for intent,
+experience, priorities, and decisions that the available context cannot establish.
+Open empirical questions remain research tasks; the user need not settle
 them before research begins. For example, ask whether offline use is required, then
 research which candidates support it.
 
@@ -41,6 +43,22 @@ research which candidates support it.
 independent subsystems needs splitting before it needs questions — refining the
 details of something that should be three projects spends a round on the wrong
 thing. Say so, propose the split and the order, and probe only the first piece.
+
+**Establish intent before narrowing.** Briefly reflect the intended outcome, who it
+serves, and what success means; distinguish the user's statements from your assumptions.
+Where those are unclear, ask for a concrete situation in which this would help, or what
+would make a technically correct result disappointing. Follow the answer before asking
+about implementation details. Reuse concrete examples already supplied.
+
+**Challenge the framing once.** Consider a simpler way to achieve the outcome, a
+materially different mechanism, and whether a presumed constraint is actually required.
+Use a relevant lens from `ideation` when useful: inversion (what would make this fail?),
+analogy (how does another domain solve this?), or removing one assumed constraint.
+Generate candidates before judging them. Surface only credible alternatives that could
+change the outcome, with trade-offs and a recommendation; do not invent options to fill
+a quota. Respect explicit constraints and settled choices unless new evidence challenges
+their rationale. Keep this within the target; an open-ended search for what to build
+belongs in `ideation`.
 
 Then map the work as decisions, each branching into the decisions that hang off it.
 Sweep the categories below rather than working from intuition — a whole category is
@@ -58,7 +76,9 @@ would argue with. The sweep exists to catch the ones that do not.
 Pruning is what separates a useful round from an interrogation:
 
 - **Keep** a decision that changes the work — different answers lead to different
-  structure, interfaces, candidate pools, evidence to gather, or success criteria.
+  user outcomes, workflow, structure, interfaces, candidate pools, evidence to gather,
+  or success criteria. A valuable discovery can be cheap to implement; reversibility
+  alone is not a reason to discard it.
 - **Cut** scope the brief carries that its stated purpose does not require, and ask
   whether it is wanted instead of designing around it. Unrequested scope is a fork
   the user cannot see, and the cheapest one to close.
@@ -73,7 +93,9 @@ An unspecified detail is not automatically a blind spot. A fork the user cannot 
 The **frontier** is every kept decision whose prerequisites are already settled — the
 questions answerable *now* without guessing at answers you have not heard yet.
 
-Ask the whole frontier in one message, ordered by consequence, then **stop and wait**.
+Batch independent decisions in one message, ordered by consequence, then **stop and
+wait**. Give a question about intent, a surprising answer, or a consequential tension
+its own round when the answer could change which other questions are worth asking.
 
 ```
 ❓ **Q1 — <short title>**: <the question, with the options if it is a choice>
@@ -89,8 +111,9 @@ Ask the whole frontier in one message, ordered by consequence, then **stop and w
 
 Rules for a round:
 
-- **Every question carries your recommendation.** "Go with your defaults" must be a
-  complete answer — the user may be tired, or may simply trust you on that branch.
+- **Every decision question carries your recommendation.** "Go with your defaults"
+  must be a complete answer. For exploratory questions about the user's experience
+  or intent, offer a tentative interpretation to correct, not an invented answer.
 - **An asked question stays pending until the user answers or explicitly delegates
   the choice.** Silence, elapsed time, an empty tool result, and a preselected
   recommendation settle nothing. An asynchronous prompt returning only confirms
@@ -110,16 +133,22 @@ Rules for a round:
 ### 5. Recompute and repeat
 
 Each set of answers settles decisions, pushing the frontier outward and unblocking
-questions that depended on them. Recompute the frontier and ask the next round only
-while consequential decisions remain open.
+questions that depended on them. When an answer reveals a surprising need, conflicting
+priorities, or a promising alternative, follow it with a concrete example or trade-off
+question before returning to the checklist. Update the framing and decision tree when
+that changes the goal. Continue only while the next question could change the outcome
+or a consequential decision; a question count is not evidence of depth.
 
 ### 6. Close
 
-Stop when every consequential decision is settled. Unknown facts may remain.
+Stop when the intended outcome is understood, the framing has been challenged,
+credible alternatives have been considered, and every consequential decision is
+settled. Unknown facts may remain. Existing context can satisfy these checks.
 
 **When called by another workflow:** return a compact brief with the purpose, scope,
-settled constraints and priorities, and remaining factual questions. If the context
-already settles every decision, return immediately without an interview. The caller
+settled constraints and priorities, alternatives considered and why the chosen approach
+fits, and remaining factual questions. If the context already satisfies the closing
+checks, return immediately without an interview. The caller
 owns any existing confirmation or approval step; do not add a separate closing
 confirmation or hand off to another workflow.
 
@@ -161,6 +190,15 @@ open.
 round asks only about forks the plan left implicit (backfill under load, rollback
 window, dual-write duration), never about what the plan already states.
 
+### A coherent brief with the wrong emphasis
+
+`blind-spots add a weekly activity dashboard` — ask what decision the dashboard would
+help someone make. The user says missed handoffs are the real problem. Compare the
+dashboard with an exception digest and notifications at the handoff itself. Their
+answer reveals that interruptions are costly, so probe when someone can act before
+choosing a digest. Then settle ownership and escalation. The exploration changes the
+solution without adding features or requiring an architectural rewrite.
+
 ### A research brief
 
 `research-general research home batteries` — context leaves the purpose unclear.
@@ -190,8 +228,15 @@ on. Do not make the user repeat themselves.
 
 ### The frontier keeps growing and the session will not end
 
-Each round should narrow. If it widens twice running, propose splitting the work
-into bounded pieces and probe only the first piece.
+An exploratory round may widen the options; use the intended outcome to narrow them
+afterward. If rounds keep adding unrelated scope, propose splitting the work into
+bounded pieces and probe only the first piece.
+
+### The interview closes quickly but the design feels obvious
+
+Check whether you accepted the proposed solution as the goal. Return to a concrete
+use case, test one assumed constraint, and compare a credible alternative. Ask only
+about differences that could matter to the user; do not pad the interview.
 
 ### The user says a question is trivia
 

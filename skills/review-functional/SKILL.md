@@ -101,8 +101,7 @@ Is the code saying what it means?
 
 - A hand-written `for` loop that maps, filters, sums, flattens, or checks any/all, where the language has `map`/`filter`/`sum`/`any`/`all` or a comprehension — the direct form names the result, the loop makes the reader derive it from an accumulator and a body. Flag the small ones too; this is the default, not a last resort
 - A value declared uninitialised then assigned across several branches, where one assigned-once expression would do
-- Validation repeated at every layer because the data's shape never captured the guarantee — parse once at the boundary instead
-- Objects constructed half-valid and completed later, so every consumer has to defend against the intermediate state
+- For validation placement and half-valid object shapes, leave structural recommendations to architecture/interface/language reviewers. Trace hidden state, escaping mutation, and effect ordering here; report concrete incorrect transitions through `review-correctness` in a coordinated review.
 
 ## Out of Scope
 

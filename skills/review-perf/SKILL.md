@@ -68,8 +68,8 @@ Performance analysis for common bottlenecks and inefficiencies.
 
 ### Memory Management
 
-- Connections or file handles opened without a `finally`/close — always close in `finally`
-- Caches with no size or TTL bound — use LRU or TTL-bounded cache
+- Connections, file handles, and subscriptions that accumulate across completed operations — inspect lifetime ownership and cleanup. Lock release, rollback, and cancellation cleanup needed for correct behavior belong to `review-correctness`.
+- Caches, queues, and buffers with no effective capacity bound; file/payload reads or pagination that load an entire growing dataset. Trace expected size, lifetime, backpressure, and existing upstream limits before proposing caps, streaming, or pagination. Attacker-controlled exhaustion belongs to `review-security`; non-termination belongs to `review-correctness`.
 - Event listeners added without a corresponding removal — return cleanup in `useEffect`
 
 ### UI/Render Performance
