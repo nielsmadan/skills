@@ -1,6 +1,6 @@
 ---
 name: plan
-description: Lightweight planning workflow — delegate read-only planning to an Opus subagent, then implement in auto mode after a single go-ahead gate, run QA and one `code-review --multi`, fix findings, repeat QA only after substantial code changes, and update docs. The middle tier between "just do it" (tiny tasks) and heavyweight superpowers planning (big features). Never enters plan mode, so it sidesteps the plan-mode permission prompts. Use when the user invokes /plan, or wants a plan for a medium-sized task before implementing.
+description: Lightweight planning workflow — delegate read-only planning to an Opus subagent (or adopt a plan already agreed in the conversation), then implement in auto mode after a single go-ahead gate, run QA and one `code-review --multi`, fix findings, repeat QA only after substantial code changes, and update docs. The middle tier between "just do it" (tiny tasks) and `longshot` (multi-hour features). Never enters plan mode, so it sidesteps the plan-mode permission prompts. Use when the user invokes /plan, or wants a plan for a medium-sized task before implementing.
 argument-hint: '[--review] <task, or blank to infer from conversation>'
 effort: xhigh
 ---
@@ -10,8 +10,8 @@ effort: xhigh
 # Plan (middle tier)
 
 Produce a concrete implementation plan for a medium-sized task, then implement it
-after one approval gate. Deliberately lighter than `superpowers:brainstorming` /
-`writing-plans` (no spec files or per-task implementation checkpoints) and
+after one approval gate. Deliberately lighter than `longshot` (no up-front
+interview, per-task implementer subagents or rulings ledger) and
 heavier than just editing — the space where a plan helps but full ceremony is overkill.
 
 **This skill IS the planning workflow for this task.** Do not also invoke
@@ -30,7 +30,7 @@ The argument is the task. If blank, infer the task from the current conversation
 
 ```
 /plan add a --json flag to the export command    # plan a stated task
-/plan                                            # plan the task from context
+/plan                                            # plan the task from context, or adopt a plan agreed above
 /plan --review <task>                            # plan, then multi-agent review before the gate
 ```
 
@@ -51,10 +51,20 @@ Judge the task's size first.
   Say so in one line and offer to just do it directly — do not spend a planning
   round-trip. Respect the user if they still want a plan.
 - **Too big** (multi-subsystem, architectural, multi-session): this is above the
-  middle tier. Point at `superpowers:brainstorming` and stop.
+  middle tier. Say so in one line, offer `longshot` instead, and stop.
 - **Middle** (a few files, a new endpoint/component, a contained refactor): proceed.
 
 ### Step 2: Dispatch the planning agent
+
+**A plan already in the conversation?** When the argument is blank and the
+conversation already holds a concrete plan for the task — files and ordered steps,
+not just an idea — ask one line before dispatching: "There's a plan above. Use it,
+or plan from scratch?" Wait for the answer.
+
+- **Use it:** skip the planning agent. Recast that plan into the skeleton below,
+  check read-only that the files and claims it relies on hold in the current repo,
+  and add any gap or drift as an open question. Continue at Step 3.
+- **From scratch:** dispatch as below, passing the conversation's plan as context.
 
 Dispatch **one** subagent via the `Agent` tool:
 - `subagent_type: Plan` — read-only by construction (no Edit/Write/NotebookEdit).

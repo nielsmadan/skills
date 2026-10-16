@@ -1,6 +1,6 @@
 ---
 name: longshot
-description: Run a long autonomous build session from a brief — interview the user with `blind-spots`, prepare the plan and review it with `review-plan`, and wait for explicit final approval to start implementation. Only then decide later ambiguities as recorded rulings and execute without check-ins. Per task a fresh implementer subagent, an independent spec+quality reviewer, a fix loop, then a whole-branch review, the plan harvested into the repo's docs and deleted, and a handoff report with rulings, deferred questions and a squash proposal. Use when the user says "longshot", "work on this independently", "run with this", "ask me everything up front then go", "I'll be away", or hands over a multi-hour feature or package to build end to end. Do NOT use for a single small change — use `plan` for that.
+description: Run a long autonomous build session from a brief — interview the user with `blind-spots`, prepare the plan and review it with `review-plan`, and wait for explicit final approval to start implementation. Only then decide later ambiguities as recorded rulings and execute without check-ins. Per task a fresh implementer subagent, an independent spec+quality reviewer, a fix loop, then whole-feature QA and a whole-branch review, the plan harvested into the repo's docs and deleted, and a handoff report with rulings, deferred questions and a squash proposal. Use when the user says "longshot", "work on this independently", "run with this", "ask me everything up front then go", "I'll be away", or hands over a multi-hour feature or package to build end to end. Do NOT use for a single small change — use `plan` for that.
 argument-hint: '[--plan FILE] [--no-worktree] [--repos a,b] (brief, or blank to take it from the conversation)'
 effort: high
 ---
@@ -279,9 +279,19 @@ After each task's verify, exactly one line. No question, no invitation to respon
 Task 3/6 done — consumer registry + bounded sink fan-out, 41 tests, clippy clean. On to install/hooks.
 ```
 
-## Phase 5 — Whole-branch review
+## Phase 5 — Feature QA and whole-branch review
 
-Per the workflow file. Default: `code-review` over the full diff of every touched
+Per the workflow file. Default: QA first, then review.
+
+**QA the whole feature once**, after the last task's commit: `qa --fix` over
+everything the run built, through its real user or consumer interfaces, given the
+definition of done and every task's acceptance criteria. Per-task checks prove each
+piece; this proves they work together. Have it write its report to `$RUN/qa.md` and
+read the count, the coverage and what it fixed. Run the check command yourself after
+its fixes, as in Phase 4 step 4, and commit them. Whatever QA cannot exercise here
+goes to "Blocked on you".
+
+Then `code-review` over the full diff of every touched
 repo (`--quick` only if the whole longshot was small), then a fix wave, then a
 re-review scoped to those fixes. Cross-repo runs get one reviewer whose job is
 **contract coherence** — wire formats, manifest shapes, command strings, identity
@@ -346,7 +356,8 @@ a recommendation, then `blind-spots`: round 1 asks the questions answerable now
 two that only became questions once protocol scope was settled → validate the plan
 against the repo → `review-plan` over it → present the final plan and contract → wait for start approval →
 announce implementation starting → worktree per consumer repo → 6 tasks through
-the loop with pings → whole-branch review + contract-coherence pass + fix wave → handoff.
+the loop with pings → `qa --fix` over the whole feature → whole-branch review +
+contract-coherence pass + fix wave → handoff.
 
 Result: three branches ready to integrate, a rulings ledger explaining every decision
 made in the user's absence, one XCTest run flagged as theirs to do, and a squash plan
