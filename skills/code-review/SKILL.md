@@ -16,7 +16,7 @@ Review the code related to: **$ARGUMENTS**
 | File | Load when |
 |------|-----------|
 | `references/agents.md` | Step 3c in comprehensive mode — the per-agent briefs for Agents 1–10, plus how language / project / library-use reviews plug in. |
-| `references/scoring-and-output.md` | Steps 4 to 5 in comprehensive mode — confidence scoring, likelihood/blast-radius triage, applying `autofix` items, and the output format. |
+| `references/scoring-and-output.md` | Steps 4 to 5 in comprehensive mode — verdict and effort scoring, likelihood/blast-radius triage, applying `autofix` items, and the output format. |
 
 Flag parsing, scope resolution, and the preflight cleanup (Steps 1–3b.6) need neither.
 
@@ -50,7 +50,7 @@ Flag parsing, scope resolution, and the preflight cleanup (Steps 1–3b.6) need 
 
 The default mode is comprehensive: run all selected perspectives independently, then independently score and triage their findings.
 
-Every mode first runs `review-tidy --fix` over the resolved scope; it coordinates comment cleanup through `review-comments` and then mechanical cleanup, with formatting last. The cleanup is a preflight edit, not a review perspective: its results are reported separately and are never confidence-scored or promoted into Critical/Should Fix findings.
+Every mode first runs `review-tidy --fix` over the resolved scope; it coordinates comment cleanup through `review-comments` and then mechanical cleanup, with formatting last. The cleanup is a preflight edit, not a review perspective: its results are reported separately and are never scored or promoted into Critical/Should Fix findings.
 
 `--quick` runs one thorough integrated review at full reasoning effort, saving time through fewer agents and no separate scoring round. It keeps the normal scope resolution, project-guideline checks, severity output, fix prompt, and optional `--rereview` loop, but uses one integrated read-only reviewer and no separate scorer agents. It does not activate automatically from diff size: a tiny auth, migration, or concurrency change may still deserve the comprehensive mode.
 
@@ -76,7 +76,7 @@ Two further aspects are **conditional add-ons** — in the default (no-aspect-fl
 
 | Flag | Maps to |
 |------|---------|
-| `--cli` | Agent 8b: Project-Shape Review — delegates to `review-cli`. Auto-included when the repo ships a console entry point. Orthogonal to language: it composes with the language review rather than replacing it. |
+| `--cli` / `--react` | Agent 8b: Project-Shape Review — delegates to `review-cli` or `review-react`. Auto-included when the repo ships a console entry point, or depends on React and the scope touches components. Orthogonal to language: it composes with the language review rather than replacing it. |
 | `--typescript` / `--swift` / `--python` | Agent 8: Language Review — delegates to the matching `review-<language>` skill (e.g. `review-typescript`, `review-swift`, `review-python`). Auto-included when the scoped files are of that language. |
 | `--project` | Agent 9: Project-Specific Review — delegates to the project's own `review-project` skill. Auto-included when that skill exists in the repo. |
 | `--library-use` | Agent 10: Library-Use Review — delegates to `review-library-use` (checks code against the repo's `library-use` conventions). Auto-included when the repo has a `library-use` reference. |
@@ -84,7 +84,7 @@ Two further aspects are **conditional add-ons** — in the default (no-aspect-fl
 **Aspect rules:**
 - Normalize `--logic` and `--defensive` to `--correctness` before selecting agents; any combination of these flags runs Agent 1 exactly once.
 - In comprehensive mode, no aspect flags → run all 9 core agents, **plus** any detected language review, the project review, and the library-use review if present.
-- One or more aspect flags → run only those agents, skip the rest. The conditional add-ons run only if `--typescript` / `--cli` / `--project` / `--library-use` (or another `--<language>`) is among the flags.
+- One or more aspect flags → run only those agents, skip the rest. The conditional add-ons run only if `--typescript` / `--cli` / `--react` / `--project` / `--library-use` (or another `--<language>`) is among the flags.
 - `--quick` is a complete preset and cannot be combined with aspect flags.
 - `--multi` composes with any aspect selection.
 - The non-flag portion of `$ARGUMENTS` is the review target (e.g. `src/auth/`).
@@ -110,8 +110,9 @@ Scope flags determine *which files* the reviewers inspect. The resolved scope is
 - **Target argument wins:** if a non-flag target is provided (e.g. `/code-review src/auth/`), it overrides scope flags entirely. The target is passed to all sub-agents as-is.
 
 ## Gotchas
-- Both modes silently drop findings below the 80-point confidence threshold. Comprehensive mode uses independent scorers; quick mode trades that independent validation for a single reviewer's self-filter.
-- Confidence means "is this claim true", never "does it matter". A verified duplication or leaky interface scores as high as a verified crash and lands in Suggestions or Should Fix by impact. Scoring true design findings low because they are "not a bug" silently deletes most clean-code and interface output.
+- Both modes silently drop findings that were not traced to a `file:line` in the code. Comprehensive mode uses independent scorers; quick mode trades that independent validation for a single reviewer's self-filter.
+- The verdict is categorical, not a 0–100 score. A model-written number is not a measurement, and a cutoff between anchors flips when the same claim is scored twice.
+- The verdict means "is this claim true", never "does it matter". A traced duplication or leaky interface passes as surely as a traced crash and lands in Suggestions or Should Fix by impact. Failing true design findings because they are "not a bug" silently deletes most clean-code and interface output. Effort only orders findings within a section; it never drops one.
 - In comprehensive mode, Step 4.5's triage never drops anything silently — every issue routed out of the main severity sections appears in the `Improbable / Not Worth Handling` appendix with its `file:line` and a one-line reason. Quick mode omits low/medium-impact improbable findings entirely to stay concise.
 - With `--staged`, the preflight edits the working-tree copies and does not stage them. Announce that the cleanup must be staged separately; never run `git add` implicitly.
 - Reviewers run in parallel on one checkout. A reviewer that edits a file, even briefly to mutation-test, makes the others report its edit as a real bug. Every reviewer is read-only; experiments run in a disposable copy (see `references/agents.md`).
@@ -135,7 +136,7 @@ Strip aspect flags (`--correctness`, `--logic`, `--architecture`, `--security`, 
 
 If `--quick` appears with any aspect flag or with `--multi`, abort with `--quick is a complete review preset; remove the aspect flags or --multi.` It may compose with a target, one scope flag, and `--rereview`.
 
-In comprehensive mode, if any aspect flags are present, launch ONLY the corresponding agents (including the conditional add-ons only when a `--<language>`/`--cli`/`--project`/`--library-use` flag is passed). Otherwise launch all 9 core agents plus whatever Step 3b.5 detects. In quick mode, follow the single-reviewer branch in Step 3c.
+In comprehensive mode, if any aspect flags are present, launch ONLY the corresponding agents (including the conditional add-ons only when a `--<language>`/`--cli`/`--react`/`--project`/`--library-use` flag is passed). Otherwise launch all 9 core agents plus whatever Step 3b.5 detects. In quick mode, follow the single-reviewer branch in Step 3c.
 
 ### 3b. Resolve scope
 
@@ -167,7 +168,7 @@ This file list is passed to inline agents and is also used to build the target a
 
 ### 3b.5. Detect language & project reviews
 
-Determine which conditional add-on reviews apply. In comprehensive mode these become additional agents. In quick mode their skill/reference text becomes guidance for the single integrated reviewer. Skip this entirely if explicit aspect flags were passed **and** none of them is `--typescript`/`--cli`/`--project`/`--library-use`/another `--<language>` — in that case the user asked for a specific subset and add-ons don't run.
+Determine which conditional add-on reviews apply. In comprehensive mode these become additional agents. In quick mode their skill/reference text becomes guidance for the single integrated reviewer. Skip this entirely if explicit aspect flags were passed **and** none of them is `--typescript`/`--cli`/`--react`/`--project`/`--library-use`/another `--<language>` — in that case the user asked for a specific subset and add-ons don't run.
 
 **Language detection registry.** For each language below, it applies if the resolved file list matches its extensions, or (for the `all` scope / when the file list is empty) the repo root has its marker file. If it applies **and** a `review-<language>` skill is installed, include that agent in comprehensive mode or record its `SKILL.md` as guidance for quick mode.
 
@@ -185,6 +186,7 @@ Determine which conditional add-on reviews apply. In comprehensive mode these be
 | Shape | Detected by | Skill |
 |---|---|---|
 | CLI | `[project.scripts]` / `[project.entry-points."console_scripts"]` in `pyproject.toml`, `[[bin]]` or `src/main.rs` in a Cargo project, `bin` in `package.json`, or a `main`-package `cobra`/`urfave` import in Go | `review-cli` |
+| React | `react` in `package.json` dependencies, and scoped `.jsx`/`.tsx` files or files that call hooks (at `all` scope, the dependency alone) | `review-react` |
 
 **Project review detection.** If the repo defines its own project review skill at `.claude/skills/review-project/SKILL.md` **or** `.agents/skills/review-project/SKILL.md`, include the project review agent in comprehensive mode or record its `SKILL.md` as guidance for quick mode. If neither exists, skip silently.
 
@@ -207,7 +209,7 @@ Before launching any review agent, invoke `review-tidy --fix` exactly once again
 | local path target | `<target> --fix` |
 | other target, such as a PR | `<resolved local source file list> --fix` |
 
-Treat its combined output as a preflight cleanup summary, not as review findings. Report how many comments were removed or rewritten and what mechanical fixes were applied, and list the deferred items, but do not send those items through confidence scoring or severity triage. Continue immediately when they find nothing.
+Treat its combined output as a preflight cleanup summary, not as review findings. Report how many comments were removed or rewritten and what mechanical fixes were applied, and list the deferred items, but do not send those items through scoring or severity triage. Continue immediately when they find nothing.
 
 If a non-file target has no writable local source files, skip the cleanup and state that it requires a local checkout; do not turn that limitation into a review finding.
 
@@ -225,14 +227,14 @@ For every harness, retain full review reasoning effort. Give the reviewer this i
 - Read `review-correctness` and apply both passes directly without launching another reviewer. Review correctness, edge cases, error handling, regressions, catch-all `else`/`default` branches that would silently absorb a newly added enum or API value, missing or weak tests, security red flags, and interface compatibility. Check performance hazards supported by the traced paths. Also check design and maintainability: module responsibilities, coupling, duplication, interface clarity, hidden shared state, and mutation of caller-owned data. Tie each concern to concrete code and its consequences.
 - If Step 3b.5 detected language, project, or library-use guidance, read those matching `SKILL.md` files as review references and apply their checks directly. Do not invoke them as skills.
 - Before accepting or dismissing a suspected issue, trace a concrete triggering input or state, inspect callers and excluding guards, and check whether tests exercise the behavior and assert the relevant result. Use targeted checks when available; run any experiment that writes files in a disposable copy. If the reviewer lacks execution tools, request a specific check from the parent, which must resolve it before final filtering or report the remaining uncertainty.
-- Return only actionable findings supported by a concrete code path. For each finding, include severity (`Critical`, `Should Fix`, or `Nice to Have`), `file:line`, what is wrong, why it matters, a concise fix, self-confidence from 0–100, likelihood (`routine`, `plausible`, `rare`, or `theoretical`), and blast radius (`low`, `medium`, or `high`). For `rare` or `theoretical`, name the reachability reason and cite any excluding guard.
-- After verification, omit findings below 80 confidence and omit `rare`/`theoretical` findings with low or medium blast radius. Keep rare high-blast-radius findings and tag them with the short reachability reason. Confidence means the claim is true; a true finding that matters little is `Nice to Have`, not low-confidence.
+- Return only actionable findings supported by a concrete code path. For each finding, include severity (`Critical`, `Should Fix`, or `Nice to Have`), `file:line`, what is wrong, why it matters, a concise fix, the `file:line` where you traced it, effort (`S`: one file, local, no interface or test changes; `M`: several files or new or changed tests; `L`: a public interface, a migration, or callers in other modules), likelihood (`routine`, `plausible`, `rare`, or `theoretical`), and blast radius (`low`, `medium`, or `high`). For `rare` or `theoretical`, name the reachability reason and cite any excluding guard.
+- After verification, omit findings you did not trace through every link in the code and omit `rare`/`theoretical` findings with low or medium blast radius. Keep rare high-blast-radius findings and tag them with the short reachability reason. Tracing decides only whether the claim is true; a true finding that matters little is `Nice to Have`, not dropped.
 - Tag a finding `autofix` only when its fix has one right answer, changes no behaviour, and stays local: a doc line naming a symbol or flag the diff renamed, an import the diff orphaned, a test name that no longer matches.
 - Do not edit the shared checkout, even temporarily; keep any experiment writes in a disposable copy.
 - Always return a short coverage statement naming the behaviors traced, callers/dependencies and tests examined, and checks actually run. State any unexamined scope, checks not run, and material unresolved uncertainties; distinguish these from confirmed findings. Do not infer safety from missing evidence.
 - Return `No actionable findings.` if nothing survives, followed by the coverage statement and any limitations.
 
-After the agent returns, resolve any requested verification checks before final filtering, without launching more reviewers or scorers. Apply its `autofix` findings yourself after checking each still meets that test, and list them under `Applied automatically`; a finding that fails the test goes to its severity section instead. Deduplicate the rest and render the surviving items under `Critical Issues (Must Fix)`, `Improvements (Should Fix)`, and `Suggestions (Nice to Have)`, omitting empty sections. Explain what is wrong, why it matters, and how to fix it. Include the coverage statement and material limitations even when there are no findings. Do not show self-confidence metadata and do not launch scorer agents. Then continue to Step 6.
+After the agent returns, resolve any requested verification checks before final filtering, without launching more reviewers or scorers. Apply its `autofix` findings yourself after checking each still meets that test, and list them under `Applied automatically`; a finding that fails the test goes to its severity section instead. Deduplicate the rest and render the surviving items under `Critical Issues (Must Fix)`, `Improvements (Should Fix)`, and `Suggestions (Nice to Have)`, omitting empty sections. Within a section, list `S` findings first, then `M`, then `L`, each prefixed with its effort tag (`[S]`, `[M]`, `[L]`). Explain what is wrong, why it matters, and how to fix it. Include the coverage statement and material limitations even when there are no findings. Do not show likelihood or blast-radius metadata and do not launch scorer agents. Then continue to Step 6.
 
 #### Comprehensive mode
 
@@ -244,7 +246,7 @@ Launch the selected review perspectives in parallel, queuing successive batches 
 
 **Launch workers that return findings without editing files**, including temporary edits: a reviewer that mutates a file to test something and restores it still corrupts what the parallel reviewers read. Include the shared rules from `references/agents.md` in every brief. Disable delegation tools for ordinary reviewers where supported; read-only access alone does not prevent delegation. If a reviewer coordinates verification, name the checks, bound the descendants, and define when it should stop. Workers can read the relevant sub-skill directly when their harness has no Skill tool.
 
-Each agent should output a list of issues. For each issue, include: what the problem is, where it is (file + line), and why it matters, and tag mechanical ones `autofix` as defined in `references/agents.md`. Do NOT assign confidence scores — scoring happens in a separate pass.
+Each agent should output a list of issues. For each issue, include: what the problem is, where it is (file + line), and why it matters, and tag mechanical ones `autofix` as defined in `references/agents.md`. Do NOT assign verdicts or effort — scoring happens in a separate pass.
 
 **Sub-agent invocation pattern.** When a sub-agent delegates to a sub-skill, pass the resolved scope through directly:
 
@@ -278,7 +280,7 @@ Then append: "Provide a focused code review in 300 words or less covering: poten
 
 ## Steps 4 to 5: Score, Triage, Autofix, Format (comprehensive mode only)
 
-Skip these steps in quick mode; Step 3c already produced the filtered, formatted review. In comprehensive mode, **load `references/scoring-and-output.md`** and follow it. In short: score every issue with independent parallel scorers using the exact prompt there (>= 80 passes, and confidence means only "is this true"), have those same scorers return impact, likelihood and blast radius so improbable findings route to an appendix instead of the work list, apply the `autofix` items, then render the severity sections.
+Skip these steps in quick mode; Step 3c already produced the filtered, formatted review. In comprehensive mode, **load `references/scoring-and-output.md`** and follow it. In short: score every issue with independent parallel scorers using the exact prompt there (only `traced` passes, and the verdict means only "is this true"), have those same scorers return impact, effort, likelihood and blast radius so improbable findings route to an appendix instead of the work list, apply the `autofix` items, then render the severity sections.
 
 When that reference is done, **come back here and do Step 6** — the rendered output is not the end of the run.
 

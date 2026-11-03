@@ -264,6 +264,7 @@ refine them in place. Dated review files are snapshots and are never rewritten.
   `docs/features/` ↔ code. `doc` never syncs `docs/product/` to code. On a Lean repo
   with no `docs/features/`, Step 7 checks use cases straight against the code.
 - This skill judges the product, not the code. Pair it with `code-review` /
-  `review-cleancode` for implementation quality and `frontend-design` for visual craft.
+  `review-cleancode` for implementation quality and Anthropic's frontend-design skill for
+  visual craft.
 - See `references/checklist.md` for the persona/use-case templates, the friction
   lenses (Nielsen heuristics + product/JTBD), and severity definitions.

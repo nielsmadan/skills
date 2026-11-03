@@ -1,6 +1,6 @@
 ---
 name: plan
-description: Lightweight planning workflow — delegate read-only planning to an Opus subagent (or adopt a plan already agreed in the conversation), then implement in auto mode after a single go-ahead gate, run QA and one `code-review --multi`, fix findings, repeat QA only after substantial code changes, and update docs. The middle tier between "just do it" (tiny tasks) and `longshot` (multi-hour features). Never enters plan mode, so it sidesteps the plan-mode permission prompts. Use when the user invokes /plan, or wants a plan for a medium-sized task before implementing.
+description: Lightweight planning workflow — plan read-only in-session when already on Opus or stronger, otherwise delegate planning to an Opus subagent (or adopt a plan already agreed in the conversation), then implement in auto mode after a single go-ahead gate, run QA and one `code-review --multi`, fix findings, repeat QA only after substantial code changes, update docs, and commit the task's work. The middle tier between "just do it" (tiny tasks) and `longshot` (multi-hour features). Never enters plan mode, so it sidesteps the plan-mode permission prompts. Use when the user invokes /plan, or wants a plan for a medium-sized task before implementing.
 argument-hint: '[--review] <task, or blank to infer from conversation>'
 effort: xhigh
 ---
@@ -21,8 +21,10 @@ Two design choices make it work:
 - **Never enter plan mode / never call `ExitPlanMode`.** Everything runs in the
   session's normal (auto) mode. This is intentional: it avoids plan mode's read-only
   permission prompts entirely, and a subagent's own tool calls never prompt you.
-- **A subagent plans, the main session implements.** A single read-only subagent
-  pinned to Opus does the exploring and drafts the plan; the main session implements it.
+- **The context that explores is the context that implements.** On Opus or a
+  stronger model the main session plans read-only itself, so what it learned while
+  exploring is still there when it implements. Only a weaker session hands planning
+  to a read-only subagent pinned to Opus, at the cost of re-reading the files later.
 
 The argument is the task. If blank, infer the task from the current conversation.
 
@@ -54,19 +56,24 @@ Judge the task's size first.
   middle tier. Say so in one line, offer `longshot` instead, and stop.
 - **Middle** (a few files, a new endpoint/component, a contained refactor): proceed.
 
-### Step 2: Dispatch the planning agent
+### Step 2: Draft the plan
 
 **A plan already in the conversation?** When the argument is blank and the
 conversation already holds a concrete plan for the task — files and ordered steps,
-not just an idea — ask one line before dispatching: "There's a plan above. Use it,
+not just an idea — ask one line before planning: "There's a plan above. Use it,
 or plan from scratch?" Wait for the answer.
 
-- **Use it:** skip the planning agent. Recast that plan into the skeleton below,
+- **Use it:** skip planning. Recast that plan into the skeleton below,
   check read-only that the files and claims it relies on hold in the current repo,
   and add any gap or drift as an open question. Continue at Step 3.
-- **From scratch:** dispatch as below, passing the conversation's plan as context.
+- **From scratch:** plan as below, treating the conversation's plan as context.
 
-Dispatch **one** subagent via the `Agent` tool:
+**Plan in this session when it runs on Opus or a stronger model.** Explore
+**read-only** — read, search and read-only shell only, no edits and **no** mutating
+commands — then draft the skeleton below yourself, under the same directives the
+subagent brief lists. Do not dispatch.
+
+**Otherwise dispatch one subagent** via the `Agent` tool:
 - `subagent_type: Plan` — read-only by construction (no Edit/Write/NotebookEdit).
 - `model: opus`.
 - `effort: xhigh`.
@@ -84,6 +91,9 @@ so brief it fully. Its prompt MUST contain:
 ```
 ## Approach
 2–3 sentences. Name approach A (recommended) vs B in one line, with why.
+Add "Close call" if A and B both meet the requirements and either differ in
+something expensive to reverse (data model, external interface, new dependency,
+architecture) or cannot be called with confidence.
 
 ## Files to touch
 - path/to/file — what changes and why
@@ -108,9 +118,14 @@ surface unresolved disagreements as open questions for the gate.
 ### Step 4: Present and STOP
 
 Print the plan inline, cleanly formatted, with the **Assumptions & open questions**
-called out so the user can resolve them. Include QA, one final multi-agent code review,
-fixes, conditional post-review QA, verification, and documentation updates in the plan; the go-ahead covers
-these finishing steps too.
+called out so the user can resolve them. If the Approach is marked "Close call", add
+one line offering to run `brainstorm` on that fork before going ahead. Run it only on
+the user's yes, in its embedded mode, then revise the plan around the chosen approach
+and present it again. Include QA, one final multi-agent code review,
+fixes, conditional post-review QA, verification, documentation updates, and the final commit in the
+plan; the go-ahead covers these finishing steps too, including staging and committing the
+task's work on the current branch. Honor any explicit limit the user gives, such as "don't
+commit".
 
 **Hard gate:** do NOT begin implementing. Wait for an explicit go-ahead ("go", "yes",
 "proceed", or edits). This stop is load-bearing — in auto mode nothing else prevents
@@ -154,7 +169,7 @@ Scope this pass to affected scenarios and their neighbors, fixing and retesting
 confirmed defects. Formatting, comments, naming-only cleanup, and documentation
 edits do not trigger another QA pass. State whether repeat QA was needed and why.
 
-### Step 8: Update docs and hand off
+### Step 8: Update docs
 
 Run `doc --update` scoped to the completed task. Update the canonical docs for the
 final behavior, interfaces, usage, and constraints; use `doc --generate` where new
@@ -164,19 +179,39 @@ from the plan into the appropriate docs. Do not create a separate plan archive.
 Check the updated examples and links, and run any required documentation checks.
 If documentation work exposes a code defect, return to the fix and verification
 steps before finishing, applying the same substantial-change rule for repeat QA
-without another code review. Report what changed, QA coverage, review findings
-resolved, verification results, docs updated, and any remaining blockers. Do not stop after implementation
-with an offer to run review or update docs later.
+without another code review.
+
+### Step 9: Commit and hand off
+
+Invoke the `commit` skill with no argument, limited to the task's changes: code,
+tests, and docs land together in the fewest self-contained commits, and other
+sessions' work in the checkout stays out. The go-ahead already authorized this; do
+not ask again. Do not commit while a check fails or a blocker remains — leave the
+work uncommitted and say why in the report.
+
+Then report, in this order:
+- **Changed** — the behavior delivered, in a few bullets.
+- **QA** — scenarios covered, defects found and fixed, and whether repeat QA ran and why.
+- **Review findings** — every valid finding, one line each, with its fix or the reason it
+  was rejected; reviewers that failed or timed out.
+- **Verification** — the checks run and their results.
+- **Docs** — the files updated.
+- **Commits** — each hash and subject, or why nothing was committed.
+- **Blockers** — anything still on the user, such as a reinstall.
+
+Do not stop after implementation with an offer to run review, update docs, or
+commit later, and do not open the report with a bare "Implemented." that hides the
+finishing steps.
 
 ## Examples
 
 User: "Plan adding a `--json` flag to export."
 
-Actions: one read-only planner drafts the approach → present the plan including
+Actions: the session (or, below Opus, one read-only subagent) drafts the approach → present the plan including
 QA, review, and docs → wait for approval → implement in the main session →
 `qa --fix` → one `code-review --multi` → fix findings and verify → repeat QA only
-if the fixes substantially changed code → update usage docs and examples → report
-the completed work.
+if the fixes substantially changed code → update usage docs and examples → `commit`
+→ report changes, QA, each review finding's resolution, checks, docs, and commits.
 
 ## Troubleshooting
 
@@ -186,11 +221,15 @@ the completed work.
   to QA, review, and docs instead of relying on their default git scope.
 - **QA, checks, or a reviewer are unavailable:** report the missing coverage and exact
   blocker; finish independent work without claiming the completion gate passed.
+- **A pre-commit hook fails:** fix what it reports and commit again; follow the
+  `commit` skill's troubleshooting rather than bypassing the hook.
 
 ## Notes
 
 - Read-only precision: the `Plan` agent has no Edit/Write/NotebookEdit tools, so it
   cannot modify files — but it retains Bash, so "no mutating commands" is an
-  instruction, not a hard block. Still far safer than plan mode.
+  instruction, not a hard block. In-session planning has no tool restriction at all,
+  so the read-only rule there rests on the instruction alone; the Step 4 gate is what
+  stops implementation from starting early.
 - `--review` runs the full `review-plan` fan-out (including a `second-opinion` codex
   agent and a `research-tech` agent); it costs more, which is why it is opt-in.

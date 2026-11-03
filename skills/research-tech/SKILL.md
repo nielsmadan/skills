@@ -80,15 +80,15 @@ Pick the relevant agents and launch each batch together as runtime capacity allo
 | **GitHub** | Library with known repo | `site:github.com {lib} "{terms}"`, then read the top 2-3 with `gh` (issues, PRs, raw files). |
 | **General** | Always | `how to {goal} {lib}`. |
 | **Specific** | Error message provided | `"{exact_error_message}" {lib}`. |
-| **StackOverflow** | Common problem/implementation pattern | `site:stackoverflow.com {lib} {keywords}`, then `jina-fetch` top answers (SO blocks WebFetch). |
+| **StackOverflow** | Common problem/implementation pattern | `site:stackoverflow.com {lib} {keywords}`, then fetch the top answers. |
 | **Changelog** | Version mentioned OR "stopped working" / "after upgrade" | `{lib} {version} changelog breaking changes migration`. |
 | **Best Practices** | Feature implementation (no error) | `{lib} best practices {goal}` + `{lib} recommended architecture {goal}`. |
-| **Reddit** | Comparison, best practices, "real world experience", ecosystem sentiment | `site:reddit.com {lib} {keywords}`, then `jina-fetch --proxy` top 2-3 (Reddit needs the proxy). |
+| **Reddit** | Comparison, best practices, "real world experience", ecosystem sentiment | `site:reddit.com {lib} {keywords}`, then fetch the top 2-3 (Reddit often blocks plain fetches). |
 | **Comparison** | "vs", "or", "compare", "which", "best library" | `{A} vs {B} {context}`. |
 | **Product/Market** | Evaluating/choosing a product, platform, tool, or model; capability lookup ("does X support Y"); pricing/ROI; benchmarks | `{product} {capability} documentation`, `{product} pricing`, `{A} vs {B} {year}`, independent benchmark sites, plus News for launches/deprecations. Confirm capabilities against official product pages/changelogs; weight independent benchmarks and community threads over vendor claims. |
-| **News** | Launches, deprecations, funding/acquisition, "is X still maintained" | WebSearch recent + `{product} news {year}`, then `jina-fetch` top 2-3. |
+| **News** | Launches, deprecations, funding/acquisition, "is X still maintained" | WebSearch recent + `{product} news {year}`, then fetch the top 2-3. |
 
-**Fetching**: `gh` for github.com; `WebFetch` for short plain pages; `jina-fetch <url> "<what to extract>"` for long-form reading and whenever `WebFetch` fails, since it returns only the extract. Without `jina-fetch` on PATH, use the Jina MCP `read_url` with its `question` parameter, which likewise returns only the matching passages. See "Web Search & Fetching" in CLAUDE.md. `WebSearch`/`WebFetch` are Claude Code's tool names — on another harness, use its equivalent search and fetch tools.
+**Fetching**: `gh` for github.com; `WebFetch` for pages, asking a specific extraction question on long-form pages, so only the answer enters your context. If a page is refused, truncated or returns only navigation, retry once with any reader or browser tool you have, otherwise note it as unreadable and move on. `WebSearch`/`WebFetch` are Claude Code's tool names — on another harness, use its equivalent search and fetch tools.
 
 For full agent prompts, see `references/agent-prompts.md`.
 

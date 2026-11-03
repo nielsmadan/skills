@@ -1,6 +1,7 @@
 ---
 name: review-functional
-description: Review code against pragmatic functional principles — effects pushed to the edges, no hidden shared state, no mutation of a caller's data, deterministic functions, declarative transforms. Deliberately non-dogmatic: currying, point-free style, recursion and monads are out of scope and are never findings. Triggers "review functional", "functional review", "check for side effects", "is this pure", "too much mutable state", "check global state".
+description: >-
+  Review code against pragmatic functional principles — effects pushed to the edges, no hidden shared state, no mutation of a caller's data, deterministic functions, declarative transforms. Deliberately non-dogmatic: currying, point-free style, recursion and monads are out of scope and are never findings. Triggers "review functional", "functional review", "check for side effects", "is this pure", "too much mutable state", "check global state".
 argument-hint: '[--staged | --unpushed | --changed | --all]'
 effort: high
 ---

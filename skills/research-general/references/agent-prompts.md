@@ -4,13 +4,10 @@ Full prompt templates for the research workers selected in Step 4. Apply that st
 
 ## Fetching web content
 
-Follow "Web Search & Fetching" in CLAUDE.md. In short:
-- Short plain pages, government PDFs, `.gov`/`.int` sites: `WebFetch`.
-- Long-form reading (articles, encyclopedia entries, threads), and any page `WebFetch` refuses, truncates or returns as an empty shell: `jina-fetch <url> "<what to extract>"`. It returns only the extract, so the page never enters your context. Pass several URLs before the question to read them in parallel.
-- Reddit: `jina-fetch --proxy`. Jina does not bypass paywalls; expect the same free prefix.
-- When exact text matters (a quote, a figure), ask for short verbatim anchor phrases and grep the cache path `jina-fetch` prints on stderr.
-
-Without `jina-fetch` on PATH, use the Jina MCP `read_url` with its `question` parameter, which likewise returns only the matching passages.
+- Pages, government PDFs, `.gov`/`.int` sites: `WebFetch` with a specific extraction question, so only the answer enters your context. Fetch several pages in parallel rather than one after another.
+- A fetch has failed when it is refused, returns HTTP 402/403, returns navigation without the body, or answers from a truncated page. Retry once with any reader or browser tool you have; otherwise record the URL as unreadable rather than presenting partial coverage as complete.
+- Reddit often blocks plain fetches; expect to need that retry. Paywalled pages return only their free prefix, with no marker where it stops.
+- When exact text matters (a quote, a figure), ask the fetch for the passage verbatim and quote only what it returned.
 
 ## Encyclopedic Agent (Wikipedia)
 
@@ -20,7 +17,7 @@ Without `jina-fetch` on PATH, use the Jina MCP `read_url` with its `question` pa
 Look up the topic on Wikipedia for grounding and citation trails.
 
 1. Use WebSearch: site:en.wikipedia.org {topic}
-2. Use jina-fetch on the top 1-2 most relevant articles, asking for the key claims with their inline citations and any dispute markers
+2. Fetch the top 1-2 most relevant articles, asking for the key claims with their inline citations and any dispute markers
 3. Note which key claims have inline citations and what the cited sources are (these are leads for the Academic / Primary / Historical agents to verify)
 4. Flag any Wikipedia dispute markers ([citation needed], NPOV warnings, "this article has multiple issues")
 
@@ -44,10 +41,10 @@ Return:
 Find peer-reviewed and pre-print scholarly sources for: {topic_or_question}
 
 For STEM / health / ML / formal-science topics:
-- Use mcp__jina__parallel_search_arxiv with 2-3 query variants
+- Search arXiv (an academic search tool if you have one, else WebSearch: site:arxiv.org {topic}) with 2-3 query variants
 
 For economics / finance / law / management / social-science topics:
-- Use mcp__jina__parallel_search_ssrn with 2-3 query variants
+- Search SSRN (an academic search tool if you have one, else WebSearch: site:ssrn.com {topic}) with 2-3 query variants
 
 For everything else (or if the above return weak results), fall back to:
 - WebSearch: {topic} systematic review meta-analysis
@@ -82,7 +79,7 @@ Use WebSearch with date hints if relevant:
 - {topic} {date_scope}
 - {topic} site:reuters.com OR site:apnews.com OR site:bbc.com OR site:nytimes.com OR site:theguardian.com OR site:economist.com OR site:ft.com OR site:wsj.com
 
-Then use jina-fetch on the top 2-3 most authoritative pieces.
+Then fetch the top 2-3 most authoritative pieces.
 
 Prioritize:
 1. Wire services (Reuters, AP) for breaking facts
@@ -120,7 +117,7 @@ For relevant agencies, search their site directly:
 - Population / development: UN DESA, Census Bureau
 - Industry-specific regulators: SEC, FDA, FAA, EMA, etc.
 
-Fetch primary documents with WebFetch (most .gov pages and PDFs are plain HTML / PDF). Use Jina if a portal is JS-heavy.
+Fetch primary documents with WebFetch (most .gov pages and PDFs are plain HTML / PDF). If a portal is JS-heavy and returns an empty shell, retry with a reader or browser tool.
 
 For each source, capture:
 - Title, URL, issuing body
@@ -165,7 +162,7 @@ Find candid opinions and lived experience on: {topic_or_question}
 Use WebSearch: site:reddit.com {topic}
 
 For top 2-3 relevant threads:
-1. Use jina-fetch --proxy to read the thread (Reddit blocks every fetcher without the proxy)
+1. Fetch the thread (Reddit often blocks plain fetches; see Fetching web content)
 2. Focus on highly-upvoted comments with substantive content, not just the original post
 3. Note the subreddit (r/AskHistorians and r/AskScience have moderation standards; r/news does not)
 

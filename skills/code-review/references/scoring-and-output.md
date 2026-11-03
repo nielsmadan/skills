@@ -2,7 +2,7 @@
 
 Load after the review agents have returned (Steps 4 to 5).
 
-## Step 4: Independent Confidence Scoring
+## Step 4: Independent Verification
 
 Collect all issues from the review agents.
 
@@ -12,7 +12,7 @@ Collect all issues from the review agents.
 
 Launch **parallel scorer agents** — one per issue (or batch small groups if there are many). On a harness where each sub-agent is a full child session rather than a cheap in-process one, batch by default: ~5 issues per scorer, and never more than ~10 scorers total. Each scorer reads the code around the reported lines itself.
 
-Give every scorer the prompt below **verbatim**, filling in only the braces. Do not add framing about which claims are real defects or worth acting on. Past main threads asked whether a claim was "true and worth acting on", which turned confidence into an importance vote and dropped true design findings at 60–79.
+Give every scorer the prompt below **verbatim**, filling in only the braces. Do not add framing about which claims are real defects or worth acting on. Past main threads asked whether a claim was "true and worth acting on", which turned the truth check into an importance vote and dropped true design findings.
 
 ```
 You are checking claims from a code review. For each claim, read the code it cites and enough of its callers, tests and related files to decide whether it is true. You are not told which reviewer wrote it.
@@ -24,18 +24,21 @@ Claims:
 {n}. {file}:{line} — {the claim as the reviewer wrote it, with its stated consequence}
 
 Return, for each claim:
-- confidence (0-100): how sure you are that the claim is TRUE, meaning the code does or contains what it describes. This is not how much it matters.
-    0   false: the code does not do this, or the claim misreads it
-    25  probably false
-    50  could not confirm or refute it from the code
-    75  probably true, but one link in the chain is unverified
-    100 verified: you traced it in the code
-  A true claim about structure (duplication, naming, coupling, a leaky or misleading interface, dead code) scores as high as a true claim about a crash. "No bug today", "cosmetic" and "a maintainability point" describe impact; put them in impact, never in confidence.
-- evidence: one line naming the file:line you checked.
+- verdict: traced | unverified | unconfirmed | false. Whether the claim is TRUE, meaning the code does or contains what it describes. This is not how much it matters.
+    traced       you followed every link of the claim in the code and it holds
+    unverified   probably true, but at least one link in the chain is unchecked
+    unconfirmed  you could not confirm or refute it from the code
+    false        the code does not do this, or the claim misreads it
+  A true claim about structure (duplication, naming, coupling, a leaky or misleading interface, dead code) is as traced as a true claim about a crash. "No bug today", "cosmetic" and "a maintainability point" describe impact; put them in impact, never in the verdict.
+- evidence: one line naming the file:line you checked. A traced verdict without one counts as unverified.
 - impact: critical | should | suggestion
     critical    can cause wrong results, a security hole, data loss or an outage
     should      a defect on a less critical path, or a design problem that will cost real work or cause bugs as the code changes
     suggestion  true and worth doing, but small
+- effort: S | M | L, for the fix the claim proposes, judged from the code it would touch
+    S  one file, local, no public interface or test changes needed
+    M  several files, or new or changed tests
+    L  changes a public or exported interface, needs a migration, or touches callers in other modules
 - likelihood: routine | plausible | rare | theoretical | structural (definitions below)
 - blast_radius: low | medium | high
 - reachability: for rare, how you checked; for theoretical, the file:line of the guard, type or validation that excludes it.
@@ -45,13 +48,13 @@ Paste the likelihood and blast-radius tables from Step 4.5 under the prompt.
 
 The scorer should NOT know which agent found the issue. It evaluates purely based on the code and the claim.
 
-**Filter**: Only issues scoring >= 80 pass through to the output. The scorer's `impact` sets each survivor's section in Step 5.
+**Filter**: Only `traced` issues with a `file:line` in `evidence` pass through to the output. The scorer's `impact` sets each survivor's section in Step 5, and its `effort` orders it within that section.
 
 ## Step 4.5: Likelihood & Blast-Radius Triage
 
-Confidence answers "is this claim true?". It does not answer "will this ever happen?" — an issue can be 95/100 real and still require a once-in-the-universe alignment of conditions. This step adds that second axis so improbable findings stop being presented as work to do.
+The verdict answers "is this claim true?". It does not answer "will this ever happen?" — an issue can be 95/100 real and still require a once-in-the-universe alignment of conditions. This step adds that second axis so improbable findings stop being presented as work to do.
 
-**Same dispatch, no extra agents.** The Step 4 prompt already asks for `likelihood` and `blast_radius`. Discard the triage fields for any issue that fails the >= 80 confidence gate.
+**Same dispatch, no extra agents.** The Step 4 prompt already asks for `likelihood` and `blast_radius`. Discard the triage fields for any issue that fails the `traced` gate.
 
 ### Likelihood buckets
 
@@ -87,7 +90,7 @@ That last row is load-bearing: rare-but-catastrophic is never suppressed, only f
 
 **Scope:** triage applies only to the itemized findings from the internal aspect agents (Agents 1–10), matching Step 4's scope. Preflight cleanup results, applied `autofix` items and external advisor prose are not discrete scoreable issues — leave them untouched.
 
-**Do not push this upstream to Step 3c.** Aspect agents must not self-assess likelihood at emit time, for the same reason Step 3c already forbids them assigning confidence scores: an agent that just found an edge case is motivated to describe it as plausible rather than "will basically never happen." Emission and likelihood-judging stay separate.
+**Do not push this upstream to Step 3c.** Aspect agents must not self-assess likelihood at emit time, for the same reason Step 3c already forbids them assigning verdicts: an agent that just found an edge case is motivated to describe it as plausible rather than "will basically never happen." Emission and likelihood-judging stay separate.
 
 ## Step 4.6: Apply Autofix Items
 
@@ -97,7 +100,7 @@ These edits are part of the review, not the fix prompt: they are listed under `A
 
 ## Step 5: Format Output
 
-Only include sections with findings from the agents that actually ran. If an aspect was not selected, omit it — do not render an empty section. Place each surviving finding in the section matching its scorer's `impact`.
+Only include sections with findings from the agents that actually ran. If an aspect was not selected, omit it — do not render an empty section. Place each surviving finding in the section matching its scorer's `impact`. Within a section, list `S` findings first, then `M`, then `L`, and prefix each with its effort tag: `[S]`, `[M]` or `[L]`.
 
 ### Critical Issues (Must Fix)
 [List issues that could cause bugs, security vulnerabilities, or data loss.

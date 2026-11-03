@@ -263,9 +263,9 @@ ln -sfn ../../.claude/skills/<name> .codex/skills/<name>
 ```
 
 **Never hand-edit a rendered output** under a harness's skills directory. Each
-carries a `<!-- GENERATED ... -->` banner; `loadout check --global` runs in
-lefthook's pre-commit hook and rejects drift, and `loadout sync` refuses to
-overwrite a hand-edited output rather than discarding it.
+carries a `<!-- GENERATED ... -->` banner; `loadout check --global` reports
+drift, and `loadout sync` refuses to overwrite a hand-edited output rather than
+discarding it.
 
 **Nothing prunes.** Moving a skill between scopes — or deleting one — leaves the
 already-rendered copies in all four harness directories. Delete those by hand.

@@ -4,14 +4,11 @@ Full prompt templates for the research workers selected in Step 4. Apply that st
 
 ## Fetching web content
 
-Follow "Web Search & Fetching" in CLAUDE.md. In short:
 - `github.com` (issues, PRs, repo files): use `gh`, not a fetcher.
-- Short plain pages (HTML blogs, RSS feeds, PDFs): `WebFetch`.
-- Long-form reading (docs, articles, threads), and any page `WebFetch` refuses, truncates or returns as an empty shell: `jina-fetch <url> "<what to extract>"`. It returns only the extract, so the page never enters your context. Pass several URLs before the question to read them in parallel.
-- Stack Overflow: straight to `jina-fetch`. Reddit: `jina-fetch --proxy`.
-- When exact text matters (code, config, a quote), ask for short verbatim anchor phrases and grep the cache path `jina-fetch` prints on stderr.
-
-Without `jina-fetch` on PATH, use the Jina MCP `read_url` with its `question` parameter, which likewise returns only the matching passages.
+- Other pages: `WebFetch` with a specific extraction question, so only the answer enters your context. Fetch several pages in parallel rather than one after another.
+- A fetch has failed when it is refused, returns HTTP 402/403, returns navigation without the body, or answers from a truncated page. Retry once with any reader or browser tool you have; otherwise record the URL as unreadable rather than presenting partial coverage as complete.
+- Stack Overflow and Reddit often block plain fetches; expect to need that retry.
+- When exact text matters (code, config, a quote), ask the fetch for the passage verbatim and quote only what it returned.
 
 ## Docs Agent (Context7)
 
@@ -128,7 +125,7 @@ Search Stack Overflow for solutions and implementations.
 Use WebSearch to search: site:stackoverflow.com {library_name} {keywords}
 
 For the top 2-3 relevant questions:
-1. Use `jina-fetch <url> "accepted and top answers: approach, code, caveats"` (Stack Overflow blocks WebFetch)
+1. Fetch each question, asking for "accepted and top answers: approach, code, caveats"
 2. Extract the solution approach
 
 For each answer, note:
@@ -204,7 +201,7 @@ Focus on:
 - "Don't do this" advice from experience
 
 For the top 2-3 relevant threads:
-1. Use `jina-fetch --proxy <url> "<what to extract>"` to read the thread (Reddit blocks every fetcher without the proxy)
+1. Fetch the thread (Reddit often blocks plain fetches; see Fetching web content)
 2. Focus on highly-upvoted comments, not just the original post
 
 For each source, note:

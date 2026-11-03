@@ -1,6 +1,6 @@
 ---
 name: explain
-description: "Generate project explanation docs in docs/explain/ covering architecture, flows, syntax, system APIs, infra, and testing, or explain a code diff, commit, branch, or PR directly in the conversation with --diff."
+description: "Generate project explanation docs in docs/explain/ covering architecture, flows, syntax, system APIs, infra, and testing, or explain a code diff, commit, branch, or PR directly in the conversation with --diff. Use when asked to explain how a project works, document its architecture, or walk through a change."
 argument-hint: "[--diff [--staged | --unpushed | target] | --all | --architecture | --flows | --syntax | --system | --infra | --test] [topic]"
 effort: medium
 ---

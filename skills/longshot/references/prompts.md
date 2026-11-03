@@ -178,6 +178,7 @@ Started: <ISO date> · Plan: <path>
 Approved plan: <path and the final summary presented to the user>
 User approval: <the user's actual reply approving that summary, with date or message reference>
 Implementation started: <ISO timestamp, after approval and the start announcement>
+Base commits: <repo> <branch> <sha> — one per writable repo, the squash range starts here
 
 ## Rulings
 
@@ -212,8 +213,8 @@ A ruling that is later overturned by evidence is edited in place with a
    ```
    <exact command>
    ```
-2. **Confirm the squash plan** — <n> commits fold to <m>:
-   <the resulting subject lines>
+2. **Squash skipped in <repo>** — <why: a commit of yours, a push>;
+   <n> commits would fold to <m>: <the proposed subject lines>
 3. **<deferred question>** — <what it blocks if the answer is X>
 
 ## What exists
@@ -221,12 +222,18 @@ A ruling that is later overturned by evidence is edited in place with a
 |---|---|---|---|
 | <name> | <path> | <branch> | <n>, <test count>, <lint state> |
 
+## Left for you to try
+- `<path>` — <what it is and how to use it, e.g. "seeded DB; run `just serve` against it">
+
+## Squashed
+- <repo>: <n> commits → <m>: <the resulting subject lines>. Undo: `git reset --soft <pre-squash tip>`
+
 Plan harvested into <doc paths — what each received>; the plan was deleted.
 
 ## Rulings I made on your behalf
 **Scope:** <ruling — why — cost if wrong.> …
 **Design:** <ruling — why — cost if wrong.> …
-Full ledger: `<path>` — deleted with the squash once you confirm it.
+Full ledger: `$RUN/ledger.md` — deleted once you have read this.
 
 ## What was not touched
 Nothing was pushed. <Which checkouts were left alone.>

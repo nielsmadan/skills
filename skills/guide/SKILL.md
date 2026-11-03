@@ -115,6 +115,11 @@ When the user signals a step is done ("done", "next", "ok", "✓"), move `▶` t
 fold the finished one into the `✓ Steps 1–N done` line, and re-print the tracker. Keep any
 brief acknowledgement above the block.
 
+**Progress is also implied.** A question, problem report, or comment about step N means the
+user has reached it: mark every earlier user step done, move `▶` to N, and fold them into the
+`✓` line, unless they say an earlier step is still open. An earlier agent handoff is not
+implied done; perform and verify it first, as below.
+
 When the user reaches an agent handoff, perform and verify that action, then any consecutive
 agent actions whose prerequisites are ready. Confirmation that the preceding user step is
 done also counts as reaching the handoff; do not require another "ready" message. Mark agent
@@ -125,7 +130,8 @@ numbering. If an agent action fails, keep it current and diagnose the failure be
 When the user reports trouble or asks about a step, in this order:
 1. **Answer the specific problem first** — diagnose, give the fix or 1–3 things to check for
    *that* step. This goes at the top of the reply.
-2. **Re-print the tracker** at the bottom with the stuck step marked `(stuck)`.
+2. **Re-print the tracker** at the bottom with `▶` on the step they asked about (advanced
+   per Step 3's implied progress), marked `(stuck)` if it isn't working for them.
 
 Do **not** re-list steps the user already completed (beyond the one-line summary). The whole
 point is that they don't scroll — keep the answer tight and the remaining steps below it.
@@ -241,6 +247,22 @@ Prepare and verify the config first. Report that it is ready, then start the gui
 When the user says "folder selected: /tmp/exports", update and verify the config, mark steps
 1–2 done, and resume at step 3. If the update fails, keep step 2 current until resolved.
 
+### Example 5: A question about a later step implies progress
+
+The tracker shows `▶ 1` of six steps, and the user asks: "for step 4, which role do I pick?"
+Answer the question at the top, then advance without waiting for a "done":
+
+> ```
+> ---
+> ✓ Steps 1–3 done
+> ▶ 4. Assign the role  ← you are here
+>     …
+>   5. …
+>   6. …
+> ```
+
+The remaining steps keep their full instructions; they are elided here.
+
 ## Troubleshooting
 
 ### The tracker keeps drifting up the screen
@@ -259,8 +281,8 @@ used; continue from where they are.
 **Solution:** Follow Step 4's recheck before giving another path. A missing control alone
 does not establish a permissions problem or prove the provider changed its UI.
 
-### The user jumps around (does step 5 before 3)
-**Cause:** Non-linear progress.
-**Solution:** Track actual completion, not position. Mark whichever steps are truly done in
-the `✓` summary (e.g. "✓ Steps 1, 2, 5 done"), set `▶` to the step they're now working, and
-list the rest.
+### The user says they skipped a step (did step 5 before 3)
+**Cause:** Non-linear progress the user has stated.
+**Solution:** Only when they say an earlier step is still open, override Step 3's implied
+progress: mark just the steps that are done (e.g. "✓ Steps 1, 2, 5 done"), set `▶` to the
+step they're now working, and list the rest, skipped ones included.

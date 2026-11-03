@@ -1,6 +1,6 @@
 ---
 name: ideation
-description: Generate ideas with structure when you're stumped — on what to build next, what the real problem is, or how to solve it. Pulls in research for context, diverges wide using matched frameworks, then converges on a prioritized few. Use when the user says "I'm stuck", "I'm stumped", "ideate", "brainstorm ideas", "help me think of", "what could I add", "what should I build", "I don't know what the problem is", "how could I solve", or wants idea generation on any topic (product, technical, business, writing, personal). For auditing an existing product against its users, use review-product instead.
+description: Generate ideas with structure when you're stumped — on what to build next, what the real problem is, or how to solve it. Pulls in research for context, diverges wide using matched frameworks, then converges on a prioritized few. Use when the user says "I'm stuck", "I'm stumped", "ideate", "brainstorm ideas", "help me think of", "what could I add", "what should I build", "I don't know what the problem is", "how could I solve", or wants idea generation on any topic (product, technical, business, writing, personal). For weighing and validating approaches to a problem that is already defined, use brainstorm. For auditing an existing product against its users, use review-product instead.
 argument-hint: '[topic] [--quick]'
 effort: high
 ---
@@ -20,8 +20,8 @@ prioritized few.** The frameworks change with the stuck-state; the rhythm doesn'
 
 This is **divergent-then-convergent**: generate broadly with judgment off, *then* narrow.
 It is the broad counterpart to `review-product` (which audits a product against its users
-in a specific direction). Where `superpowers:brainstorming` gates implementation behind an
-approved design, this skill is upstream of that — it generates the ideas you'd then design.
+in a specific direction). Where `brainstorm` works out and validates how to solve a problem
+the user can already name, this skill is upstream of that — it generates the ideas you'd then design.
 
 `review-product` delegates here when its audit surfaces a **wide-open gap** — a user job the
 product doesn't serve at all, whose fix isn't obvious — and needs a divergent spread of
@@ -108,7 +108,7 @@ Create a TodoWrite item per step. With `--quick`, collapse to steps 3 + 5 only.
   filename. If there's no `docs/` tree, or nothing in it fits, just present inline and let the
   user name a path — don't invent a folder or a new docs section.
 - End by pointing at the natural next move: validate the riskiest assumption, or feed a chosen
-  idea into `superpowers:brainstorming` / `review-plan` to design it.
+  idea into `brainstorm` / `review-plan` to design it.
 
 ## Output Format
 
@@ -132,7 +132,7 @@ Grouped by the framework or lens that produced them; one line of reasoning each.
 | 2 | ... | | | |
 
 ## Next move
-- Validate assumption for #<n> by <cheapest test>, or design #<n> via brainstorming/review-plan.
+- Validate assumption for #<n> by <cheapest test>, or design #<n> via brainstorm/review-plan.
 ```
 
 ## Examples
@@ -184,6 +184,6 @@ well-understood topics, skip it. Momentum matters — a stumped person wants ide
 - `references/frameworks.md` holds the full method library (procedure + example per framework),
   organized by stuck-state. Load only the entries the router selects.
 - Adjacent skills: `review-product` (audit a product against its users — narrower, evaluative),
-  `superpowers:brainstorming` (design-gate an approved approach — downstream of this),
+  `brainstorm` (generate and validate approaches to a defined problem — downstream of this),
   `review-plan` (review a plan once an idea is chosen), `research-tech` / `research-general`
   (the context sources this skill calls).

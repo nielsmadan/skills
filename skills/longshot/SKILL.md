@@ -1,6 +1,6 @@
 ---
 name: longshot
-description: Run a long autonomous build session from a brief — interview the user with `blind-spots`, prepare the plan and review it with `review-plan`, and wait for explicit final approval to start implementation. Only then decide later ambiguities as recorded rulings and execute without check-ins. Per task a fresh implementer subagent, an independent spec+quality reviewer, a fix loop, then whole-feature QA and a whole-branch review, the plan harvested into the repo's docs and deleted, and a handoff report with rulings, deferred questions and a squash proposal. Use when the user says "longshot", "work on this independently", "run with this", "ask me everything up front then go", "I'll be away", or hands over a multi-hour feature or package to build end to end. Do NOT use for a single small change — use `plan` for that.
+description: Run a long autonomous build session from a brief — interview the user with `blind-spots`, prepare the plan and review it with `review-plan`, and wait for explicit final approval to start implementation. Only then decide later ambiguities as recorded rulings and execute without check-ins. Per task a fresh implementer subagent, an independent spec+quality reviewer, a fix loop, then whole-feature QA and a whole-branch review, the plan harvested into the repo's docs and deleted, the run's commits squashed, and a handoff report with rulings and deferred questions. Use when the user says "longshot", "work on this independently", "run with this", "ask me everything up front then go", "I'll be away", or hands over a multi-hour feature or package to build end to end. Do NOT use for a single small change — use `plan` for that.
 argument-hint: '[--plan FILE] [--no-worktree] [--repos a,b] (brief, or blank to take it from the conversation)'
 effort: high
 ---
@@ -26,8 +26,9 @@ not authorize new scope.
 
 Approving the implementation start authorizes staging and implementation commits
 for the run's work in its writable repos, including on the primary repo's current
-branch. Honor any explicit limits the user gives. Do not ask for a separate commit
-confirmation. Final squashing requires its own approval under Phase 6.
+branch, and squashing those commits at the end of the run (Phase 6). Honor any
+explicit limits the user gives. Do not ask for a separate commit or squash
+confirmation.
 
 State it back to the user at the implementation start gate, verbatim in substance:
 
@@ -116,12 +117,13 @@ preparation.
 rationale from `blind-spots`; do not reopen an approach already settled there.
 Where the settled decisions still leave
 a genuine fork in how the thing is built — the same requirements reachable two or
-three structurally different ways — present those options with their trade-offs, lead
-with your recommendation and the reason, and wait. `blind-spots` establishes what the
-work must do; this establishes the shape it takes, and a plan drafted before it is
-answered bakes in a choice the user never made. Cut each option to what the definition
-of done requires before presenting it. If there is no such fork, say so in one line
-and move on rather than inventing alternatives.
+three structurally different ways, a real fork by `brainstorm`'s test — invoke
+`brainstorm` on it in its embedded mode, passing the settled brief, the definition of
+done and the options you see. It validates each option with an independent critic,
+presents them with your recommendation, and waits for the user's pick. `blind-spots`
+establishes what the work must do; this establishes the shape it takes, and a plan
+drafted before it is answered bakes in a choice the user never made. If there is no
+such fork, say so in one line and move on rather than inventing alternatives.
 
 Then draft or validate the plan itself, in the **plan format** in
 `references/prompts.md`. Every task goes to a fresh subagent that has none of this
@@ -184,9 +186,11 @@ updates."** Only now activate autonomous rulings, save the plan, create worktree
 dispatch implementers, or make implementation edits and commits.
 
 Open the ledger at `docs/plans/<YYYY-MM-DD>-<slug>-ledger.md` (see
-`references/prompts.md` for its shape). Record the approved plan and the user's
-actual start-approval message before the first ruling. Append to it for the rest
-of the run; it lives on disk so the phase and approval survive compaction.
+`references/prompts.md` for its shape). Record the approved plan, the user's
+actual start-approval message, and the primary repo's `HEAD` as its base commit
+before the first ruling; Phase 3 adds each worktree's base as it creates it.
+Append to it for the rest of the run; it lives on disk so the phase and approval
+survive compaction.
 
 Create the run directory `RUN=${TMPDIR:-/tmp}/longshot-<slug>` for check logs and
 review findings. Those are working artifacts, not the record — anything that
@@ -201,7 +205,8 @@ Follow the workflow file. Default:
 - Work on the primary repo's current branch unless the user requests another branch.
 - **Every foreign repo gets a worktree**, branched off its main:
   `git worktree add ../<project>-worktrees/<repo> -b <feature> ../all/<repo>`.
-  Never commit to a foreign repo's `main`. Never combine two repos in one commit.
+  Record the new branch's `HEAD` in the ledger as that repo's base commit. Never
+  commit to a foreign repo's `main`. Never combine two repos in one commit.
 - `--no-worktree` skips this and works in place.
 
 ## Phase 4 — The execution loop
@@ -315,18 +320,39 @@ commit both. A plan the user supplied was theirs before the run — harvest it t
 same way but propose its deletion in the handoff rather than doing it.
 
 The ledger stays until the user has read the handoff: it is the record of what was
-decided on their behalf. Its rulings that constrain future work are harvested now;
-the file itself is deleted once the user confirms the squash, and folds into it.
-Remove `$RUN` at the same time.
+decided on their behalf. Its rulings that constrain future work are harvested now.
+Move the file itself out of the repo to `$RUN/ledger.md` before committing the
+harvest, so the squashed history leaves no trace of it. Delete
+it with the rest of `$RUN` once the user has read the handoff.
+
+**Then sort what the run left in the work tree.** Run `git status` in each writable
+repo. Keep the files the run created that help the user try out what it built —
+seeded data, a sample config, a fixture to run against — and list each one in the
+handoff with what it is for. Delete every other file the run created, such as
+scratch output, logs and stray screenshots. Leave alone any change the run did not
+make.
+
+**Then squash the run's commits** — start approval covers this, so do not ask again.
+Per writable repo, invoke `squash-commits <base>` with the base commit the ledger
+recorded, so the range is exactly what the run committed. Squash a repo only when
+every commit in `<base>..HEAD` is the run's and none of them is on a remote.
+Uncommitted or untracked files do not block it, so leave in place anything the run
+kept for the user to try out. If either condition fails — the user committed or
+pushed in that checkout mid-run — leave its history alone and put the squash plan
+in "Blocked on you" as a before/after commit list awaiting a yes. Keep each repo's
+pre-squash tip for the report.
 
 Then one report. Template in `references/prompts.md`. It must contain:
 
 - **Blocked on you** — first, because it is what the user reads first: each blocked
-  check with the exact command to run; the squash proposal, as the concrete
-  before/after commit list awaiting a yes (never rewrite history without one;
-  delegate to `squash-commits` once approved); and the deferred questions worth an
-  answer before the next round of work. The rest stay in the ledger.
+  check with the exact command to run; any squash that had to be skipped, with its
+  reason and proposed commit list; and the deferred questions worth an answer before
+  the next round of work. The rest stay in the ledger.
 - **What exists, where** — a repo / path / branch / commit-count table.
+- **Left for you to try** — each uncommitted file the run kept, its path and what it
+  is for.
+- **Squashed** — per repo, how many commits folded into which subjects, and the
+  pre-squash tip with the undo command `git reset --soft <tip>`.
 - **Where the plan went** — which docs received what, and that the plan was deleted.
 - **Rulings** — the ledger, grouped scope vs. design, each as
   decision — why — cost if wrong.
@@ -360,8 +386,9 @@ the loop with pings → `qa --fix` over the whole feature → whole-branch revie
 contract-coherence pass + fix wave → handoff.
 
 Result: three branches ready to integrate, a rulings ledger explaining every decision
-made in the user's absence, one XCTest run flagged as theirs to do, and a squash plan
-waiting on a yes. Zero required user turns between start approval and the report.
+made in the user's absence, one XCTest run flagged as theirs to do, and each branch's
+history squashed to a few commits. Zero required user turns between start approval
+and the report.
 
 ### Example: unanswered choices in an asynchronous prompt
 

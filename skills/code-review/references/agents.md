@@ -2,7 +2,7 @@
 
 Load at Step 3c, once the aspect selection and scope are resolved. Each agent
 outputs a list of issues — what the problem is, where it is (`file:line`), and why
-it matters. Agents do **NOT** assign confidence scores; scoring is a separate pass.
+it matters. Agents do **NOT** assign verdicts or effort; scoring is a separate pass.
 
 Delegating agents pass the resolved scope through per the translation table in
 Step 3c. Inline agents work directly against the file list computed in Step 3b.

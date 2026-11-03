@@ -39,8 +39,9 @@ is recoverable from the branch reflog after the verified ref move.
   silently absorb every commit between its members.
 - **The final tree must be byte-identical** to the original tip before the branch is
   moved. Squashing changes *history*, never *content*. Verify this and abort if it differs.
-- **Require a clean working tree.** If there are uncommitted changes, stop without
-  creating a stash. Let the user decide how to preserve their work before re-running.
+- **Leave the working tree and index alone.** Uncommitted and untracked changes are
+  fine: the rebuild never touches them, and the final tree matches the original tip,
+  so they stay exactly as they were. Never stash, reset or check out to clear them.
 - **No interactive rebase.** `git rebase -i` is unsupported in this harness. Use the
   rebuild method below.
 - **Leave no persistent helper state.** Do not create backup tags, branches, or stashes.
@@ -53,13 +54,9 @@ is recoverable from the branch reflog after the verified ref move.
 ### Step 1: Preconditions
 
 ```bash
-git status --porcelain      # MUST be empty — else stop without changing Git state
+git status --porcelain      # note the output (STATUS_BEFORE); Step 7 compares against it
 git rev-parse --abbrev-ref HEAD   # current branch (save as BRANCH)
 ```
-
-If the working tree is dirty, stop: "Working tree has uncommitted changes. Preserve or
-commit them as you prefer, then re-run `/squash-commits`. This skill did not create a
-stash or change the working tree."
 
 ### Step 2: Determine the unpushed range
 
@@ -181,12 +178,12 @@ branch. Report what diverged; the branch is untouched and nothing needs cleaning
 If both checks pass, point the branch at the rebuilt history:
 ```bash
 git update-ref -m 'squash-commits: <N> → <M> commits' refs/heads/<BRANCH> <NEWTIP> <ORIG_TIP>
-git status --short         # should be clean
+git status --porcelain     # MUST match STATUS_BEFORE
 ```
 `update-ref` with the old value moves the branch only if it still points at `ORIG_TIP`. If
 it moved since Step 2 (a new commit, a pull), it fails with `cannot lock ref … expected
-<ORIG_TIP>` and changes nothing — stop and re-plan from Step 2. The working tree and index
-already match `NEWTIP`'s tree, so status stays clean.
+<ORIG_TIP>` and changes nothing — stop and re-plan from Step 2. `HEAD`'s tree is
+unchanged, so any uncommitted or untracked changes show exactly as they did in Step 1.
 
 ### Step 8: Report
 
@@ -201,8 +198,8 @@ git log --oneline <BASE>..HEAD
 <new oneline log>
 
 Original tip: `<ORIG_TIP>` (retained in `<BRANCH>`'s reflog).
-- Undo: `git reset --hard <ORIG_TIP>` (run it yourself — the agent does not run
-  `reset --hard`).
+- Undo: `git reset --soft <ORIG_TIP>` — restores the original commits and leaves the
+  index and working tree as they are.
 - Cleanup: complete — no backup tag, branch, stash, or temporary message files remain.
 ```
 
@@ -279,9 +276,10 @@ the merges manually or rebase to a linear history first.
 
 **Cause:** The new grouping/messages aren't what they wanted.
 **Solution:** Use the `ORIG_TIP` printed in the completion report:
-`git reset --hard <ORIG_TIP>` (the user runs this — the agent does not run
-`reset --hard`). If the report is unavailable, inspect `git reflog <BRANCH>` and identify the tip
-immediately before the squash. Then adjust the plan and re-run.
+`git reset --soft <ORIG_TIP>`. The trees are identical, so this restores the original
+history without touching the index or any uncommitted work. If the report is unavailable,
+inspect `git reflog <BRANCH>` and identify the tip immediately before the squash. Then
+adjust the plan and re-run.
 
 ### Legacy `squash-backup-*` tags exist
 
