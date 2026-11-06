@@ -92,6 +92,22 @@ context without repeating sensitive values to the user or writing them elsewhere
 Continue the task using the prior diagnosis, fix, or decision. Cite the session's
 agent, title, and date when summarizing what was recovered.
 
+### When sessions ran
+
+`--timeline` lists sessions active in a window instead of searching, oldest first,
+in local time. It takes the same agent and scope selectors and no query:
+
+```bash
+python3 scripts/search_agent_logs.py --timeline --since 2026-11-02 [--until 2026-11-03] [--idle-minutes 30] [--format json]
+```
+
+Each session is split into active spans wherever its log goes quiet for longer than
+`--idle-minutes`; a span's prompt count covers only human prompts, so a span with
+none was driven by another session, a scheduled wake-up or a compaction. A bare
+`--until` date includes that whole day, and `--days N` can stand in for `--since`.
+The footer merges overlapping sessions into one active total per day. Claude
+subagent transcripts are skipped, since their parent session already covers them.
+
 ### 4. Widen only as needed
 
 If nothing matches, try an alternate query, remove `--days`, use `--app NAME`,

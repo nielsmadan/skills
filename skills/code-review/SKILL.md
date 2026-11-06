@@ -1,7 +1,7 @@
 ---
 name: code-review
 description: Clean up comments and mechanical loose ends, then review code with comprehensive and quick modes. Use when reviewing code changes, PRs, or specific files for quality, bugs, and best practices.
-argument-hint: '[target] [--quick] [--correctness] [--logic] [--architecture] [--security] [--performance] [--history] [--test] [--interface] [--clean-code] [--functional] [--defensive] [--typescript] [--project] [--library-use] [--staged] [--unpushed] [--all] [--changed] [--multi] [--rereview]'
+argument-hint: '[target] [--quick] [--correctness] [--logic] [--architecture] [--security] [--performance] [--history] [--test] [--interface] [--clean-code] [--functional] [--consistency] [--defensive] [--typescript] [--project] [--library-use] [--staged] [--unpushed] [--all] [--changed] [--multi] [--rereview]'
 effort: high
 ---
 
@@ -23,11 +23,12 @@ Flag parsing, scope resolution, and the preflight cleanup (Steps 1–3b.6) need 
 ## Usage
 
 ```
-/code-review                          # Preflight cleanup + all 9 review aspects, default scope
+/code-review                          # Preflight cleanup + all 10 review aspects, default scope
 /code-review --quick                  # One integrated review pass, no scorer-agent round
-/code-review <target>                 # Preflight cleanup + all 9 aspects, scoped to target
+/code-review <target>                 # Preflight cleanup + all 10 aspects, scoped to target
 /code-review --architecture           # Architecture only
 /code-review --functional             # Functional principles only
+/code-review --consistency            # Consistency with existing codebase patterns only
 /code-review --correctness            # Logic, failure paths, and changing assumptions
 /code-review --security --performance # Two aspects
 /code-review --logic src/auth/        # One aspect, scoped to target
@@ -58,7 +59,7 @@ Every mode first runs `review-tidy --fix` over the resolved scope; it coordinate
 
 ## Aspect Selection
 
-Aspect flags let you run a subset of the review agents instead of all 9. Flags are additive — pass as many as you want. Comment quality is absent from this list because its fix pass always runs before the selected review.
+Aspect flags let you run a subset of the review agents instead of all 10. Flags are additive — pass as many as you want. Comment quality is absent from this list because its fix pass always runs before the selected review.
 
 | Flag | Maps to |
 |------|---------|
@@ -71,6 +72,7 @@ Aspect flags let you run a subset of the review agents instead of all 9. Flags a
 | `--interface` | Agent 6: Interface Design (delegates to `/review-interfaces`) |
 | `--clean-code` | Agent 7: Clean Code (delegates to `/review-cleancode`) |
 | `--functional` | Agent 7b: Functional Review (delegates to `/review-functional`) |
+| `--consistency` | Agent 7c: Consistency Review (delegates to `/review-consistency`) |
 
 Two further aspects are **conditional add-ons** — in the default (no-aspect-flag) run they are included automatically when they apply; with explicit aspect flags they run only if their own flag is passed (see Step 3b.5 for detection):
 
@@ -83,7 +85,7 @@ Two further aspects are **conditional add-ons** — in the default (no-aspect-fl
 
 **Aspect rules:**
 - Normalize `--logic` and `--defensive` to `--correctness` before selecting agents; any combination of these flags runs Agent 1 exactly once.
-- In comprehensive mode, no aspect flags → run all 9 core agents, **plus** any detected language review, the project review, and the library-use review if present.
+- In comprehensive mode, no aspect flags → run all 10 core agents, **plus** any detected language review, the project review, and the library-use review if present.
 - One or more aspect flags → run only those agents, skip the rest. The conditional add-ons run only if `--typescript` / `--cli` / `--react` / `--project` / `--library-use` (or another `--<language>`) is among the flags.
 - `--quick` is a complete preset and cannot be combined with aspect flags.
 - `--multi` composes with any aspect selection.
@@ -132,11 +134,11 @@ Search for and identify all files related to "$ARGUMENTS". Use Glob and Grep to 
 
 If the removed `--comments` aspect flag is passed, abort with `Comment cleanup now runs automatically before every code review. Use review-comments directly for a standalone comment report.`
 
-Strip aspect flags (`--correctness`, `--logic`, `--architecture`, `--security`, `--performance`, `--history`, `--test`, `--interface`, `--clean-code`, `--functional`, `--defensive`, `--typescript`, `--project`, `--library-use`), scope flags (`--staged`, `--unpushed`, `--all`, `--changed`), `--quick`, `--multi`, and `--rereview` from `$ARGUMENTS`. The remainder is the review target.
+Strip aspect flags (`--correctness`, `--logic`, `--architecture`, `--security`, `--performance`, `--history`, `--test`, `--interface`, `--clean-code`, `--functional`, `--consistency`, `--defensive`, `--typescript`, `--project`, `--library-use`), scope flags (`--staged`, `--unpushed`, `--all`, `--changed`), `--quick`, `--multi`, and `--rereview` from `$ARGUMENTS`. The remainder is the review target.
 
 If `--quick` appears with any aspect flag or with `--multi`, abort with `--quick is a complete review preset; remove the aspect flags or --multi.` It may compose with a target, one scope flag, and `--rereview`.
 
-In comprehensive mode, if any aspect flags are present, launch ONLY the corresponding agents (including the conditional add-ons only when a `--<language>`/`--cli`/`--react`/`--project`/`--library-use` flag is passed). Otherwise launch all 9 core agents plus whatever Step 3b.5 detects. In quick mode, follow the single-reviewer branch in Step 3c.
+In comprehensive mode, if any aspect flags are present, launch ONLY the corresponding agents (including the conditional add-ons only when a `--<language>`/`--cli`/`--react`/`--project`/`--library-use` flag is passed). Otherwise launch all 10 core agents plus whatever Step 3b.5 detects. In quick mode, follow the single-reviewer branch in Step 3c.
 
 ### 3b. Resolve scope
 
@@ -224,17 +226,17 @@ Do not load `references/agents.md`. Launch exactly **one read-only review agent*
 For every harness, retain full review reasoning effort. Give the reviewer this integrated brief:
 
 - Read the applicable `AGENTS.md` / `CLAUDE.md` files and the scoped diff or files. For each changed behavior, trace the path from its callers through the implementation and dependencies to its observable result, including failure paths. Read surrounding code and related tests to check the contracts at each boundary; do not stop at the diff hunks. For a whole-file or whole-repo target, trace the main behaviors in scope.
-- Read `review-correctness` and apply both passes directly without launching another reviewer. Review correctness, edge cases, error handling, regressions, catch-all `else`/`default` branches that would silently absorb a newly added enum or API value, missing or weak tests, security red flags, and interface compatibility. Check performance hazards supported by the traced paths. Also check design and maintainability: module responsibilities, coupling, duplication, interface clarity, hidden shared state, and mutation of caller-owned data. Tie each concern to concrete code and its consequences.
+- Read `review-correctness` and apply both passes directly without launching another reviewer. Review correctness, edge cases, error handling, regressions, catch-all `else`/`default` branches that would silently absorb a newly added enum or API value, missing or weak tests, security red flags, and interface compatibility. Check performance hazards supported by the traced paths. Also check design and maintainability: module responsibilities, coupling, duplication, interface clarity, hidden shared state, and mutation of caller-owned data. Check consistency: compare each added construct with two or more existing siblings of the same kind and flag divergences in naming, placement, mechanism (errors, logging, config, existing helpers) or registration, citing the precedent `file:line`s; documented project rules and newer patterns win over older precedent. Tie each concern to concrete code and its consequences.
 - If Step 3b.5 detected language, project, or library-use guidance, read those matching `SKILL.md` files as review references and apply their checks directly. Do not invoke them as skills.
 - Before accepting or dismissing a suspected issue, trace a concrete triggering input or state, inspect callers and excluding guards, and check whether tests exercise the behavior and assert the relevant result. Use targeted checks when available; run any experiment that writes files in a disposable copy. If the reviewer lacks execution tools, request a specific check from the parent, which must resolve it before final filtering or report the remaining uncertainty.
 - Return only actionable findings supported by a concrete code path. For each finding, include severity (`Critical`, `Should Fix`, or `Nice to Have`), `file:line`, what is wrong, why it matters, a concise fix, the `file:line` where you traced it, effort (`S`: one file, local, no interface or test changes; `M`: several files or new or changed tests; `L`: a public interface, a migration, or callers in other modules), likelihood (`routine`, `plausible`, `rare`, or `theoretical`), and blast radius (`low`, `medium`, or `high`). For `rare` or `theoretical`, name the reachability reason and cite any excluding guard.
 - After verification, omit findings you did not trace through every link in the code and omit `rare`/`theoretical` findings with low or medium blast radius. Keep rare high-blast-radius findings and tag them with the short reachability reason. Tracing decides only whether the claim is true; a true finding that matters little is `Nice to Have`, not dropped.
-- Tag a finding `autofix` only when its fix has one right answer, changes no behaviour, and stays local: a doc line naming a symbol or flag the diff renamed, an import the diff orphaned, a test name that no longer matches.
+- Tag a finding `autofix` when its fix cannot change production behaviour, any change in what a test executes is proven by running tests, and a wrong call would be visible in the diff and cheap to revert. It must not need new prose, a design choice, or an edit to exported or public code. Examples: a doc line naming a symbol or flag the diff renamed, an import the diff orphaned, a test name that no longer matches, an unexported identifier renamed to the codebase's naming pattern. When the fix changes what a test executes, append `verify: suite` if test code moves unchanged, or `verify: mutation` if it substitutes different test code.
 - Do not edit the shared checkout, even temporarily; keep any experiment writes in a disposable copy.
 - Always return a short coverage statement naming the behaviors traced, callers/dependencies and tests examined, and checks actually run. State any unexamined scope, checks not run, and material unresolved uncertainties; distinguish these from confirmed findings. Do not infer safety from missing evidence.
 - Return `No actionable findings.` if nothing survives, followed by the coverage statement and any limitations.
 
-After the agent returns, resolve any requested verification checks before final filtering, without launching more reviewers or scorers. Apply its `autofix` findings yourself after checking each still meets that test, and list them under `Applied automatically`; a finding that fails the test goes to its severity section instead. Deduplicate the rest and render the surviving items under `Critical Issues (Must Fix)`, `Improvements (Should Fix)`, and `Suggestions (Nice to Have)`, omitting empty sections. Within a section, list `S` findings first, then `M`, then `L`, each prefixed with its effort tag (`[S]`, `[M]`, `[L]`). Explain what is wrong, why it matters, and how to fix it. Include the coverage statement and material limitations even when there are no findings. Do not show likelihood or blast-radius metadata and do not launch scorer agents. Then continue to Step 6.
+After the agent returns, resolve any requested verification checks before final filtering, without launching more reviewers or scorers. Apply its `autofix` findings yourself after checking each still meets that test, and list them under `Applied automatically`; a finding that fails the test goes to its severity section instead. Run a `verify:` item's check first, in a disposable copy with the fix applied: for `verify: suite` the full test suite must pass under `timeout`; for `verify: mutation` the affected tests must pass, then fail once you break the behaviour they assert in the code under test (grep to confirm the break landed). An item whose check fails or cannot run goes to its severity section. Deduplicate the rest and render the surviving items under `Critical Issues (Must Fix)`, `Improvements (Should Fix)`, and `Suggestions (Nice to Have)`, omitting empty sections. Within a section, list `S` findings first, then `M`, then `L`, each prefixed with its effort tag (`[S]`, `[M]`, `[L]`). Explain what is wrong, why it matters, and how to fix it. Include the coverage statement and material limitations even when there are no findings. Do not show likelihood or blast-radius metadata and do not launch scorer agents. Then continue to Step 6.
 
 #### Comprehensive mode
 
@@ -246,7 +248,7 @@ Launch the selected review perspectives in parallel, queuing successive batches 
 
 **Launch workers that return findings without editing files**, including temporary edits: a reviewer that mutates a file to test something and restores it still corrupts what the parallel reviewers read. Include the shared rules from `references/agents.md` in every brief. Disable delegation tools for ordinary reviewers where supported; read-only access alone does not prevent delegation. If a reviewer coordinates verification, name the checks, bound the descendants, and define when it should stop. Workers can read the relevant sub-skill directly when their harness has no Skill tool.
 
-Each agent should output a list of issues. For each issue, include: what the problem is, where it is (file + line), and why it matters, and tag mechanical ones `autofix` as defined in `references/agents.md`. Do NOT assign verdicts or effort — scoring happens in a separate pass.
+Each agent should output a list of issues. For each issue, include: what the problem is, where it is (file + line), and why it matters, and tag safe fixes `autofix` as defined in `references/agents.md`. Do NOT assign verdicts or effort — scoring happens in a separate pass.
 
 **Sub-agent invocation pattern.** When a sub-agent delegates to a sub-skill, pass the resolved scope through directly:
 
@@ -258,7 +260,7 @@ Each agent should output a list of issues. For each issue, include: what the pro
 | `all` | `--all` |
 | target given | the target itself (e.g. `src/auth/`) |
 
-All delegated review sub-skills (`review-architecture`, `review-security`, `review-perf`, `review-interfaces`, `review-cleancode`, `review-functional`, `review-correctness`, `review-typescript`, `test --review`) accept `--staged | --unpushed | --changed | --all`. No special-casing needed. The project's `review-project` skill is expected to accept the same scope flags — if it doesn't, pass it the target/file list instead.
+All delegated review sub-skills (`review-architecture`, `review-security`, `review-perf`, `review-interfaces`, `review-cleancode`, `review-functional`, `review-consistency`, `review-correctness`, `review-typescript`, `test --review`) accept `--staged | --unpushed | --changed | --all`. No special-casing needed. The project's `review-project` skill is expected to accept the same scope flags — if it doesn't, pass it the target/file list instead.
 
 Inline agents (no delegation) work directly against the file list computed in step 3b.
 
@@ -319,10 +321,10 @@ Without `--rereview`, Step 6 ends the run after fixes are applied — the user m
 
 ## Examples
 
-**Clean up, then review the default scope with all 9 agents:**
+**Clean up, then review the default scope with all 10 agents:**
 > /code-review
 
-Runs `review-tidy --fix` (including comment cleanup), then 9 parallel review agents (correctness, architecture, security, performance, historical context, test quality, interface design, clean code, functional principles) against staged changes (or unstaged changes if nothing is staged). The cleanup is summarized separately; review findings are prioritized by severity.
+Runs `review-tidy --fix` (including comment cleanup), then 10 parallel review agents (correctness, architecture, security, performance, historical context, test quality, interface design, clean code, functional principles, consistency with existing patterns) against staged changes (or unstaged changes if nothing is staged). The cleanup is summarized separately; review findings are prioritized by severity.
 
 **Quick review of a routine small change:**
 > /code-review --quick
@@ -332,17 +334,17 @@ Runs one integrated read-only reviewer against staged changes (or unstaged chang
 **Focused single-aspect review:**
 > /code-review --architecture
 
-Runs only the architecture & patterns agent. Use this when you already know which concern you care about and don't want to wait on the other 8 core agents or sift through their output. Flags are additive — combine them (e.g. `--security --performance`) to run a handful of aspects without running them all.
+Runs only the architecture & patterns agent. Use this when you already know which concern you care about and don't want to wait on the other 9 core agents or sift through their output. Flags are additive — combine them (e.g. `--security --performance`) to run a handful of aspects without running them all.
 
 **Whole-repo review:**
 > /code-review --all
 
-Runs the preflight cleanup and all 9 agents against every file in the repo (`git ls-files`). Use this for a fresh audit of an unfamiliar project, before a major release, or when nothing in the working tree is changed. Composes with aspect flags and `--multi`, e.g. `/code-review --all --architecture --multi`.
+Runs the preflight cleanup and all 10 agents against every file in the repo (`git ls-files`). Use this for a fresh audit of an unfamiliar project, before a major release, or when nothing in the working tree is changed. Composes with aspect flags and `--multi`, e.g. `/code-review --all --architecture --multi`.
 
 **Cross-model consensus review:**
 > /code-review --multi
 
-Runs the same 9 review agents plus external reviews from every advisor `second-opinion` has configured, after the preflight cleanup. The output includes a cross-model agreement section highlighting issues where the internal agents and external advisors converge, giving higher confidence to consensus findings. `--multi` composes with aspect and scope flags, e.g. `/code-review --multi --architecture` or `/code-review --all --multi`.
+Runs the same 10 review agents plus external reviews from every advisor `second-opinion` has configured, after the preflight cleanup. The output includes a cross-model agreement section highlighting issues where the internal agents and external advisors converge, giving higher confidence to consensus findings. `--multi` composes with aspect and scope flags, e.g. `/code-review --multi --architecture` or `/code-review --all --multi`.
 
 **Review, fix, then re-review automatically:**
 > /code-review --rereview

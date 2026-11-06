@@ -1,6 +1,6 @@
 ---
 name: commit
-description: Commit ONLY the changes this session made, never another agent's work in the same checkout. With a message argument, makes one commit; with no argument, splits the session's work into the fewest self-contained commits and generates a short feat/fix/chore message for each. Use when the user says "commit", "commit this", "commit my changes", "commit just my/this session's changes", or invokes commit — especially when multiple agents share one working tree.
+description: Commit ONLY the changes this session made, never another agent's work in the same checkout. With a message argument, makes one commit; with no argument, splits the session's work into the fewest self-contained commits and generates a short message for each — feat/fix/chore in the user's own repos, the repo's own history convention elsewhere. Use when the user says "commit", "commit this", "commit my changes", "commit just my/this session's changes", or invokes commit — especially when multiple agents share one working tree.
 effort: medium
 ---
 
@@ -106,15 +106,32 @@ Verify before committing: `git diff --cached` should show this group's changes
 and only those — nothing from another session, nothing from a later group.
 
 ### Step 5: Message
-- **Argument given** → use it verbatim as the subject.
-- **Blank** → generate a short subject for this group following the user's
-  commit policy:
-  - Type is one of `feat` (user-noticeable addition), `fix` (something broken now
-    works), or `chore` (everything else). No scopes/parentheses.
-  - Format: `type: short description`, lowercase, imperative, no trailing period.
-  - Body: omit it, or one short sentence of *what* — never why/how, no essays.
-  - If a group's subject needs an "and" to cover it, the grouping was too coarse;
-    if two groups would get near-identical subjects, it was too fine.
+**Argument given** → use it verbatim as the subject.
+
+**Blank** → first decide, once per run, which convention applies:
+
+1. **The user's own repo** → the house format below. A repo is the user's own
+   when their instructions say their commit format covers it (typically by
+   remote owner — check `git remote get-url origin` against what they list).
+2. **Any other repo** → match the repo's history. Read it with
+   `git log --no-merges -30 --format='%s%n%b%n--'` and copy what the majority
+   does: prefix style (Conventional Commits types and scopes, `area:`,
+   `[component]`, plain sentence), capitalization, mood, trailing period,
+   subject length, and whether commits carry a body. If every recent commit has
+   `Signed-off-by`, commit with `-s`. Never invent a ticket or issue number the
+   convention wants — leave it out and say so in the report.
+3. **No convention to match** (fewer than ~5 commits, or no majority style) →
+   the house format.
+
+House format:
+- Type is one of `feat` (user-noticeable addition), `fix` (something broken now
+  works), or `chore` (everything else). No scopes/parentheses.
+- Format: `type: short description`, lowercase, imperative, no trailing period.
+- Body: omit it, or one short sentence of *what* — never why/how, no essays.
+
+Whichever convention applies: if a group's subject needs an "and" to cover it,
+the grouping was too coarse; if two groups would get near-identical subjects, it
+was too fine.
 
 ### Step 6: Commit and report (silently)
 Commit the staged changes, then move to the next group (back to Step 4) — don't
@@ -187,6 +204,18 @@ Result:
 Committed 4 files as "feat: add CSV export".
 Committed 1 file as "fix: correct build path in deploy script".
 ```
+
+### Example 4: blank message, someone else's repo
+User: `commit`
+Actions:
+1. This session fixed a timeout in `src/client/retry.go` and its test.
+2. `git remote get-url origin` points at an owner the user's instructions don't
+   list → match history.
+3. `git log --no-merges -30` shows subjects like `client: fix nil deref on close`
+   — lowercase `package: description`, no bodies.
+4. `git add src/client/retry.go src/client/retry_test.go`;
+   `git commit -m "client: honor context deadline in retry loop"`.
+Result: `Committed 2 files as "client: honor context deadline in retry loop".`
 
 ## Troubleshooting
 

@@ -7,8 +7,8 @@ import os
 import re
 import sqlite3
 import sys
-from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from dataclasses import dataclass, field, replace
+from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 from typing import Iterable, Iterator
 
@@ -82,6 +82,7 @@ class Entry:
     text: str
     timestamp: str | None = None
     kind: str = KIND_MESSAGE
+    automated: bool = False
 
 
 @dataclass
@@ -325,6 +326,10 @@ def claude_entries(record: dict) -> list[Entry]:
     result = record.get("toolUseResult")
     if isinstance(result, str) and result.strip():
         entries.append(Entry(role, result, timestamp, KIND_TOOL))
+    origin = record.get("origin")
+    origin_kind = origin.get("kind") if isinstance(origin, dict) else None
+    if record.get("isMeta") or record.get("isCompactSummary") or origin_kind not in (None, "human"):
+        return [replace(entry, automated=True) for entry in entries]
     return entries
 
 
@@ -734,6 +739,317 @@ def read_opencode_session(session_id: str, roots: Roots) -> tuple[SessionMeta, l
         connection.close()
 
 
+@dataclass(frozen=True)
+class Span:
+    start: datetime
+    end: datetime
+    prompts: int
+
+    @property
+    def duration(self) -> timedelta:
+        return self.end - self.start
+
+
+@dataclass(frozen=True)
+class TimelineSession:
+    meta: SessionMeta
+    spans: list[Span]
+
+    @property
+    def active(self) -> timedelta:
+        return sum((span.duration for span in self.spans), timedelta())
+
+
+def parse_instant(value: object) -> datetime | None:
+    if not isinstance(value, str) or not value:
+        return None
+    try:
+        moment = datetime.fromisoformat(value.replace("Z", "+00:00"))
+    except ValueError:
+        return None
+    return moment if moment.tzinfo else moment.replace(tzinfo=timezone.utc)
+
+
+def parse_bound(value: str, end_of_day: bool) -> datetime:
+    text = value.strip()
+    if re.fullmatch(r"\d{4}-\d{2}-\d{2}", text):
+        day = datetime.fromisoformat(text)
+        return (day + timedelta(days=1) if end_of_day else day).astimezone()
+    moment = datetime.fromisoformat(text.replace("Z", "+00:00"))
+    return moment if moment.tzinfo else moment.astimezone()
+
+
+def activity_spans(
+    events: Iterable[tuple[datetime, bool]], idle: timedelta
+) -> list[Span]:
+    spans: list[Span] = []
+    for moment, is_prompt in sorted(events):
+        if spans and moment - spans[-1].end <= idle:
+            last = spans[-1]
+            spans[-1] = Span(last.start, moment, last.prompts + int(is_prompt))
+        else:
+            spans.append(Span(moment, moment, int(is_prompt)))
+    return spans
+
+
+def session_events(
+    entries: Iterable[Entry], since: datetime, until: datetime
+) -> list[tuple[datetime, bool]]:
+    timed = ((parse_instant(entry.timestamp), entry) for entry in entries)
+    return [
+        (moment, entry.role == "user" and entry.kind == KIND_MESSAGE and not entry.automated)
+        for moment, entry in timed
+        if moment is not None and since <= moment < until
+    ]
+
+
+def merged_intervals(spans: Iterable[Span]) -> list[tuple[datetime, datetime]]:
+    merged: list[tuple[datetime, datetime]] = []
+    for span in sorted(spans, key=lambda span: span.start):
+        if merged and span.start <= merged[-1][1]:
+            merged[-1] = (merged[-1][0], max(merged[-1][1], span.end))
+        else:
+            merged.append((span.start, span.end))
+    return merged
+
+
+def daily_active(spans: Iterable[Span]) -> dict[date, timedelta]:
+    totals: dict[date, timedelta] = {}
+    for start, end in merged_intervals(spans):
+        cursor = start.astimezone()
+        end = end.astimezone()
+        while cursor < end:
+            midnight = datetime.combine(
+                cursor.date() + timedelta(days=1), datetime.min.time()
+            ).astimezone()
+            piece_end = min(end, midnight)
+            totals[cursor.date()] = totals.get(cursor.date(), timedelta()) + (piece_end - cursor)
+            cursor = piece_end
+    return totals
+
+
+def timeline_paths(agent: str, roots: Roots, options: SearchOptions) -> Iterator[Path]:
+    if agent == "claude":
+        available = [root for root in (roots.claude_projects, roots.claude_archive) if root.is_dir()]
+        if not available:
+            raise FileNotFoundError(
+                f"Claude stores not found: {roots.claude_projects}, {roots.claude_archive}"
+            )
+        for root in available:
+            for path in claude_candidate_paths(root, options):
+                if "subagents" not in path.parts:
+                    yield path
+        return
+    root = {
+        "codex": roots.codex_sessions,
+        "droid": roots.droid_sessions,
+        "pi": roots.pi_sessions,
+    }[agent]
+    if not root.is_dir():
+        raise FileNotFoundError(f"{agent.capitalize()} sessions not found: {root}")
+    yield from (path for path in root.rglob("*.jsonl") if recent_enough(path, options.cutoff))
+
+
+def timeline_sources(
+    agent: str, roots: Roots, options: SearchOptions
+) -> Iterator[tuple[SessionMeta, list[Entry]]]:
+    if agent != "opencode":
+        for path in timeline_paths(agent, roots, options):
+            yield read_jsonl_session(agent, path)
+        return
+    connection = open_opencode(roots.opencode_db)
+    try:
+        rows = connection.execute(
+            "SELECT id, directory, title, time_created, time_updated FROM session"
+        ).fetchall()
+        for row in rows:
+            if options.cutoff is not None and float(row["time_updated"]) / 1000 < options.cutoff:
+                continue
+            meta = SessionMeta(
+                "opencode",
+                str(row["id"]),
+                f"{roots.opencode_db}#session={row['id']}",
+                row["title"],
+                row["directory"],
+                first_ts=iso_from_millis(row["time_created"]),
+                last_ts=iso_from_millis(row["time_updated"]),
+            )
+            yield meta, list(opencode_entries(connection, meta.session_id))
+    finally:
+        connection.close()
+
+
+def timeline_sessions(
+    agent: str,
+    roots: Roots,
+    options: SearchOptions,
+    since: datetime,
+    until: datetime,
+    idle: timedelta,
+) -> list[TimelineSession]:
+    sessions: dict[str, TimelineSession] = {}
+    for meta, entries in timeline_sources(agent, roots, options):
+        if not cwd_in_scope(meta.cwd, options):
+            continue
+        spans = activity_spans(session_events(entries, since, until), idle)
+        if not spans:
+            continue
+        known = sessions.get(meta.session_id)
+        if known is None or spans[-1].end > known.spans[-1].end:
+            sessions[meta.session_id] = TimelineSession(meta, spans)
+    return list(sessions.values())
+
+
+def format_duration(value: timedelta) -> str:
+    minutes = round(value.total_seconds() / 60)
+    return f"{minutes // 60}h{minutes % 60:02d}m" if minutes >= 60 else f"{minutes}m"
+
+
+def format_local(moment: datetime, reference: date | None = None) -> str:
+    local = moment.astimezone()
+    return local.strftime("%H:%M") if local.date() == reference else local.strftime("%Y-%m-%d %H:%M")
+
+
+def iso_local(moment: datetime) -> str:
+    return moment.astimezone().isoformat(timespec="seconds")
+
+
+def timeline_payload(
+    sessions: list[TimelineSession],
+    agents: list[str],
+    incomplete: bool,
+    since: datetime,
+    until: datetime,
+    idle: timedelta,
+) -> dict:
+    return {
+        "since": iso_local(since),
+        "until": iso_local(until),
+        "idle_minutes": round(idle.total_seconds() / 60),
+        "agents": agents,
+        "incomplete": incomplete,
+        "count": len(sessions),
+        "sessions": [
+            {
+                **session_fields(session.meta),
+                "start": iso_local(session.spans[0].start),
+                "end": iso_local(session.spans[-1].end),
+                "active_minutes": round(session.active.total_seconds() / 60),
+                "spans": [
+                    {
+                        "start": iso_local(span.start),
+                        "end": iso_local(span.end),
+                        "minutes": round(span.duration.total_seconds() / 60),
+                        "prompts": span.prompts,
+                    }
+                    for span in session.spans
+                ],
+            }
+            for session in sessions
+        ],
+        "daily_active_minutes": {
+            day.isoformat(): round(total.total_seconds() / 60)
+            for day, total in sorted(
+                daily_active(span for session in sessions for span in session.spans).items()
+            )
+        },
+    }
+
+
+def print_timeline(
+    sessions: list[TimelineSession],
+    agents: list[str],
+    incomplete: bool,
+    since: datetime,
+    until: datetime,
+    idle: timedelta,
+    output_format: str,
+) -> None:
+    if output_format == "json":
+        payload = timeline_payload(sessions, agents, incomplete, since, until, idle)
+        print(json.dumps(payload, ensure_ascii=False, indent=2))
+        return
+    qualifier = " (incomplete)" if incomplete else ""
+    print(
+        f"Agent sessions {format_local(since)} → {format_local(until)} local time, "
+        f"split at idle gaps over {format_duration(idle)}"
+    )
+    print(f"Searched {', '.join(agents)}{qualifier}")
+    if not sessions:
+        print("No sessions in range.")
+        return
+    print(f"Found {len(sessions)} session(s), oldest first:\n")
+    for session in sessions:
+        first, last = session.spans[0].start, session.spans[-1].end
+        day = first.astimezone().date()
+        print("=" * 70)
+        print(
+            f"{format_local(first)} → {format_local(last, day)}  "
+            f"active {format_duration(session.active)}  {session.meta.ref}"
+        )
+        if session.meta.title:
+            print(f"title  : {session.meta.title}")
+        if session.meta.cwd:
+            branch = f" (branch {session.meta.branch})" if session.meta.branch else ""
+            print(f"cwd    : {session.meta.cwd}{branch}")
+        for span in session.spans:
+            print(
+                f"  {format_local(span.start, day)}–{format_local(span.end, day)}"
+                f"  {format_duration(span.duration)}, {span.prompts} prompt(s)"
+            )
+        print()
+    totals = daily_active(span for session in sessions for span in session.spans)
+    print("Daily active time (overlapping sessions merged):")
+    for day, total in sorted(totals.items()):
+        print(f"  {day.isoformat()}  {format_duration(total)}")
+
+
+def run_timeline(args: argparse.Namespace, roots: Roots) -> int:
+    try:
+        agents, all_mode = selected_agents(args)
+        until = parse_bound(args.until, end_of_day=True) if args.until else datetime.now().astimezone()
+        if args.since:
+            since = parse_bound(args.since, end_of_day=False)
+        else:
+            since = until - timedelta(days=args.days)
+    except ValueError as error:
+        print(str(error), file=sys.stderr)
+        return 2
+    if since >= until:
+        print("--since must be earlier than --until", file=sys.stderr)
+        return 2
+    idle = timedelta(minutes=args.idle_minutes)
+    options = SearchOptions(
+        cwd=args.cwd,
+        scope=args.scope,
+        app=args.app,
+        cutoff=since.timestamp(),
+        context=args.context,
+        max_snippets=args.max_snippets,
+    )
+    sessions: list[TimelineSession] = []
+    warnings: list[str] = []
+    searched: list[str] = []
+    for agent in agents:
+        try:
+            sessions.extend(timeline_sessions(agent, roots, options, since, until, idle))
+        except (FileNotFoundError, sqlite3.Error) as error:
+            if not all_mode:
+                print(str(error), file=sys.stderr)
+                return 2
+            warnings.append(str(error))
+            continue
+        searched.append(agent)
+    if not searched:
+        print("No selected agent stores were available.", file=sys.stderr)
+        return 2
+    for warning in warnings:
+        print(f"Warning: {warning}", file=sys.stderr)
+    sessions.sort(key=lambda session: session.spans[0].start)
+    print_timeline(sessions, searched, bool(warnings), since, until, idle, args.output_format)
+    return 0
+
+
 def parse_ref(value: str) -> tuple[str, str]:
     agent, separator, session_id = value.partition(":")
     if not separator or agent not in AGENTS or not session_id:
@@ -914,6 +1230,24 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--current", action="store_true", help="search the invoking agent")
     parser.add_argument("--all", action="store_true", help="search all agents (default)")
     parser.add_argument("--read", metavar="REF", help="print one AGENT:SESSION_ID transcript")
+    parser.add_argument(
+        "--timeline",
+        action="store_true",
+        help="list when sessions were active instead of searching (needs --since or --days)",
+    )
+    parser.add_argument(
+        "--since", help="--timeline start: YYYY-MM-DD or ISO datetime, local time if no offset"
+    )
+    parser.add_argument(
+        "--until",
+        help="--timeline end (default now); a bare YYYY-MM-DD includes that whole day",
+    )
+    parser.add_argument(
+        "--idle-minutes",
+        type=int,
+        default=30,
+        help="--timeline gap that splits a session into separate active spans (default: 30)",
+    )
     parser.add_argument("--cwd", default=os.getcwd(), help="project directory for scope matching")
     parser.add_argument(
         "--scope",
@@ -984,10 +1318,18 @@ def main(argv: list[str] | None = None, roots: Roots | None = None) -> int:
         except (FileNotFoundError, ValueError, sqlite3.Error) as error:
             print(str(error), file=sys.stderr)
             return 2
-    if not args.query:
-        parser.error("query is required unless --read is used")
     if args.days is not None and args.days < 0:
         parser.error("--days must be non-negative")
+    if args.timeline:
+        if args.query:
+            parser.error("--timeline takes no query")
+        if args.since is None and args.days is None:
+            parser.error("--timeline needs --since or --days")
+        if args.idle_minutes < 1:
+            parser.error("--idle-minutes must be positive")
+        return run_timeline(args, roots)
+    if not args.query:
+        parser.error("query is required unless --read or --timeline is used")
     if args.context < 0 or args.max_snippets < 0 or args.max_results < 1:
         parser.error("context/snippet limits must be non-negative and max-results must be positive")
     if args.offset < 0 or args.max_chars < 1:

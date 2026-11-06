@@ -22,7 +22,12 @@ git worktree remove --force "$SCRATCH/cr-<aspect>"
 
 If you cannot make a copy, describe the experiment in the finding instead of running it.
 
-**Tag mechanical findings `autofix`.** A finding is `autofix` only when its fix has one right answer, changes no behaviour, and stays local. Examples: a doc or help line naming a symbol, flag or path the diff renamed or removed; an unexported import or helper whose last use the diff removed, with grep (string literals included) finding no other reference; a test name that names a renamed symbol. Anything that needs a design choice, touches exported or public code, or could change behaviour is a normal finding. `autofix` items skip scoring and are applied by the main thread.
+**Tag safe fixes `autofix`.** A finding is `autofix` when its fix cannot change production behaviour, any change in what a test executes is proven by running tests, and a wrong call would be visible in the diff and cheap to revert. The fix may rest on judgment, as comment cleanup does, but must not need new prose, a design choice, or an edit to exported or public code. Examples: a doc or help line naming a symbol, flag or path the diff renamed or removed; an unexported import or helper whose last use the diff removed, with grep (string literals included) finding no other reference; a test name that names a renamed symbol. When the fix changes what a test executes, append the check it needs:
+
+- `verify: suite` — test code moves unchanged; the full test suite must pass with the fix applied.
+- `verify: mutation` — the fix substitutes different test code; the affected tests must pass, and must still fail once the behaviour they assert is deliberately broken. A green run alone cannot show that a substitution left the test asserting anything.
+
+Anything else is a normal finding. `autofix` items skip scoring and are applied by the main thread.
 
 ## Agent 1: Correctness Review (`--correctness`, aliases `--logic` / `--defensive`)
 Read `review-correctness` and apply both passes to the resolved scope and file list. Do this work yourself; do not dispatch sub-agents or launch other agent CLIs.
@@ -90,6 +95,14 @@ Read `review-functional` and apply its checklist to the resolved scope or file l
 - Apply the skill's exclusions for local mutation, I/O entry points, language idioms, and justified hot-path mutation
 - Exclude currying, point-free style, recursion, and monads
 
+## Agent 7c: Consistency Review (`--consistency`)
+Read `review-consistency` and apply its workflow to the resolved scope or file list. Do this work yourself; do not dispatch sub-agents or launch other agent CLIs.
+- Inventory each unit the change adds and its kind, then collect existing same-kind precedents from the whole checkout, not only the scoped files
+- Flag divergences in naming, placement, mechanism (errors, logging, config, existing helpers), sibling shape, and registration, citing at least two agreeing precedent `file:line`s or a written rule
+- Documented project rules and the newer of two competing patterns win over older precedent
+- Leave pattern quality to clean code and architecture, formatter style and stale references to the preflight cleanup
+- Tag `autofix` only these: an unexported identifier renamed to the pattern its same-kind identifiers use, with every reference found by grep (string literals included); a missing entry in a documentation list that holds only names; test code (builders, data, helpers) moved unchanged to where its siblings keep it, tagged `verify: suite`; a test's ad-hoc mock or setup replaced by the established fixture or helper, tagged `verify: mutation`. Never tag public names, registrations, production code moves or mechanism swaps, a move into a `conftest.py` or anything else that widens fixture scope, or a move of code that resolves paths relative to its own file
+
 ## Agent 8: Language Review (`--typescript` / other `--<language>`) — conditional
 Only if Step 3b.5 detected a language (or the flag was passed explicitly). For each applicable language, invoke its `review-<language>` skill with the scope-translated arguments.
 - TypeScript → `review-typescript`: judgment-level type design a linter can't decide — type modeling (make invalid states unrepresentable, unions of interfaces, outputs no wider than needed), inference-vs-annotation calls, and casts/`any` that compile but hide a wrong upstream type or unvalidated boundary data. Deliberately non-overlapping with typescript-eslint.
@@ -105,7 +118,7 @@ Only if Step 3b.5 found a `library-use` reference in the repo (or the flag was p
 
 ## The extensible layer (how 8, 9 and 10 plug in)
 
-Language reviews and the project review sit on top of the 9 language-agnostic aspects:
+Language reviews and the project review sit on top of the 10 language-agnostic aspects:
 
 - **Language reviews** live globally in `claude/skills/review-<language>/`. They hold checks that apply to *every* project in that language. To add a new language, create a `review-<language>` skill and add a row to the detection registry in Step 3b.5 — `code-review` will auto-route to it. Nothing else to wire.
 - **The project review** is a skill the *project* defines at `.claude/skills/review-project/` for issues unique to that one codebase (conventions, gotchas, house rules that don't generalize). `code-review` calls it only when it exists — projects without one are unaffected. Minimal shape:

@@ -6,7 +6,12 @@ Load after the review agents have returned (Steps 4 to 5).
 
 Collect all issues from the review agents.
 
-**Autofix items first.** Set aside every issue tagged `autofix` and check it against the test in `references/agents.md`: one right answer, no behaviour change, local. For a deletion, re-run the grep yourself, string literals included. Items that pass skip scoring and are applied in Step 4.6. An item that fails joins the scoring set like any other issue.
+**Autofix items first.** Set aside every issue tagged `autofix` and check it against the test in `references/agents.md`: no production behaviour change, any change in what a test executes proven by tests, and a wrong call visible in the diff and cheap to revert. For a deletion or rename, re-run the grep yourself, string literals included. For an item tagged `verify:`, run its check now in a disposable copy (the worktree recipe in `references/agents.md`), never in the shared checkout, where scorers are about to read:
+
+- `verify: suite` — apply the fix in the copy and run the project's full test suite under `timeout`. It must pass.
+- `verify: mutation` — apply the fix in the copy and run the affected tests; they must pass. Then break the behaviour they assert in the code under test (invert a condition, change a returned value), grep to confirm the break landed, and re-run them. They must fail.
+
+Items that pass skip scoring and are applied in Step 4.6. An item that fails any check, or whose check cannot run, joins the scoring set like any other issue.
 
 **Score every remaining issue.** Merge exact duplicates (the same defect at the same location from several agents) and nothing else. Do not send only the "top" claims, drop issues you judge minor, or skip the round because you checked the claims yourself. Past runs did all three, and most clean-code and interface findings never reached a scorer.
 
@@ -94,7 +99,7 @@ That last row is load-bearing: rare-but-catastrophic is never suppressed, only f
 
 ## Step 4.6: Apply Autofix Items
 
-Apply the `autofix` items that passed the check in Step 4. Do this after triage and before rendering, so the report describes the code as it now is. If an edit shifts lines in a file that also has a scored finding, update that finding's line number.
+Apply the `autofix` items that passed the check in Step 4, using the same edit that was verified. Do this after triage and before rendering, so the report describes the code as it now is. If an edit shifts lines in a file that also has a scored finding, update that finding's line number.
 
 These edits are part of the review, not the fix prompt: they are listed under `Applied automatically` in Step 5 and never offered in Step 6.
 
@@ -115,7 +120,7 @@ Only include sections with findings from the agents that actually ran. If an asp
 
 ### Applied automatically
 [Render only if non-empty. One line per item:
- {file}:{line} — {what changed} ({aspect that found it})]
+ {file}:{line} — {what changed} ({aspect that found it}; add `verified: suite` or `verified: mutation` for items that ran a check)]
 
 ### Improbable / Not Worth Handling
 [Render only if non-empty. One line per item, no fix guidance:

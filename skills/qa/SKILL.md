@@ -112,7 +112,16 @@ Use unique sessions, track processes/settings/fixtures you create, and keep
 interactions on one shared target sequential. Use existing test credentials through
 the project's normal mechanism. Keep secrets and private data out of reports.
 Production mutations or real external sends need existing explicit authorization;
-continue independent local cases if one action needs input.
+without it, asking for it is a user action as below.
+
+**Stop before any step that needs the user.** Logging in, entering a 2FA code,
+approving a device or OS permission prompt, or granting an authorization are the
+user's to do. Stop before starting such a step and end the turn right away: do not
+open a login page or prompt and wait on it, and do not run other cases first. Assume
+the user is not watching this session, since they often run many in parallel. Open
+the reply with the request, marked as needing their action and time-critical, and
+say exactly what to do and where. A QA worker returns the request to its parent,
+which surfaces it the same way.
 
 Exercise each row through the real interface. Check both feedback and the final
 effect: a success toast, HTTP 202, zero exit code, or loaded plugin manifest may

@@ -7,6 +7,7 @@ import os
 import sqlite3
 import sys
 import tempfile
+import time
 import unittest
 from contextlib import redirect_stderr, redirect_stdout
 from pathlib import Path
@@ -399,6 +400,83 @@ class SearchAgentLogsTests(unittest.TestCase):
         self.assertEqual(status, 0)
         self.assertIn("(incomplete)", stdout.getvalue())
         self.assertIn("Codex sessions not found", stderr.getvalue())
+
+
+    def run_timeline(self, arguments: list[str]) -> tuple[int, str, str]:
+        with patch.dict(os.environ, {"TZ": "UTC"}):
+            time.tzset()
+            try:
+                return self.run_main(["--timeline", "--scope", "all", *arguments])
+            finally:
+                time.tzset()
+
+    def make_claude_timeline_session(self) -> None:
+        folder = self.roots.claude_projects / search_agent_logs.encode_claude_path(self.cwd)
+        def record(kind: str, stamp: str, content, **extra) -> dict:
+            return {
+                "type": kind,
+                "cwd": self.cwd,
+                "gitBranch": "main",
+                "timestamp": f"2026-08-11T{stamp}:00Z",
+                "message": {"role": kind, "content": content},
+                **extra,
+            }
+        self.write_jsonl(
+            folder / "claude-timeline.jsonl",
+            [
+                record("user", "09:00", "first prompt", origin={"kind": "human"}),
+                record("assistant", "09:10", [{"type": "text", "text": "working"}]),
+                record("user", "09:20", "second prompt"),
+                record("user", "11:00", "peer note", isMeta=True, origin={"kind": "peer"}),
+                record("assistant", "11:15", [{"type": "text", "text": "done"}]),
+                record("user", "11:40", "summary", isCompactSummary=True),
+                {"type": "ai-title", "aiTitle": "Timeline work"},
+            ],
+        )
+        self.write_jsonl(
+            folder / "claude-timeline" / "subagents" / "agent-1.jsonl",
+            [record("user", "09:05", "subagent prompt")],
+        )
+
+    def test_timeline_splits_sessions_at_idle_gaps_and_counts_human_prompts(self):
+        self.make_claude_timeline_session()
+        status, stdout, stderr = self.run_timeline(
+            ["--claude", "--since", "2026-08-11", "--until", "2026-08-11"]
+        )
+        self.assertEqual((status, stderr), (0, ""))
+        self.assertIn("2026-08-11 09:00 \u2192 11:40  active 1h00m  claude:claude-timeline", stdout)
+        self.assertIn("title  : Timeline work", stdout)
+        self.assertIn("  09:00\u201309:20  20m, 2 prompt(s)", stdout)
+        self.assertIn("  11:00\u201311:40  40m, 0 prompt(s)", stdout)
+        self.assertIn("  2026-08-11  1h00m", stdout)
+        self.assertEqual(stdout.count("=" * 70), 1)
+
+    def test_timeline_json_clips_to_window_and_merges_overlapping_days(self):
+        self.make_claude_timeline_session()
+        status, stdout, _ = self.run_timeline(
+            ["--since", "2026-08-10T10:01", "--until", "2026-08-11T09:15", "--format", "json"]
+        )
+        self.assertEqual(status, 0)
+        payload = json.loads(stdout)
+        refs = [session["ref"] for session in payload["sessions"]]
+        self.assertEqual(
+            refs,
+            ["opencode:opencode-session", "codex:codex-session", "pi:pi-session",
+             "droid:droid-session", "claude:claude-timeline"],
+        )
+        claude = payload["sessions"][-1]
+        self.assertEqual(
+            claude["spans"],
+            [{"start": "2026-08-11T09:00:00+00:00", "end": "2026-08-11T09:10:00+00:00",
+              "minutes": 10, "prompts": 1}],
+        )
+        self.assertEqual(payload["daily_active_minutes"], {"2026-08-10": 1, "2026-08-11": 10})
+
+    def test_timeline_requires_a_start(self):
+        stderr = io.StringIO()
+        with redirect_stderr(stderr), self.assertRaises(SystemExit):
+            search_agent_logs.main(["--timeline"], self.roots)
+        self.assertIn("--timeline needs --since or --days", stderr.getvalue())
 
 
 if __name__ == "__main__":
