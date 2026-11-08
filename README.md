@@ -1,6 +1,6 @@
 # nlsmdn skills
 
-Opinionated agent skills for code review, research, and daily workflow. 59 skills, generated from
+Opinionated agent skills for code review, research, and daily workflow. 60 skills, generated from
 [nielsmadan/agentic-coding](https://github.com/nielsmadan/agentic-coding) — do not edit this repo
 directly, changes are overwritten.
 
@@ -52,6 +52,7 @@ Add `--skill <name>` to install one, or `--all` to cover every detected agent.
 | Skill | Description |
 |---|---|
 | `code-review` | Clean up comments and mechanical loose ends, then review code with comprehensive and quick modes. Use when reviewing code changes, PRs, or specific files for quality, bugs, and best practices. |
+| `codebase-review` | Review a whole codebase aspect by aspect — overview, docs truth-check, state, API, persistence, caching, startup, auth, errors, UI, layering, dependencies, CI, tests, security, feature deep dives, consistency, architecture roadmap — writing a doc per aspect and a verified findings ledger that doubles as the TODO. Plans first (recon, `blind-spots`, `review-plan`, one start gate), then runs independently. `--fix` hands settled findings to named worker sessions in worktrees or sibling checkouts, integrated locally by fast-forward without pushing; major user-facing changes wait for decision waves at the end. Reports user-facing and other changes. Use for "codebase review", "review the whole codebase", "onboard me to this repo", "deep dive this app", "audit the code base", "review and fix everything". Not for a diff or PR (code-review), a CLI release pass (release-review), or building a feature (longshot). |
 | `review-architecture` | Review system architecture — layering, module boundaries, coupling/cohesion, pattern fit, quality attributes (scalability, resilience, evolvability), and architectural smells. Triggers "review architecture", "architecture review", "system design review", "check architecture". |
 | `review-cleancode` | Review code for clean-code principles — SOLID, DRY, YAGNI, KISS, code smells. Triggers "review clean code", "check DRY/SOLID", "code smells". |
 | `review-cli` | Language-agnostic review of a command-line tool's interface and behaviour — exit codes and signals, broken-pipe handling, stdout/stderr discipline, TTY detection and destructive-action gating, dry-run integrity, partial failure and idempotency, config precedence, flag and help design, and error messages that name the next action. Starts by RUNNING the binary, because most of this is invisible in the source. Applies equally to Python, Rust, Go, Node and shell-invoked tools. Auto-invoked by `code-review` on projects that ship a console entry point. Triggers "review cli", "cli review", "command line interface review", "review the CLI UX". |
