@@ -260,6 +260,9 @@ over-structured-and-stale tree is the worst case and the strongest reason to shr
 - **Live / current-state** — `features/`, `tech/`, `<flow>.md`, `overview.md`, and the
   human-facing `user/` tree. `--update` keeps these in sync with the code, respecting
   their audiences. The bulk of the tree.
+- **Domain glossary** — living project meanings, wherever the repo keeps them. Update settled
+  definitions and distinguish intended meaning from current implementation; a code mismatch
+  does not automatically redefine a concept. Follow [domain-modeling.md](domain-modeling.md).
 - **Manual test procedures and history** — `tests/<name>/README.md` is live;
   `tests/<name>/runs/` and its evidence are historical. Update the procedure as needed, but
   preserve past results and the setup used to obtain them. See [manual-tests.md](manual-tests.md).

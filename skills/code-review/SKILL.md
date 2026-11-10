@@ -11,6 +11,28 @@ effort: high
 
 Review the code related to: **$ARGUMENTS**
 
+## Review grading
+
+Use only these finding priorities, in descending order:
+
+- **Critical Issues (Must Fix):** a verified path causes data loss, a security failure, a materially
+  wrong operation, or makes a core workflow unusable without reasonable recovery.
+- **Improvements (Should Fix):** an ordinary supported workflow demonstrably fails or repeatedly
+  imposes substantial friction, or a concrete design defect creates meaningful maintenance cost.
+- **Suggestions (Nice to Have):** a worthwhile improvement with small practical impact, including
+  optional polish, local simplification, and rare recoverable edge cases.
+
+Grade the demonstrated consequence, realistic reachability, and available recovery against project
+priorities. A category, missing convention, hypothetical future problem, or confidence that a claim
+is true does not set its priority. Do not assign automatic severity floors or ceilings. Keep
+unverified claims in validation gaps, outside the graded finding count; distinguish suggestions
+from defects. For plans, trace the consequence if implemented and state the assumptions.
+
+Use the short labels **Must Fix**, **Should Fix**, and **Nice to Have** in summaries and ledgers.
+Keep effort, verification status, user-facing change size, and tool/vendor diagnostic ratings
+separate. When called by `code-review`, return its requested evidence and impact fields; the parent
+owns scoring and final triage. Otherwise apply this rubric directly. Omit empty priority sections.
+
 ## Reference files (load what the run needs)
 
 | File | Load when |
@@ -51,7 +73,7 @@ Flag parsing, scope resolution, and the preflight cleanup (Steps 1–3b.6) need 
 
 The default mode is comprehensive: run all selected perspectives independently, then independently score and triage their findings.
 
-Every mode first runs `review-tidy --fix` over the resolved scope; it coordinates comment cleanup through `review-comments` and then mechanical cleanup, with formatting last. The cleanup is a preflight edit, not a review perspective: its results are reported separately and are never scored or promoted into Critical/Should Fix findings.
+Every mode first runs `review-tidy --fix` over the resolved scope; it coordinates comment cleanup through `review-comments` and then mechanical cleanup, with formatting last. The cleanup is a preflight edit, not a review perspective: its results are reported separately and are never scored or promoted into Must Fix/Should Fix findings.
 
 `--quick` runs one thorough integrated review at full reasoning effort, saving time through fewer agents and no separate scoring round. It keeps the normal scope resolution, project-guideline checks, severity output, fix prompt, and optional `--rereview` loop, but uses one integrated read-only reviewer and no separate scorer agents. It does not activate automatically from diff size: a tiny auth, migration, or concurrency change may still deserve the comprehensive mode.
 
@@ -74,19 +96,19 @@ Aspect flags let you run a subset of the review agents instead of all 10. Flags 
 | `--functional` | Agent 7b: Functional Review (delegates to `/review-functional`) |
 | `--consistency` | Agent 7c: Consistency Review (delegates to `/review-consistency`) |
 
-Two further aspects are **conditional add-ons** — in the default (no-aspect-flag) run they are included automatically when they apply; with explicit aspect flags they run only if their own flag is passed (see Step 3b.5 for detection):
+Further aspects are **conditional add-ons** — in the default (no-aspect-flag) run they are included automatically when they apply; with explicit aspect flags they run only if their own flag is passed (see Step 3b.5 for detection):
 
 | Flag | Maps to |
 |------|---------|
-| `--cli` / `--react` | Agent 8b: Project-Shape Review — delegates to `review-cli` or `review-react`. Auto-included when the repo ships a console entry point, or depends on React and the scope touches components. Orthogonal to language: it composes with the language review rather than replacing it. |
+| `--cli` / `--react` / `--swiftui` | Agent 8b: Project-Shape Review — delegates to `review-cli`, `review-react`, or `review-swiftui`. Auto-included for console entry points, scoped React components, or scoped SwiftUI implementation. Orthogonal to language: it composes with the language review rather than replacing it. |
 | `--typescript` / `--swift` / `--python` | Agent 8: Language Review — delegates to the matching `review-<language>` skill (e.g. `review-typescript`, `review-swift`, `review-python`). Auto-included when the scoped files are of that language. |
 | `--project` | Agent 9: Project-Specific Review — delegates to the project's own `review-project` skill. Auto-included when that skill exists in the repo. |
 | `--library-use` | Agent 10: Library-Use Review — delegates to `review-library-use` (checks code against the repo's `library-use` conventions). Auto-included when the repo has a `library-use` reference. |
 
 **Aspect rules:**
 - Normalize `--logic` and `--defensive` to `--correctness` before selecting agents; any combination of these flags runs Agent 1 exactly once.
-- In comprehensive mode, no aspect flags → run all 10 core agents, **plus** any detected language review, the project review, and the library-use review if present.
-- One or more aspect flags → run only those agents, skip the rest. The conditional add-ons run only if `--typescript` / `--cli` / `--react` / `--project` / `--library-use` (or another `--<language>`) is among the flags.
+- In comprehensive mode, no aspect flags → run all 10 core agents, **plus** any detected language and project-shape reviews, the project review, and the library-use review if present.
+- One or more aspect flags → run only those agents, skip the rest. The conditional add-ons run only if `--typescript` / `--cli` / `--react` / `--swiftui` / `--project` / `--library-use` (or another `--<language>`) is among the flags.
 - `--quick` is a complete preset and cannot be combined with aspect flags.
 - `--multi` composes with any aspect selection.
 - The non-flag portion of `$ARGUMENTS` is the review target (e.g. `src/auth/`).
@@ -138,7 +160,7 @@ Strip aspect flags (`--correctness`, `--logic`, `--architecture`, `--security`, 
 
 If `--quick` appears with any aspect flag or with `--multi`, abort with `--quick is a complete review preset; remove the aspect flags or --multi.` It may compose with a target, one scope flag, and `--rereview`.
 
-In comprehensive mode, if any aspect flags are present, launch ONLY the corresponding agents (including the conditional add-ons only when a `--<language>`/`--cli`/`--react`/`--project`/`--library-use` flag is passed). Otherwise launch all 10 core agents plus whatever Step 3b.5 detects. In quick mode, follow the single-reviewer branch in Step 3c.
+In comprehensive mode, if any aspect flags are present, launch ONLY the corresponding agents (including the conditional add-ons only when a `--<language>`/`--cli`/`--react`/`--swiftui`/`--project`/`--library-use` flag is passed). Otherwise launch all 10 core agents plus whatever Step 3b.5 detects. In quick mode, follow the single-reviewer branch in Step 3c.
 
 ### 3b. Resolve scope
 
@@ -170,7 +192,7 @@ This file list is passed to inline agents and is also used to build the target a
 
 ### 3b.5. Detect language & project reviews
 
-Determine which conditional add-on reviews apply. In comprehensive mode these become additional agents. In quick mode their skill/reference text becomes guidance for the single integrated reviewer. Skip this entirely if explicit aspect flags were passed **and** none of them is `--typescript`/`--cli`/`--react`/`--project`/`--library-use`/another `--<language>` — in that case the user asked for a specific subset and add-ons don't run.
+Determine which conditional add-on reviews apply. In comprehensive mode these become additional agents. In quick mode their skill/reference text becomes guidance for the single integrated reviewer. Skip this entirely if explicit aspect flags were passed **and** none of them is `--typescript`/`--cli`/`--react`/`--swiftui`/`--project`/`--library-use`/another `--<language>` — in that case the user asked for a specific subset and add-ons don't run.
 
 **Language detection registry.** For each language below, it applies if the resolved file list matches its extensions, or (for the `all` scope / when the file list is empty) the repo root has its marker file. If it applies **and** a `review-<language>` skill is installed, include that agent in comprehensive mode or record its `SKILL.md` as guidance for quick mode.
 
@@ -189,6 +211,12 @@ Determine which conditional add-on reviews apply. In comprehensive mode these be
 |---|---|---|
 | CLI | `[project.scripts]` / `[project.entry-points."console_scripts"]` in `pyproject.toml`, `[[bin]]` or `src/main.rs` in a Cargo project, `bin` in `package.json`, or a `main`-package `cobra`/`urfave` import in Go | `review-cli` |
 | React | `react` in `package.json` dependencies, and scoped `.jsx`/`.tsx` files or files that call hooks (at `all` scope, the dependency alone) | `review-react` |
+| SwiftUI | Scoped SwiftUI view, scene, modifier, or control implementation, or UI resources consumed by it; at `all` scope, that implementation anywhere in the project. An import or a Swift project marker alone is insufficient | `review-swiftui` |
+
+In default reviews, when Swift and SwiftUI both apply, include both reviewers. Explicit
+aspect flags still select only the requested reviewers. `review-swift` owns state, identity,
+lifetime, dependencies, concurrency, and rendering cost; `review-swiftui` owns presentation
+and interaction. Pass this boundary to both and deduplicate by the underlying cause.
 
 **Project review detection.** If the repo defines its own project review skill at `.claude/skills/review-project/SKILL.md` **or** `.agents/skills/review-project/SKILL.md`, include the project review agent in comprehensive mode or record its `SKILL.md` as guidance for quick mode. If neither exists, skip silently.
 
@@ -227,9 +255,9 @@ For every harness, retain full review reasoning effort. Give the reviewer this i
 
 - Read the applicable `AGENTS.md` / `CLAUDE.md` files and the scoped diff or files. For each changed behavior, trace the path from its callers through the implementation and dependencies to its observable result, including failure paths. Read surrounding code and related tests to check the contracts at each boundary; do not stop at the diff hunks. For a whole-file or whole-repo target, trace the main behaviors in scope.
 - Read `review-correctness` and apply both passes directly without launching another reviewer. Review correctness, edge cases, error handling, regressions, catch-all `else`/`default` branches that would silently absorb a newly added enum or API value, missing or weak tests, security red flags, and interface compatibility. Check performance hazards supported by the traced paths. Also check design and maintainability: module responsibilities, coupling, duplication, interface clarity, hidden shared state, and mutation of caller-owned data. Check consistency: compare each added construct with two or more existing siblings of the same kind and flag divergences in naming, placement, mechanism (errors, logging, config, existing helpers) or registration, citing the precedent `file:line`s; documented project rules and newer patterns win over older precedent. Tie each concern to concrete code and its consequences.
-- If Step 3b.5 detected language, project, or library-use guidance, read those matching `SKILL.md` files as review references and apply their checks directly. Do not invoke them as skills.
+- If Step 3b.5 detected language, project-shape, project, or library-use guidance, read those matching `SKILL.md` files as review references and apply their checks directly. Do not invoke them as skills.
 - Before accepting or dismissing a suspected issue, trace a concrete triggering input or state, inspect callers and excluding guards, and check whether tests exercise the behavior and assert the relevant result. Use targeted checks when available; run any experiment that writes files in a disposable copy. If the reviewer lacks execution tools, request a specific check from the parent, which must resolve it before final filtering or report the remaining uncertainty.
-- Return only actionable findings supported by a concrete code path. For each finding, include severity (`Critical`, `Should Fix`, or `Nice to Have`), `file:line`, what is wrong, why it matters, a concise fix, the `file:line` where you traced it, effort (`S`: one file, local, no interface or test changes; `M`: several files or new or changed tests; `L`: a public interface, a migration, or callers in other modules), likelihood (`routine`, `plausible`, `rare`, or `theoretical`), and blast radius (`low`, `medium`, or `high`). For `rare` or `theoretical`, name the reachability reason and cite any excluding guard.
+- Return only actionable findings supported by a concrete code path. For each finding, include severity (`Must Fix`, `Should Fix`, or `Nice to Have`, using Review grading above), `file:line`, what is wrong, why it matters, a concise fix, the `file:line` where you traced it, effort (`S`: one file, local, no interface or test changes; `M`: several files or new or changed tests; `L`: a public interface, a migration, or callers in other modules), likelihood (`routine`, `plausible`, `rare`, or `theoretical`), and blast radius (`low`, `medium`, or `high`). For `rare` or `theoretical`, name the reachability reason and cite any excluding guard.
 - After verification, omit findings you did not trace through every link in the code and omit `rare`/`theoretical` findings with low or medium blast radius. Keep rare high-blast-radius findings and tag them with the short reachability reason. Tracing decides only whether the claim is true; a true finding that matters little is `Nice to Have`, not dropped.
 - Tag a finding `autofix` when its fix cannot change production behaviour, any change in what a test executes is proven by running tests, and a wrong call would be visible in the diff and cheap to revert. It must not need new prose, a design choice, or an edit to exported or public code. Examples: a doc line naming a symbol or flag the diff renamed, an import the diff orphaned, a test name that no longer matches, an unexported identifier renamed to the codebase's naming pattern. When the fix changes what a test executes, append `verify: suite` if test code moves unchanged, or `verify: mutation` if it substitutes different test code.
 - Do not edit the shared checkout, even temporarily; keep any experiment writes in a disposable copy.
@@ -288,21 +316,21 @@ When that reference is done, **come back here and do Step 6** — the rendered o
 
 ## Step 6: Offer to Fix
 
-**This step is mandatory.** Rendering the review output is *not* the end of the workflow — do not end the turn after printing the findings. If there is at least one **Critical** or **Should Fix** finding, you MUST call the **AskUserQuestion tool** so the user picks a fix scope by selection instead of typing one out.
+**This step is mandatory.** Rendering the review output is *not* the end of the workflow — do not end the turn after printing the findings. If there is at least one **Must Fix** or **Should Fix** finding, you MUST call the **AskUserQuestion tool** so the user picks a fix scope by selection instead of typing one out.
 
 Build the options list from the severity tiers that actually have findings, most-inclusive first:
 
 | Option | Fixes | Include when |
 |---|---|---|
-| **"Fix everything"** | Critical + Improvements + Suggestions | there are `Suggestions (Nice to Have)` findings alongside at least one Critical or Should Fix finding |
-| **"Fix Critical + Should Fix"** | Critical + Improvements | there are both Critical and Should Fix findings |
-| **"Fix Critical only"** | Critical | there are Critical findings |
-| **"Fix Should Fix"** | Improvements | there are Should Fix findings but no Critical findings |
+| **"Fix everything"** | Must Fix + Improvements + Suggestions | there are `Suggestions (Nice to Have)` findings alongside at least one Must Fix or Should Fix finding |
+| **"Address Must Fix + Should Fix"** | Must Fix + Improvements | there are both Must Fix and Should Fix findings |
+| **"Address Must Fix only"** | Must Fix | there are Must Fix findings |
+| **"Fix Should Fix"** | Improvements | there are Should Fix findings but no Must Fix findings |
 | **"Don't fix anything"** | nothing | always — last option |
 
-AskUserQuestion takes at most 4 options, so when all tiers are populated drop the narrowest fix option (`Fix Critical only`) rather than `Don't fix anything` — the user can still ask for a narrower scope in free text.
+AskUserQuestion takes at most 4 options, so when all tiers are populated drop the narrowest fix option (`Address Must Fix only`) rather than `Don't fix anything` — the user can still ask for a narrower scope in free text.
 
-Skip this step entirely (no prompt) only when there are no Critical and no Should Fix findings — a run that surfaced nothing but suggestions has nothing worth gating on.
+Skip this step entirely (no prompt) only when there are no Must Fix and no Should Fix findings — a run that surfaced nothing but suggestions has nothing worth gating on.
 
 Build the options only from the `Critical Issues`, `Improvements`, and `Suggestions` sections. `Applied automatically` items are already done and are never offered. **Never include `Improbable / Not Worth Handling` items** — not even under "Fix everything". Step 4.5 already judged them not worth doing, and offering to fix them reintroduces exactly the noise the appendix exists to remove.
 
@@ -315,7 +343,7 @@ If `--rereview` was passed AND fixes were applied in Step 6, automatically run t
 - Re-run Steps 3–6 with the **same review mode, aspect, `--multi`, and target/scope selection** as the original run.
 - Review the **same file list** computed in step 3b — fixes turn staged files into unstaged edits, so re-resolving scope from scratch could miss them. Reuse the original file list directly rather than recomputing from `git diff`.
 - Announce the re-review at the start, e.g. `Re-reviewing after fixes (--rereview)`.
-- The re-review's Step 6 fix prompt runs as normal. This forms a natural loop: review → fix → re-review → fix … It terminates when the re-review surfaces no Critical/Should Fix findings (Step 6 is skipped) or the user picks "Don't fix anything".
+- The re-review's Step 6 fix prompt runs as normal. This forms a natural loop: review → fix → re-review → fix … It terminates when the re-review surfaces no Must Fix/Should Fix findings (Step 6 is skipped) or the user picks "Don't fix anything".
 
 Without `--rereview`, Step 6 ends the run after fixes are applied — the user must invoke `/code-review` again manually to verify.
 
@@ -349,7 +377,7 @@ Runs the same 10 review agents plus external reviews from every advisor `second-
 **Review, fix, then re-review automatically:**
 > /code-review --rereview
 
-Runs the review, offers the fix prompt (Step 6), and — once fixes are applied — immediately re-runs the same review on the same files to confirm the fixes landed and introduced no new issues. The loop continues until a re-review comes back with no Critical/Should Fix findings or the user declines to fix. Composes with aspect, scope, and `--multi` flags.
+Runs the review, offers the fix prompt (Step 6), and — once fixes are applied — immediately re-runs the same review on the same files to confirm the fixes landed and introduced no new issues. The loop continues until a re-review comes back with no Must Fix/Should Fix findings or the user declines to fix. Composes with aspect, scope, and `--multi` flags.
 
 ## Troubleshooting
 

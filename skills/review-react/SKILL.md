@@ -13,6 +13,28 @@ React review that covers what the hooks linter and React Compiler **cannot decid
 where state lives and what shape it has, whether an effect should exist at all, where component
 and boundary lines fall, and which render costs are real. Mechanical hook rules are lint's job.
 
+## Review grading
+
+Use only these finding priorities, in descending order:
+
+- **Critical Issues (Must Fix):** a verified path causes data loss, a security failure, a materially
+  wrong operation, or makes a core workflow unusable without reasonable recovery.
+- **Improvements (Should Fix):** an ordinary supported workflow demonstrably fails or repeatedly
+  imposes substantial friction, or a concrete design defect creates meaningful maintenance cost.
+- **Suggestions (Nice to Have):** a worthwhile improvement with small practical impact, including
+  optional polish, local simplification, and rare recoverable edge cases.
+
+Grade the demonstrated consequence, realistic reachability, and available recovery against project
+priorities. A category, missing convention, hypothetical future problem, or confidence that a claim
+is true does not set its priority. Do not assign automatic severity floors or ceilings. Keep
+unverified claims in validation gaps, outside the graded finding count; distinguish suggestions
+from defects. For plans, trace the consequence if implemented and state the assumptions.
+
+Use the short labels **Must Fix**, **Should Fix**, and **Nice to Have** in summaries and ledgers.
+Keep effort, verification status, user-facing change size, and tool/vendor diagnostic ratings
+separate. When called by `code-review`, return its requested evidence and impact fields; the parent
+owns scoring and final triage. Otherwise apply this rubric directly. Omit empty priority sections.
+
 ## Relationship to the lint layer (read first)
 
 Establish the baseline before deciding anything is out of scope. Three facts change what this
@@ -76,7 +98,7 @@ JSX nor call hooks.
    ```
 
    Wait for all external results before proceeding.
-7. **Classify severity** (definitions at the end of the checklist) and **report**.
+7. **Classify severity** using Review grading and **report**.
 
 ## Judgment categories
 
@@ -119,21 +141,19 @@ Configuration, not code; raising it on a diff review is noise.
 {One line: hooks rules enabled, compiler on/off, React version, renderer/framework.
 **At `--all` only:** the §P recommendations.}
 
-### Critical (wrong data shown or persisted)
+### Critical Issues (Must Fix)
 - {file}:{line} — {category}: {description}
   **Why it's not a lint finding:** {what judgment this needed}
   **Impact:** {what the user sees}
   **Fix:** {with code}
 
-### High (will cause bugs as the code evolves)
+### Improvements (Should Fix)
 - {file}:{line} — {category}: {description}
   **Fix:** {solution}
 
-### Medium (structure & cost)
+### Suggestions (Nice to Have)
 - {file}:{line} — {category}: {description} — {suggested change}
 
-### Suggestions
-- {opportunities}
 ```
 
 If `--multi` was used, append one subsection per advisor that responded (titled with the
@@ -145,7 +165,7 @@ advisor's name as reported by `second-opinion`), then a **Cross-Model Agreement*
 > review-react --staged
 
 A profile page fetches in `useEffect(() => { fetch(`/api/users/${id}`).then(setUser) }, [id])`.
-Switching users quickly can show the previous user's profile. Reports Critical with an ignore
+Switching users quickly can show the previous user's profile. Reports Should Fix for a transient wrong-profile display, escalating only if the traced path leaks protected data or performs a materially wrong operation. Proposes an ignore
 flag in cleanup, or the project's query hook if it has one. Not a lint finding:
 `exhaustive-deps` is satisfied.
 
@@ -153,14 +173,14 @@ flag in cleanup, or the project's query hook if it has one. Not a lint finding:
 > review-react --changed
 
 A checkout screen sends a `purchase_completed` analytics event from an effect that watches
-`order.status`. It re-fires when the screen remounts after navigating back. Reports High: move
+`order.status`. It re-fires when the screen remounts after navigating back. Reports Should Fix: move
 it into the submit handler's success path.
 
 **Memoization noise under the compiler:**
 > review-react
 
 Baseline shows React Compiler on. A new component wraps every handler in `useCallback` and
-the component in `memo`. Reports Medium: remove them, since the compiler memoizes the same
+the component in `memo`. Reports Nice to Have: remove them, since the compiler memoizes the same
 values; keep only a `useCallback` whose identity an imperative library depends on.
 
 ## Troubleshooting

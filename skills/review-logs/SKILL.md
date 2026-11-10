@@ -11,6 +11,28 @@ effort: medium
 
 Scan recent Claude Code session transcripts for recurring failure patterns and generate actionable recommendations.
 
+## Review grading
+
+Use only these finding priorities, in descending order:
+
+- **Critical Issues (Must Fix):** a verified path causes data loss, a security failure, a materially
+  wrong operation, or makes a core workflow unusable without reasonable recovery.
+- **Improvements (Should Fix):** an ordinary supported workflow demonstrably fails or repeatedly
+  imposes substantial friction, or a concrete design defect creates meaningful maintenance cost.
+- **Suggestions (Nice to Have):** a worthwhile improvement with small practical impact, including
+  optional polish, local simplification, and rare recoverable edge cases.
+
+Grade the demonstrated consequence, realistic reachability, and available recovery against project
+priorities. A category, missing convention, hypothetical future problem, or confidence that a claim
+is true does not set its priority. Do not assign automatic severity floors or ceilings. Keep
+unverified claims in validation gaps, outside the graded finding count; distinguish suggestions
+from defects. For plans, trace the consequence if implemented and state the assumptions.
+
+Use the short labels **Must Fix**, **Should Fix**, and **Nice to Have** in summaries and ledgers.
+Keep effort, verification status, user-facing change size, and tool/vendor diagnostic ratings
+separate. When called by `code-review`, return its requested evidence and impact fields; the parent
+owns scoring and final triage. Otherwise apply this rubric directly. Omit empty priority sections.
+
 ## Usage
 
 ```
@@ -52,14 +74,17 @@ python3 <discovered-path>/extract_signals.py --days <N> [--project <name>] --out
 
 Read `/tmp/review-logs-output.json` and present findings in severity order:
 
-| Priority | Category | What to Present |
-|----------|----------|-----------------|
-| Critical | High-frequency retry loops | What's making the model stuck; suggest CLAUDE.md guidance to prevent it |
-| Critical | Permission denials (unexpected) | Suggest specific `settings.json` allowlist additions with exact JSON |
-| Actionable | Top failing commands | Distinguish fixable patterns from expected failures |
-| Actionable | Misbehavior patterns | Suggest CLAUDE.md rules or hook scripts |
-| Informational | Error distribution by project | Where problems concentrate |
-| Informational | Problematic sessions | Only with `--verbose`; session IDs for manual review |
+| Category | What to Present |
+|----------|-----------------|
+| High-frequency retry loops | What's making the model stuck; suggest CLAUDE.md guidance to prevent it |
+| Permission denials (unexpected) | Suggest specific `settings.json` allowlist additions with exact JSON |
+| Top failing commands | Distinguish fixable patterns from expected failures |
+| Misbehavior patterns | Suggest CLAUDE.md rules or hook scripts |
+| Error distribution by project | Where problems concentrate |
+| Problematic sessions | Only with `--verbose`; session IDs for manual review |
+
+Grade verified recommendations using Review grading; frequency alone is not severity.
+Keep distribution statistics and session listings separate from findings.
 
 ### Step 4: Generate Recommendations
 
@@ -99,11 +124,13 @@ Scanned {N} sessions across {M} projects ({date_range}). Found {errors} errors, 
 ```
 Typical output:
 ```
-## Critical: Retry Loops (3 patterns)
+## Improvements (Should Fix)
+
+### Repeated build retries
 1. `npm run build` retried 4+ times in 6 sessions — model keeps re-running after TypeScript errors instead of fixing them
    → Add to CLAUDE.md: "When `npm run build` fails with type errors, fix the type errors before re-running."
 
-## Actionable: Permission Denials (2 patterns)
+### Permission denials blocking the normal workflow
 1. `Bash(docker compose up)` denied 12 times across 4 sessions
    → Add to settings.json allowlist: "Bash(docker compose *)"
 

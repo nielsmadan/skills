@@ -11,6 +11,28 @@ effort: xhigh
 
 Security audit for common vulnerabilities and unsafe patterns.
 
+## Review grading
+
+Use only these finding priorities, in descending order:
+
+- **Critical Issues (Must Fix):** a verified path causes data loss, a security failure, a materially
+  wrong operation, or makes a core workflow unusable without reasonable recovery.
+- **Improvements (Should Fix):** an ordinary supported workflow demonstrably fails or repeatedly
+  imposes substantial friction, or a concrete design defect creates meaningful maintenance cost.
+- **Suggestions (Nice to Have):** a worthwhile improvement with small practical impact, including
+  optional polish, local simplification, and rare recoverable edge cases.
+
+Grade the demonstrated consequence, realistic reachability, and available recovery against project
+priorities. A category, missing convention, hypothetical future problem, or confidence that a claim
+is true does not set its priority. Do not assign automatic severity floors or ceilings. Keep
+unverified claims in validation gaps, outside the graded finding count; distinguish suggestions
+from defects. For plans, trace the consequence if implemented and state the assumptions.
+
+Use the short labels **Must Fix**, **Should Fix**, and **Nice to Have** in summaries and ledgers.
+Keep effort, verification status, user-facing change size, and tool/vendor diagnostic ratings
+separate. When called by `code-review`, return its requested evidence and impact fields; the parent
+owns scoring and final triage. Otherwise apply this rubric directly. Omit empty priority sections.
+
 ## Usage
 
 ```
@@ -55,11 +77,7 @@ Security audit for common vulnerabilities and unsafe patterns.
 
    Dispatch workers that return findings without editing files. Disable delegation tools where supported; read-only access alone does not prevent delegation. Any coordinating role needs explicit subtasks, a descendant limit, and a stopping condition in its brief.
 4. **Check dependencies** using the ecosystem-specific commands in the Dependency Vulnerabilities section
-5. **Classify severity** for each finding:
-   - **Critical**: Exploitable vulnerability with direct user/data impact (e.g., SQL injection on a public endpoint, hardcoded production secret)
-   - **High**: Vulnerability requiring specific conditions to exploit but with serious impact (e.g., XSS in admin panel, missing rate limiting on login)
-   - **Medium**: Security weakness that increases attack surface (e.g., overly permissive CORS, debug mode flag)
-   - **Suggestion**: Defense-in-depth improvement (e.g., adding CSP headers, tightening cookie flags)
+5. **Classify severity** using Review grading; justify the impact with evidence.
 6. **Report findings** grouped by severity using the Output Format below
 
 ## Security Checklist
@@ -105,31 +123,29 @@ For code examples, grep patterns, false-positive rules, and dependency audit com
 
 Run ecosystem-specific audit commands — see `references/security-checklist.md` for commands by ecosystem.
 
-Report any Critical or High severity vulnerabilities.
+Keep scanner/vendor ratings as evidence. Grade each applicable vulnerability using Review grading after checking the deployed version, reachability, mitigations, and consequence.
 
 ## Output Format
 
 ```markdown
 ## Security Review: {scope}
 
-### Critical (fix immediately)
+### Critical Issues (Must Fix)
 - {file}:{line} - {vulnerability type}: {description}
   **Fix:** {remediation}
 
-### High Priority
+### Improvements (Should Fix)
 - {file}:{line} - {issue}
   **Fix:** {remediation}
 
-### Medium Priority
+### Suggestions (Nice to Have)
 - {file} - {issue}
 
 ### Dependency Vulnerabilities
-| Package | Severity | CVE | Fix Version |
+| Package | Vendor severity | CVE | Fix Version |
 |---------|----------|-----|-------------|
 | {pkg} | Critical | CVE-XXXX-XXXX | {version} |
 
-### Suggestions
-- {improvement}
 ```
 
 ## Examples
@@ -137,7 +153,7 @@ Report any Critical or High severity vulnerabilities.
 **Staged changes introduce SQL injection:**
 > /review-security --staged
 
-Reviews staged files and catches a login handler using string concatenation to build a SQL query with user input. Reports it as Critical with a fix showing parameterized queries.
+Reviews staged files and catches a login handler using string concatenation to build a SQL query with user input. Traces attacker-controlled input to the executed query. If it permits unauthorized data access or mutation, reports Must Fix with a parameterized-query repair; the syntax alone does not establish exploitability.
 
 **Pre-release audit finds hardcoded secret:**
 > /review-security --all

@@ -58,6 +58,7 @@ Scenario   A user who edited ~/.claude/settings.json by hand runs `tool sync` to
            skill. `--force` would discard the edit; on `init`, `--force` means "replace the
            registration". Same word, unrelated effects.
 Finding    `--force` names two unrelated behaviours.
+Priority   Nice to Have — a naming clarification unless actual misuse is demonstrated.
 Prior art  git, cargo, npm: `--force` = override a safety check. None use it for "replace".
 Ruling     `sync --overwrite-modified`; `init` uses `--replace`. No alias (nothing is released).
 Rationale  Each flag says what it destroys. Pre-1.0, so no compatibility cost.
@@ -68,6 +69,7 @@ Depends    none
 Triggers   none
 ```
 
+- **Priority** uses the Review grading rubric in SKILL.md; evidence, readiness, and release gates stay separate.
 - **Scenario** is mandatory. Anyone should be able to reproduce it from the text alone.
 - **Rationale** records the *use-case* reason for the ruling. If it is ever challenged, it is
   re-analysed on that basis, and "we decided it" is not a rationale.
@@ -112,6 +114,7 @@ conversation.
 
 Checkout: <absolute path>. Base: <commit>, which must contain <commits it depends on>.
 Entries: S-06, S-07 (copied verbatim below; changes.md is the source of truth).
+Approach: <implement directly | plan | longshot — run that skill with this brief as its input>
 
 ## Rules
 - If an entry's premise does not match the code you find, stop and report. Do not adapt the

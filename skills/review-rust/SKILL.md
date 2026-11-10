@@ -16,6 +16,28 @@ decision, whether an `unsafe` justification is true, and what the public surface
 Run on `.rs` files. Complements `review-cleancode` (SOLID/DRY/smells) and `review-cli` (the
 interface a binary presents) — don't repeat either.
 
+## Review grading
+
+Use only these finding priorities, in descending order:
+
+- **Critical Issues (Must Fix):** a verified path causes data loss, a security failure, a materially
+  wrong operation, or makes a core workflow unusable without reasonable recovery.
+- **Improvements (Should Fix):** an ordinary supported workflow demonstrably fails or repeatedly
+  imposes substantial friction, or a concrete design defect creates meaningful maintenance cost.
+- **Suggestions (Nice to Have):** a worthwhile improvement with small practical impact, including
+  optional polish, local simplification, and rare recoverable edge cases.
+
+Grade the demonstrated consequence, realistic reachability, and available recovery against project
+priorities. A category, missing convention, hypothetical future problem, or confidence that a claim
+is true does not set its priority. Do not assign automatic severity floors or ceilings. Keep
+unverified claims in validation gaps, outside the graded finding count; distinguish suggestions
+from defects. For plans, trace the consequence if implemented and state the assumptions.
+
+Use the short labels **Must Fix**, **Should Fix**, and **Nice to Have** in summaries and ledgers.
+Keep effort, verification status, user-facing change size, and tool/vendor diagnostic ratings
+separate. When called by `code-review`, return its requested evidence and impact fields; the parent
+owns scoring and final triage. Otherwise apply this rubric directly. Omit empty priority sections.
+
 ## Relationship to clippy (read first)
 
 Clippy ships **839 lints**. 489 are enabled by default — 67 at **deny** (`correctness`) and 422 at
@@ -391,19 +413,6 @@ that matter. **Never raise these outside an `--all` audit.**
   negatives (type changes, generics, feature subsets); Miri detects UB only in executions your tests
   actually drive and "cannot ensure code soundness".
 
-## Severity
-
-- **Critical**: an illegal state reachable in a load-bearing model; a fabricated sentinel identity
-  entering persistent storage; unsound `unsafe`; a data race.
-- **High**: a sum type flattened so the invalid combination is emitted; a closed vocabulary with a
-  silent catch-all; a unit mismatch in the same field; an error losing the cause at a boundary; a
-  spawned task with no owner; structurally wrong cost in a hot path; a `pub` field carrying an
-  invariant.
-- **Medium**: correlated `Option`s; missing `#[non_exhaustive]` on a published enum; `Mutex` in
-  single-threaded code; missing semantically-meaningful derives; glob re-exports; a return type one
-  variant too wide; dead `pub` fields.
-- **Suggestion**: `Cow` opportunities, newtypes where mix-ups are possible but not evidenced, sealing
-  a trait, naming consistency, lint-group adoption.
 
 ## Output Format
 
@@ -415,21 +424,19 @@ that matter. **Never raise these outside an `--all` audit.**
 what `-W nursery -W pedantic` would add by count and the lint-configuration recommendation. On a
 diff review, omit this block entirely unless the baseline is broken.}
 
-### Critical (illegal state reachable / unsound / data loss)
+### Critical Issues (Must Fix)
 - {file}:{line} — {category}: {description}
   **Why it's not a clippy finding:** {what judgment this needed}
   **Impact:** {what breaks}
   **Fix:** {model change — with code}
 
-### High (design problems that will cause bugs)
+### Improvements (Should Fix)
 - {file}:{line} — {category}: {description}
   **Fix:** {solution}
 
-### Medium (modeling, errors, ownership, public surface)
+### Suggestions (Nice to Have)
 - {file}:{line} — {category}: {description} — {suggested change}
 
-### Suggestions
-- {opportunities}
 ```
 
 If `--multi` was used, append one subsection per advisor that responded (titled with the advisor's
@@ -442,7 +449,7 @@ name as reported by `second-opinion`), then a **Cross-Model Agreement** subsecti
 
 `map_event` returns a proper `MappedAction` enum, and two lines later it becomes
 `let (phase, running) = match ... { Update(p) => (p, true), Remove => (Phase::Idle, false) }`, stored
-as `StatusEvent { phase, running }`. Reports High: `(Phase::Working, running: false)` is
+as `StatusEvent { phase, running }`. Reports Should Fix: `(Phase::Working, running: false)` is
 representable, serializable and meaningless — and a synthetic-event helper elsewhere emits exactly
 that combination today. Clippy sees a well-typed tuple.
 
@@ -450,7 +457,7 @@ that combination today. Clippy sees a well-typed tuple.
 > /review-rust --all
 
 `EventSpec.timeout: u64` holds seconds in 44 entries and milliseconds in 13, distinguished only by
-a comment above one table. Reports High — a `Duration` converted per agent at render time, or a
+a comment above one table. Reports Should Fix — a `Duration` converted per agent at render time, or a
 `Timeout::Secs/Millis` enum, removes the class. No lint can see that one `u64` means two things.
 
 **A return type one variant too wide:**
@@ -458,7 +465,7 @@ a comment above one table. Reports High — a `Duration` converted per agent at 
 
 `resolve_identity` returns `Vec<Outcome>`, and one variant is documented as "always the sole element
 of the vec". The caller scans for it, handles it, then matches it again with
-`Outcome::ScanRejected { .. } => unreachable!("handled above")`. Reports Medium: return
+`Outcome::ScanRejected { .. } => unreachable!("handled above")`. Reports Nice to Have: return
 `Result<Vec<Outcome>, RejectReason>`. The `unreachable!` is not the defect — it's the evidence.
 
 ## Troubleshooting

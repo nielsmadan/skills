@@ -1,6 +1,6 @@
 ---
 name: doc
-description: "Assess documentation for gaps, staleness, quality, and files outside the defined doc set. Preserve useful knowledge in canonical docs, then remove superseded or unnecessary files. Check changed code when the tree is dirty, otherwise assess the whole repo. Explicit modes: --review, --update, --generate, or --session to capture durable knowledge from a conversation or transcript. Use for doc creation, cleanup, freshness, quality, or saving occasional manual test procedures and results whose numbers a later run will compare against; routine suite runs and ordinary QA passes do not need test records."
+description: "Assess documentation for gaps, staleness, quality, and files outside the defined doc set. Clarify project terminology and maintain domain glossaries and decision records. Preserve useful knowledge in canonical docs, then remove superseded or unnecessary files. Check changed code when the tree is dirty, otherwise assess the whole repo. Explicit modes: --review, --update, --generate, or --session to capture durable knowledge from a conversation or transcript. Use for doc creation, cleanup, freshness, quality, or saving occasional manual test procedures and results whose numbers a later run will compare against; routine suite runs and ordinary QA passes do not need test records."
 argument-hint: "[ (no args = context-aware assess) | --review | --update | --generate <target> | --session [--md <file>]] [--all | --staged | --unpushed]"
 effort: high
 ---
@@ -11,12 +11,35 @@ effort: high
 
 Assess, review, update, generate, and prune documentation following consistent principles.
 
+## Review grading
+
+Use only these finding priorities, in descending order:
+
+- **Critical Issues (Must Fix):** a verified path causes data loss, a security failure, a materially
+  wrong operation, or makes a core workflow unusable without reasonable recovery.
+- **Improvements (Should Fix):** an ordinary supported workflow demonstrably fails or repeatedly
+  imposes substantial friction, or a concrete design defect creates meaningful maintenance cost.
+- **Suggestions (Nice to Have):** a worthwhile improvement with small practical impact, including
+  optional polish, local simplification, and rare recoverable edge cases.
+
+Grade the demonstrated consequence, realistic reachability, and available recovery against project
+priorities. A category, missing convention, hypothetical future problem, or confidence that a claim
+is true does not set its priority. Do not assign automatic severity floors or ceilings. Keep
+unverified claims in validation gaps, outside the graded finding count; distinguish suggestions
+from defects. For plans, trace the consequence if implemented and state the assumptions.
+
+Use the short labels **Must Fix**, **Should Fix**, and **Nice to Have** in summaries and ledgers.
+Keep effort, verification status, user-facing change size, and tool/vendor diagnostic ratings
+separate. When called by `code-review`, return its requested evidence and impact fields; the parent
+owns scoring and final triage. Otherwise apply this rubric directly. Omit empty priority sections.
+
 ## Reference files (load what the run needs)
 
 | File | Load when |
 |------|-----------|
 | `references/principles.md` | Writing, sizing, or judging docs — the 8 principles and the Minimal/Lean/Structured profiles. Assess needs it to pick a profile; review/update/generate to apply it. |
 | `references/cleanup.md` | Assessing which docs belong, or applying a cleanup: extract useful knowledge, repair links, then remove the superseded files. |
+| `references/domain-modeling.md` | Clarifying project concepts, resolving conflicting terminology, maintaining a glossary, or capturing domain decisions. |
 | `references/mode-review.md` | `--review` |
 | `references/mode-update.md` | `--update` |
 | `references/mode-generate.md` | `--generate` |
@@ -68,6 +91,13 @@ limited to formatting one document keeps that scope.
 All modes use code and session evidence according to each doc's lifecycle: current procedures
 track today's code, while historical records describe the run or decision that produced them.
 
+When the scope reveals ambiguous concepts or conflicting names, apply
+`references/domain-modeling.md` within the selected mode. Include existing glossaries in scope,
+even outside `docs/`, and retain those with a distinct purpose during cleanup. Assess proposes
+terminology work in its existing lanes; review reports it; update/generate write resolved meanings;
+session captures meanings settled in the conversation. Keep each mode's existing write boundaries.
+Reading a familiar term alone does not require a modeling exercise or a new glossary.
+
 | Mode | Intent | Writes? | Default scope |
 |------|--------|---------|---------------|
 | **(no args) — assess** | Survey docs state, propose & run an action plan | No → plan, then runs your picks | **auto: changed files if the tree is dirty, else whole repo** |
@@ -93,6 +123,7 @@ directly from a diff); `--generate` is for greenfield.
 /doc --update                     # Sync docs for staged code changes (end of a feature)
 /doc --update auth flow           # Sync all docs for a feature/area
 /doc --generate <target>          # Generate docs for file/module/feature
+/doc --update glossary            # Reconcile established terms with current docs and code
 /doc --generate --staged          # Generate docs for staged code changes
 /doc --generate --unpushed        # Generate docs for code changed across unpushed commits
 ```

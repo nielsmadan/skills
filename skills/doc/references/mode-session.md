@@ -8,7 +8,7 @@ selects a rendered conversation (plain markdown of USER/ASSISTANT turns); do not
 mix in the current session's environment or results. You do NOT read Claude Code `.jsonl`
 files here. Capture does not depend on a code diff or rerun completed tests.
 
-Extract and place five kinds of knowledge, using the SAME layout and conventions as
+Extract and place these kinds of knowledge, using the SAME layout and conventions as
 `--update`/`--generate` (see `references/principles.md`):
 
 1. **Gotchas** — pitfalls, surprises, "things we ran into" → the `## Gotchas` section of
@@ -31,6 +31,10 @@ Extract and place five kinds of knowledge, using the SAME layout and conventions
    runs do not become records because someone launched them by hand, and an ordinary feature
    QA or exploratory pass belongs in the conversation, not in a file. Keep missing historical
    details explicitly unrecorded rather than reconstructing them from today's checkout.
+6. **Domain meanings** — agreed definitions, distinctions, and relationships → the existing
+   glossary or relevant doc's terminology section. Apply [domain-modeling.md](domain-modeling.md)
+   for placement and qualifying ADRs. Capture what the conversation settled; unresolved
+   interpretations remain questions, not canonical definitions.
 
 ## Rules
 
@@ -42,7 +46,8 @@ Extract and place five kinds of knowledge, using the SAME layout and conventions
 - **Preview** the proposed edits to the user and apply on confirmation. Leave changes
   **uncommitted** (the user commits).
 - **Fallback:** if the repo has no `docs/`, qualifying manual tests still go directly into
-  `docs/tests/<name>/`. For other knowledge without a suitable home, write a single
+  `docs/tests/<name>/`; resolved domain terms use the placement rules in `domain-modeling.md`.
+  For other knowledge without a suitable home, write a single
   `docs/session-harvests/<name>.md`; derive the name from the transcript filename or the
   current session's topic. Link test records rather than duplicating them in the harvest.
 - **Report:** if `--report <file>` is given, write the list of doc files you created or

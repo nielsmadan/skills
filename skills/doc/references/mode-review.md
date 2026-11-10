@@ -81,16 +81,17 @@ against the principles in `references/principles.md`, then offers to apply fixes
 ```markdown
 ## Documentation Review: {scope}
 
-### Critical (fix now)
+### Critical Issues (Must Fix)
 1. {file}:{line} - {issue}
 
-### High Priority (fix soon)
+### Improvements (Should Fix)
 2. {file} - {issue}
 
-### Suggestions
+### Suggestions (Nice to Have)
 3. {file} - {improvement}
 ```
 
+Apply the Review grading section in SKILL.md; missing or stale documentation has no automatic severity.
 Number findings sequentially across all tiers so the user can select by number.
 
 ## Troubleshooting

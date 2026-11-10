@@ -11,6 +11,28 @@ effort: high
 
 TypeScript review that covers what a **type-aware linter cannot decide for you** — how types are *modeled*, when to *annotate vs infer*, and whether a cast or `any` is papering over a design problem. These are judgment calls; the mechanical rules are ESLint's job.
 
+## Review grading
+
+Use only these finding priorities, in descending order:
+
+- **Critical Issues (Must Fix):** a verified path causes data loss, a security failure, a materially
+  wrong operation, or makes a core workflow unusable without reasonable recovery.
+- **Improvements (Should Fix):** an ordinary supported workflow demonstrably fails or repeatedly
+  imposes substantial friction, or a concrete design defect creates meaningful maintenance cost.
+- **Suggestions (Nice to Have):** a worthwhile improvement with small practical impact, including
+  optional polish, local simplification, and rare recoverable edge cases.
+
+Grade the demonstrated consequence, realistic reachability, and available recovery against project
+priorities. A category, missing convention, hypothetical future problem, or confidence that a claim
+is true does not set its priority. Do not assign automatic severity floors or ceilings. Keep
+unverified claims in validation gaps, outside the graded finding count; distinguish suggestions
+from defects. For plans, trace the consequence if implemented and state the assumptions.
+
+Use the short labels **Must Fix**, **Should Fix**, and **Nice to Have** in summaries and ledgers.
+Keep effort, verification status, user-facing change size, and tool/vendor diagnostic ratings
+separate. When called by `code-review`, return its requested evidence and impact fields; the parent
+owns scoring and final triage. Otherwise apply this rubric directly. Omit empty priority sections.
+
 ## Relationship to the lint layer (read first)
 
 **This skill assumes a *type-aware* linter handles the mechanical layer, and "type-aware" is the
@@ -107,7 +129,7 @@ Run on `.ts` / `.tsx` / `.mts` / `.cts`. Complements `review-cleancode` (SOLID/D
 ## Checklist (judgment only)
 
 **Load `references/checklist.md`** before reviewing files — it carries the full bullet
-catalogue for all three categories plus the severity definitions. The categories:
+catalogue for all three categories. Use Review grading above for priority. The categories:
 
 1. **Type modeling & design** — the core value. Invalid states representable, bag-of-optionals
    where a union belongs, outputs wider than callers need, nullability in the interior instead
@@ -149,21 +171,19 @@ Configuration, not code. It changes rarely, so raising it on a diff review is no
 rules this review was responsible for. **At `--all` only:** the §P recommendations. Omit on a diff
 review if the type-aware layer is in place.}
 
-### Critical (illegal state can reach runtime)
+### Critical Issues (Must Fix)
 - {file}:{line} — {category}: {description}
   **Why it's not a lint finding:** {what judgment this needed}
   **Impact:** {what breaks}
   **Fix:** {model change / boundary validation — with code}
 
-### High (modeling problems that will cause bugs)
+### Improvements (Should Fix)
 - {file}:{line} — {category}: {description}
   **Fix:** {solution}
 
-### Medium (annotation/inference & type-design)
+### Suggestions (Nice to Have)
 - {file}:{line} — {category}: {description} — {suggested change}
 
-### Suggestions
-- {opportunities}
 ```
 
 If `--multi` was used, append one subsection per advisor that responded (titled with the advisor's name as reported by `second-opinion`), then a **Cross-Model Agreement** subsection.
@@ -173,17 +193,17 @@ If `--multi` was used, append one subsection per advisor that responded (titled 
 **Invalid state representable:**
 > /review-typescript --staged
 
-Finds a `FetchState` type `{ loading: boolean; data?: T; error?: string }` — nothing prevents `loading: true` with both `data` and `error` set. Reports High with a discriminated-union rewrite. Not a lint finding: the type is internally consistent; only a human knows the states are illegal.
+Finds a `FetchState` type `{ loading: boolean; data?: T; error?: string }` — nothing prevents `loading: true` with both `data` and `error` set. Traces consumers before grading: Should Fix if contradictory states cause normal-flow failures, otherwise Nice to Have for a useful simplification. Suggests a discriminated-union rewrite. Not a lint finding: the type is internally consistent; only a human knows the states are illegal.
 
 **Cast hiding a mistyped source:**
 > /review-typescript --changed
 
-Finds `const total = order.items as LineItem[]` where `order.items` is typed `any` (from an untyped API client). Reports High — fix the client's return type; the cast is a symptom. `no-unnecessary-type-assertion` stays silent because the cast is load-bearing.
+Finds `const total = order.items as LineItem[]` where `order.items` is typed `any` (from an untyped API client). Reports Should Fix only when the unchecked boundary causes a demonstrated failure or meaningful repair cost; otherwise Nice to Have. Fix the client's return type; the cast is a symptom. `no-unnecessary-type-assertion` stays silent because the cast is load-bearing.
 
 **Good annotation missing:**
 > /review-typescript
 
-A 40-line hand-written `const config = {...}` has no type, so a typo in a nested key only errors at a distant consumer. Reports Medium — add `satisfies AppConfig` for definition-site checking while keeping the narrow inferred shape.
+A 40-line hand-written `const config = {...}` has no type, so a typo in a nested key only errors at a distant consumer. Reports Nice to Have — add `satisfies AppConfig` for definition-site checking while keeping the narrow inferred shape.
 
 ## Troubleshooting
 

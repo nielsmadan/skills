@@ -37,9 +37,10 @@ Return, for each claim:
   A true claim about structure (duplication, naming, coupling, a leaky or misleading interface, dead code) is as traced as a true claim about a crash. "No bug today", "cosmetic" and "a maintainability point" describe impact; put them in impact, never in the verdict.
 - evidence: one line naming the file:line you checked. A traced verdict without one counts as unverified.
 - impact: critical | should | suggestion
-    critical    can cause wrong results, a security hole, data loss or an outage
-    should      a defect on a less critical path, or a design problem that will cost real work or cause bugs as the code changes
-    suggestion  true and worth doing, but small
+    critical    a verified path causes data loss, a security failure, a materially wrong operation, or makes a core workflow unusable without reasonable recovery
+    should      an ordinary supported workflow demonstrably fails or repeatedly imposes substantial friction, or a concrete design defect creates meaningful maintenance cost
+    suggestion  a worthwhile improvement with small practical impact, including optional polish, local simplification, and rare recoverable edge cases
+- calibration: grade the consequence, realistic reachability, and recovery against project priorities; no category or missing convention sets a severity floor.
 - effort: S | M | L, for the fix the claim proposes, judged from the code it would touch
     S  one file, local, no public interface or test changes needed
     M  several files, or new or changed tests
@@ -53,7 +54,9 @@ Paste the likelihood and blast-radius tables from Step 4.5 under the prompt.
 
 The scorer should NOT know which agent found the issue. It evaluates purely based on the code and the claim.
 
-**Filter**: Only `traced` issues with a `file:line` in `evidence` pass through to the output. The scorer's `impact` sets each survivor's section in Step 5, and its `effort` orders it within that section.
+**Filter**: Only `traced` issues with a `file:line` in `evidence` enter graded findings. Put relevant
+`unverified` or `unconfirmed` claims in Validation gaps with the specific check still needed;
+exclude them from finding counts. Drop false claims. The scorer's `impact` sets each survivor's section in Step 5, and its `effort` orders it within that section.
 
 ## Step 4.5: Likelihood & Blast-Radius Triage
 
@@ -108,15 +111,15 @@ These edits are part of the review, not the fix prompt: they are listed under `A
 Only include sections with findings from the agents that actually ran. If an aspect was not selected, omit it — do not render an empty section. Place each surviving finding in the section matching its scorer's `impact`. Within a section, list `S` findings first, then `M`, then `L`, and prefix each with its effort tag: `[S]`, `[M]` or `[L]`.
 
 ### Critical Issues (Must Fix)
-[List issues that could cause bugs, security vulnerabilities, or data loss.
+[List verified consequences meeting the Must Fix threshold in SKILL.md.
  Tag any rare/theoretical + high-blast-radius issue inline: `(rare — <reason>)`]
 
 ### Improvements (Should Fix)
-[List issues that violate patterns, reduce maintainability, or hurt performance.
+[List verified workflow failures, substantial friction, or meaningful maintenance costs meeting Should Fix.
  Same `(rare — <reason>)` tagging rule applies.]
 
 ### Suggestions (Nice to Have)
-[List minor style issues, potential refactors, or enhancements]
+[List worthwhile small-impact improvements; omit unsupported stylistic preferences]
 
 ### Applied automatically
 [Render only if non-empty. One line per item:
@@ -127,6 +130,10 @@ Only include sections with findings from the agents that actually ran. If an asp
  {file}:{line} — {one-line issue} — {bucket}: {one-line reachability reason}]
 
 This section is terse and placed last by convention — "collapsed" means one-liners at the bottom, not a UI disclosure widget. Terminal output has no working `<details>`; don't add one.
+
+### Validation gaps
+[Material unresolved claims or checks, with the evidence missing and the narrow verification
+needed. These are ungraded and are not included in finding counts or fix selections.]
 
 ### External Advisor Reviews (--multi only)
 

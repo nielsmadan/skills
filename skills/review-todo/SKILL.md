@@ -17,6 +17,28 @@ Turn the most recent completed review into a stateful plan-to-implementation wor
 
 The first response for a new review must contain the complete proposed disposition and implementation plan for every finding. Do not walk the user through findings one at a time. Make no production-code edits and no commits until the user has reviewed that whole plan and explicitly approved it.
 
+## Review grading
+
+Use only these finding priorities, in descending order:
+
+- **Critical Issues (Must Fix):** a verified path causes data loss, a security failure, a materially
+  wrong operation, or makes a core workflow unusable without reasonable recovery.
+- **Improvements (Should Fix):** an ordinary supported workflow demonstrably fails or repeatedly
+  imposes substantial friction, or a concrete design defect creates meaningful maintenance cost.
+- **Suggestions (Nice to Have):** a worthwhile improvement with small practical impact, including
+  optional polish, local simplification, and rare recoverable edge cases.
+
+Grade the demonstrated consequence, realistic reachability, and available recovery against project
+priorities. A category, missing convention, hypothetical future problem, or confidence that a claim
+is true does not set its priority. Do not assign automatic severity floors or ceilings. Keep
+unverified claims in validation gaps, outside the graded finding count; distinguish suggestions
+from defects. For plans, trace the consequence if implemented and state the assumptions.
+
+Use the short labels **Must Fix**, **Should Fix**, and **Nice to Have** in summaries and ledgers.
+Keep effort, verification status, user-facing change size, and tool/vendor diagnostic ratings
+separate. When called by `code-review`, return its requested evidence and impact fields; the parent
+owns scoring and final triage. Otherwise apply this rubric directly. Omit empty priority sections.
+
 ## Instructions
 
 ### Step 1: Start or resume
@@ -37,7 +59,7 @@ An invocation may include decisions such as `fix 2, 3, 9; ignore 7`. Capture the
 Normalize concrete, actionable findings into `.review-todo.md` without changing their meaning:
 
 - Reuse unique integer IDs already shown by the review; otherwise assign stable integer IDs in its original order. Never renumber them.
-- Preserve severity, title, file and line, problem, impact, proposed fix, and source when available.
+- Preserve the original severity as source metadata, plus title, location, problem, impact, fix, and source. Record Must Fix, Should Fix, or Nice to Have as the normalized priority after checking the evidence. Do not mechanically map legacy High/Medium labels; keep unresolved claims in Source notes until verified.
 - Deduplicate restatements while retaining all source labels on the surviving item.
 - Exclude review-process prose, comment-cleanup summaries, and other non-findings.
 - Put findings already classified by the source review as `Improbable / Not Worth Handling` in `Source notes`, not the actionable queue. Reopen one only if the user explicitly asks.
@@ -65,7 +87,8 @@ Use this shape, omitting empty optional fields:
 
 ### 1. Short finding title
 
-- Severity: should-fix
+- Priority: Should Fix
+- Original severity: should-fix
 - Location: `src/example.ts:42`
 - Related group: none
 - Status: pending

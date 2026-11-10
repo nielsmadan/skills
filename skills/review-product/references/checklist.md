@@ -100,14 +100,7 @@ lenses. The first is the most important for a *product* (vs purely visual) revie
 
 ---
 
-## Severity tiers
+## Grading
 
-Rate every finding by its impact **on the user accomplishing their job**:
-
-- **Critical** — blocks a primary use case; the persona cannot complete a core job
-- **High** — significant friction; needs a workaround, risks abandonment
-- **Medium** — slows or annoys the user but the job still completes
-- **Suggestion** — polish or nice-to-have with marginal impact
-
-For each recommendation, note rough **effort** (S/M/L) so the user can weigh
-impact against cost.
+Use the Review grading section in SKILL.md. Primary-use-case importance, frequency,
+consequence, and recovery inform priority; a checklist category is not a severity tier.

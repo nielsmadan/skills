@@ -11,6 +11,28 @@ effort: xhigh
 
 Macro-level review of system structure: how modules, layers, and components fit together. Complements `review-cleancode` (micro/code smells) and `review-interfaces` (single-interface design).
 
+## Review grading
+
+Use only these finding priorities, in descending order:
+
+- **Critical Issues (Must Fix):** a verified path causes data loss, a security failure, a materially
+  wrong operation, or makes a core workflow unusable without reasonable recovery.
+- **Improvements (Should Fix):** an ordinary supported workflow demonstrably fails or repeatedly
+  imposes substantial friction, or a concrete design defect creates meaningful maintenance cost.
+- **Suggestions (Nice to Have):** a worthwhile improvement with small practical impact, including
+  optional polish, local simplification, and rare recoverable edge cases.
+
+Grade the demonstrated consequence, realistic reachability, and available recovery against project
+priorities. A category, missing convention, hypothetical future problem, or confidence that a claim
+is true does not set its priority. Do not assign automatic severity floors or ceilings. Keep
+unverified claims in validation gaps, outside the graded finding count; distinguish suggestions
+from defects. For plans, trace the consequence if implemented and state the assumptions.
+
+Use the short labels **Must Fix**, **Should Fix**, and **Nice to Have** in summaries and ledgers.
+Keep effort, verification status, user-facing change size, and tool/vendor diagnostic ratings
+separate. When called by `code-review`, return its requested evidence and impact fields; the parent
+owns scoring and final triage. Otherwise apply this rubric directly. Omit empty priority sections.
+
 ## Usage
 
 ```
@@ -61,11 +83,7 @@ Read-only architecture review. Review the architecture of the <diff source> and 
 
 Wait for all external results before proceeding to step 7.
 
-7. **Classify severity** for each finding:
-   - **Critical**: Structural defect that will cause cascading bugs, block scaling, or make a class of changes dangerous (e.g., circular module dependency, layer inversion, broken bounded context).
-   - **High**: Significant maintainability or evolvability problem (e.g., god module, leaky abstraction across a major boundary, missing seam where one is needed for the stated quality attribute).
-   - **Medium**: Pattern inconsistency or coupling smell that increases cognitive load (e.g., one feature using a different communication pattern than the rest, mild abstraction leak).
-   - **Suggestion**: Improvement opportunity with marginal current impact (e.g., extract a shared kernel, rename a module to match its responsibility).
+7. **Classify severity** using Review grading; justify the impact with evidence.
 8. **Report findings** grouped by severity using the Output Format below.
 
 ## Architecture Checklist
@@ -80,7 +98,7 @@ Wait for all external results before proceeding to step 7.
 
 ### 2. Module Structure & Coupling
 
-- **Circular dependencies**: Module A imports from B which (transitively) imports from A. Always Critical at the module level.
+- **Circular dependencies**: Module A imports from B which (transitively) imports from A. Trace initialization, deployment, or change-cost consequences before grading.
 - **God module**: A module that everyone imports from and that imports from everyone (high fan-in *and* fan-out).
 - **Modular Mirage**: Folders look modular but share global state, a singleton "manager", or a fat utility module — structural split without semantic cohesion.
 - **Manager / orchestrator centralization**: One module containing all the orchestration logic that other modules merely defer to. Often emerges from AI-generated code; redistribute behavior to the modules that own the data.
@@ -125,18 +143,18 @@ For each attribute the project cares about, check whether the architecture activ
 
 ## Architectural Smells (quick reference)
 
-| Smell | Signal | Severity heuristic |
+| Smell | Signal | Consequence to verify |
 |-------|--------|--------------------|
-| Circular module dependency | A → B → A | Critical |
-| Layer inversion | Lower layer imports from higher | Critical |
-| God module | Imported by ~everything, imports ~everything | High |
-| Modular mirage | Split folders + shared mutable state / singleton manager | High |
-| Leaky abstraction | Interface exposes implementation type | High |
-| Anemic domain | Logic in services, models are data bags | High (depending on stated style) |
-| Distributed monolith | Services must deploy together | Critical (if microservices claimed) |
-| Shotgun surgery axis | One change touches many modules | High |
-| Manager centralization | One module orchestrates, others are passive | Medium-High |
-| Hidden coupling | Modules sync via shared DB table / global state instead of API | High |
+| Circular module dependency | A → B → A | Initialization failure or coupled changes |
+| Layer inversion | Lower layer imports from higher | Concrete dependency or testing constraint |
+| God module | Imported by ~everything, imports ~everything | Measured change surface or ownership conflict |
+| Modular mirage | Split folders + shared mutable state / singleton manager | Cross-module behavior or change coupling |
+| Leaky abstraction | Interface exposes implementation type | Caller breakage when implementation changes |
+| Anemic domain | Logic in services, models are data bags | A cost beyond disagreement with the chosen style |
+| Distributed monolith | Services must deploy together | Required deployment independence is blocked |
+| Shotgun surgery axis | One change touches many modules | Repeated, concrete maintenance cost |
+| Manager centralization | One module orchestrates, others are passive | Bottleneck or ownership problem |
+| Hidden coupling | Modules sync via shared DB table / global state instead of API | Traced failures or costly coordination |
 
 ## Output Format
 
@@ -146,20 +164,17 @@ For each attribute the project cares about, check whether the architecture activ
 ### Summary
 {1-3 sentences: dominant pattern, biggest risk, overall health}
 
-### Critical (structural defects, scaling/safety blockers)
+### Critical Issues (Must Fix)
 - {module or file:line} - {category}: {description}
   **Impact:** {what breaks or becomes risky}
   **Fix:** {direction — not necessarily a full design}
 
-### High Priority (maintainability / evolvability)
+### Improvements (Should Fix)
 - {module} - {category}: {description}
   **Fix:** {direction}
 
-### Medium Priority (consistency / cognitive load)
+### Suggestions (Nice to Have)
 - {module} - {description}
-
-### Suggestions
-- {improvement opportunity}
 
 ### Documentation Gaps
 - {decisions that lack an ADR or comment explaining why}
@@ -184,12 +199,12 @@ Add one subsection per advisor that responded, titled with the advisor's name as
 **Staged change introduces a layering violation:**
 > /review-architecture --staged
 
-A new file in `src/ui/` directly imports `db/connection.ts`. The review reads the surrounding module, sees that all other UI code goes through `services/`, and reports a Critical layer-inversion issue with the fix to route the call through the existing service.
+A new file in `src/ui/` directly imports `db/connection.ts`. The review reads the surrounding module, sees that all other UI code goes through `services/`, and reports the layer inversion as Should Fix only if it creates a concrete testing or maintenance cost; otherwise as Nice to Have with the fix to route the call through the existing service.
 
 **Full audit finds a god module:**
 > /review-architecture --all
 
-Parallel agents per category. Finds `lib/utils.ts` imported by 80+ files and itself importing from auth, db, and HTTP layers. Reports as High with a split plan along the axes that callers actually use.
+Parallel agents per category. Finds `lib/utils.ts` imported by 80+ files and itself importing from auth, db, and HTTP layers. Traces representative changes and caller constraints. Reports Should Fix if the coupling causes meaningful repeated work; otherwise a useful split is Nice to Have. Import counts alone do not set priority.
 
 **Cross-model architecture review on a contested refactor:**
 > /review-architecture --multi --staged

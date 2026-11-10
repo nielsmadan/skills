@@ -108,6 +108,15 @@ Only if Step 3b.5 detected a language (or the flag was passed explicitly). For e
 - TypeScript → `review-typescript`: judgment-level type design a linter can't decide — type modeling (make invalid states unrepresentable, unions of interfaces, outputs no wider than needed), inference-vs-annotation calls, and casts/`any` that compile but hide a wrong upstream type or unvalidated boundary data. Deliberately non-overlapping with typescript-eslint.
 - Swift → `review-swift`: judgment-level design a linter and the compiler can't decide — state modeling with enums and value types (make invalid states unrepresentable), optional/error/Codable modeling, concurrency isolation intent (actors, `Sendable`, state assumptions across `await`, `Task` lifetime), SwiftUI identity/lifetime/dependencies, ARC ownership, and escape hatches (`!`, `as!`, `try!`, `@unchecked Sendable`) that hide a modeling problem. Deliberately non-overlapping with SwiftLint, swift-format, and Swift 6 strict-concurrency diagnostics. Note it establishes a build-settings baseline first (language mode, default actor isolation, enabled SwiftLint rules) — isolation findings are unreviewable without it.
 
+## Agent 8b: Project-Shape Review (`--cli` / `--react` / `--swiftui`) — conditional
+Only for shapes selected in Step 3b.5. Read the matching `review-cli`, `review-react`, or
+`review-swiftui` skill and apply it to the resolved scope. Do this work yourself; do not
+dispatch sub-agents or launch other agent CLIs.
+- SwiftUI → `review-swiftui`: presentation, accessibility, adaptive layout, localization,
+  navigation, keyboard/focus behavior, and native macOS window commands. Leave Swift modeling,
+  concurrency, ownership, state, identity/lifetime/dependencies, and rendering cost to
+  `review-swift`. Establish platform/deployment targets before recommending APIs.
+
 ## Agent 9: Project-Specific Review (`--project`) — conditional
 Only if Step 3b.5 found a `review-project` skill in the repo (or the flag was passed explicitly). Invoke the project's `review-project` skill with the scope-translated arguments. This agent checks issues unique to this codebase that the language-agnostic and language-specific agents don't know about.
 

@@ -11,6 +11,28 @@ effort: high
 
 Language-agnostic clean code review covering SOLID, DRY, YAGNI, KISS, design principles, and code smells.
 
+## Review grading
+
+Use only these finding priorities, in descending order:
+
+- **Critical Issues (Must Fix):** a verified path causes data loss, a security failure, a materially
+  wrong operation, or makes a core workflow unusable without reasonable recovery.
+- **Improvements (Should Fix):** an ordinary supported workflow demonstrably fails or repeatedly
+  imposes substantial friction, or a concrete design defect creates meaningful maintenance cost.
+- **Suggestions (Nice to Have):** a worthwhile improvement with small practical impact, including
+  optional polish, local simplification, and rare recoverable edge cases.
+
+Grade the demonstrated consequence, realistic reachability, and available recovery against project
+priorities. A category, missing convention, hypothetical future problem, or confidence that a claim
+is true does not set its priority. Do not assign automatic severity floors or ceilings. Keep
+unverified claims in validation gaps, outside the graded finding count; distinguish suggestions
+from defects. For plans, trace the consequence if implemented and state the assumptions.
+
+Use the short labels **Must Fix**, **Should Fix**, and **Nice to Have** in summaries and ledgers.
+Keep effort, verification status, user-facing change size, and tool/vendor diagnostic ratings
+separate. When called by `code-review`, return its requested evidence and impact fields; the parent
+owns scoring and final triage. Otherwise apply this rubric directly. Omit empty priority sections.
+
 ## Usage
 
 ```
@@ -56,11 +78,7 @@ Read-only clean code review. Review the code in this repository (use `git diff -
 
 Wait for all external results before proceeding to step 6.
 
-6. **Classify severity** for each finding:
-   - **Critical**: Structural issue that will cause bugs or make changes dangerous (e.g., shotgun surgery, broken LSP, god class actively accumulating responsibility)
-   - **High**: Significant maintainability problem (e.g., DRY violation across 3+ locations, deep inheritance instead of composition, feature envy)
-   - **Medium**: Design issue that increases cognitive load (e.g., long method, primitive obsession, minor YAGNI)
-   - **Suggestion**: Improvement opportunity with marginal current impact
+6. **Classify severity** using Review grading; justify the impact with evidence.
 7. **Report findings** grouped by severity using the Output Format below
 
 ## Clean Code Checklist
@@ -123,20 +141,17 @@ For annotated BAD/GOOD code examples for each category, see `references/cleancod
 ```markdown
 ## Clean Code Review: {scope}
 
-### Critical (structural issues, bug risk)
+### Critical Issues (Must Fix)
 - {file}:{line} - {category}: {description}
   **Impact:** {why it matters}
   **Fix:** {solution with code example}
 
-### High Priority (maintainability)
+### Improvements (Should Fix)
 - {file}:{line} - {category}: {description}
   **Fix:** {solution}
 
-### Medium Priority (cognitive load)
+### Suggestions (Nice to Have)
 - {file} - {category}: {description}
-
-### Suggestions
-- {improvement opportunity}
 
 **Net:** ~{N} lines removable across the findings above (omit if nothing is cuttable).
 ```
@@ -160,12 +175,12 @@ Add one subsection per advisor that responded, titled with the advisor's name as
 **Staged changes with DRY violation:**
 > /review-cleancode --staged
 
-Reviews staged files and catches the same email validation logic duplicated in `createUser` and `updateUser`. Reports as High with fix to extract a shared `validateEmail` function.
+Reviews staged files and catches the same email validation logic duplicated in `createUser` and `updateUser`. Reports Nice to Have if this is only local duplication; Should Fix requires evidence that the copies drift or create meaningful maintenance cost. Suggests a shared `validateEmail` function.
 
 **Full codebase audit finds god class:**
 > /review-cleancode --all
 
-Parallel agents scan by category. Finds `AppService` handling auth, payments, notifications, and reporting — four distinct responsibilities. Reports as Critical with a split plan.
+Parallel agents scan by category. Finds `AppService` handling auth, payments, notifications, and reporting — four distinct responsibilities. Reports Should Fix if the mixed responsibilities cause meaningful change coupling, with a split plan. The number of responsibilities alone does not establish a finding.
 
 **Get external opinions on clean code quality:**
 > /review-cleancode --multi --staged

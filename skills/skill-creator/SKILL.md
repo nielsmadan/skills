@@ -230,8 +230,11 @@ no list to register a skill in.
 | Scope | Lives in | Reaches |
 |---|---|---|
 | Global | `loadout/skills/<name>/` | All four harnesses, every project |
-| Project-type | `loadout/templates/<type>/skills/<name>/` | Only projects declaring that template |
+| Project-type | `loadout/kits/skills/<name>/` | Only projects selecting a kit that lists the skill |
 | This repo only | `.claude/skills/<name>/` | sessions in this repo (see below) |
+
+For a project-type skill, add its name to `skills` in the relevant
+`loadout/kits/<type>.toml` manifest, then sync the projects selecting that kit.
 
 **Global skill** — write `loadout/skills/<name>/SKILL.md`, then:
 
@@ -324,7 +327,7 @@ Before finalizing, verify:
 - [ ] SKILL.md under ~5,000 words
 - [ ] References clearly linked from SKILL.md (if using references/)
 - [ ] File types mentioned in description (if applicable)
-- [ ] Placed by scope: `loadout/skills/` (global), `loadout/templates/<type>/skills/` (project-type), or `.claude/skills/` (this repo only)
+- [ ] Placed by scope: `loadout/skills/` (global), `loadout/kits/skills/` (project-type), or `.claude/skills/` (this repo only)
 - [ ] Classified in `publish/skills.toml` (a `[groups]` entry, or private) — the pre-commit hook fails otherwise
 - [ ] `loadout sync --global` run, and the skill appears under all four harness skills directories
 - [ ] `loadout check --global` reports no drift

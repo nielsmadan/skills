@@ -16,6 +16,28 @@ those.
 Complements `review-<language>` skills (which review the code) and `review-interfaces` (which
 reviews function and module signatures, not the CLI surface). Don't repeat either.
 
+## Review grading
+
+Use only these finding priorities, in descending order:
+
+- **Critical Issues (Must Fix):** a verified path causes data loss, a security failure, a materially
+  wrong operation, or makes a core workflow unusable without reasonable recovery.
+- **Improvements (Should Fix):** an ordinary supported workflow demonstrably fails or repeatedly
+  imposes substantial friction, or a concrete design defect creates meaningful maintenance cost.
+- **Suggestions (Nice to Have):** a worthwhile improvement with small practical impact, including
+  optional polish, local simplification, and rare recoverable edge cases.
+
+Grade the demonstrated consequence, realistic reachability, and available recovery against project
+priorities. A category, missing convention, hypothetical future problem, or confidence that a claim
+is true does not set its priority. Do not assign automatic severity floors or ceilings. Keep
+unverified claims in validation gaps, outside the graded finding count; distinguish suggestions
+from defects. For plans, trace the consequence if implemented and state the assumptions.
+
+Use the short labels **Must Fix**, **Should Fix**, and **Nice to Have** in summaries and ledgers.
+Keep effort, verification status, user-facing change size, and tool/vendor diagnostic ratings
+separate. When called by `code-review`, return its requested evidence and impact fields; the parent
+owns scoring and final triage. Otherwise apply this rubric directly. Omit empty priority sections.
+
 ## Relationship to the toolchain (read first)
 
 **There is essentially no tooling for this layer.** That is not an assumption — a search across
@@ -318,18 +340,6 @@ dry-run enforcement, atomic writes, env precedence, and file locking.
 - **Anything the project's own enabled lints already gate**, including a Rust crate that has
   turned on the print lints.
 
-## Severity
-
-- **Critical**: destroys data with no gate on a reachable path; reports success for a destructive
-  action that did not happen, or for one that happened differently than stated; exits 0 on a
-  failure the caller must detect, with no compensating channel.
-- **High**: broken-pipe traceback or panic; colliding exit codes; a dry-run that doesn't reach the
-  write; non-TTY assuming yes; a prompt with no flag equivalent; partial failure leaving state a
-  re-run can't recover; precedence implemented twice.
-- **Medium**: stream leaks; missing `--version`; empty `--help`; missing machine-readable format
-  or schema version; a required flag modeled as optional; stringified errors losing the cause;
-  config in the wrong XDG root.
-- **Suggestion**: examples in help, short aliases, colour/TTY refinements, column-width notes.
 
 ## Output Format
 
@@ -341,21 +351,19 @@ dry-run enforcement, atomic writes, env precedence, and file locking.
 library. **At `--all` only:** the §P results. On a diff review, omit this block unless a probe you
 ran actually failed.}
 
-### Critical (data loss / false success / undetectable failure)
+### Critical Issues (Must Fix)
 - {file}:{line} — {category}: {description}
   **Probe:** {the command and its actual output, where a probe found it}
   **Impact:** {what breaks, for whom}
   **Fix:** {concrete change — with code, in this project's language}
 
-### High (behaviour that will bite users or scripts)
+### Improvements (Should Fix)
 - {file}:{line} — {category}: {description}
   **Fix:** {solution}
 
-### Medium (interface and message quality)
+### Suggestions (Nice to Have)
 - {file}:{line} — {category}: {description} — {suggested change}
 
-### Suggestions
-- {opportunities}
 ```
 
 If `--multi` was used, append one subsection per advisor that responded (titled with the advisor's
@@ -368,7 +376,7 @@ name as reported by `second-opinion`), then a **Cross-Model Agreement** subsecti
 
 `rm` has no confirmation, no `--yes` and no `--force`. The justification is an `undo` command — but
 `undo` is only wired for one of two storage backends, and on the other it returns "this backend
-does not support undo". Reports Critical: on that backend `rm` is unprompted and unrecoverable.
+does not support undo". Reports Must Fix: on that backend `rm` is unprompted and unrecoverable.
 The finding needs reading the gate, the thing that justifies its absence, and every construction
 path of that thing — three places, none of which look wrong alone.
 
@@ -377,7 +385,7 @@ path of that thing — three places, none of which look wrong alone.
 
 `cmd ls | head -3` prints three rows and then panics — `failed printing to stdout: Broken pipe`,
 exit 101. Nothing in the source mentions SIGPIPE, and nothing looks wrong: it is a plain print in
-a loop. Reports High with the one-line fix for the language, and notes that exit 101 will be
+a loop. Reports Should Fix with the one-line fix for the language, and notes that exit 101 will be
 misread as a genuine bug in any report.
 
 **Success message for a no-op:**
@@ -386,7 +394,7 @@ misread as a genuine bug in any report.
 `uninstall --consumer <typo>` removes nothing, then reports "removed consumer <typo> (last
 consumer; hooks and active binary removed)" and exits 0 — having actually torn down the shared
 hooks, because zero registered consumers remain. The idempotent remove is correct; the message is
-the defect. Reports Critical: a misspelled argument performs a full teardown and reports success.
+the defect. Reports Must Fix: a misspelled argument performs a full teardown and reports success.
 
 ## Troubleshooting
 

@@ -30,6 +30,28 @@ skill owns and keeps in sync with the implementation; formerly `docs/prd/`). Thi
 skill owns `docs/product/` and does not write `docs/features/`; it only *checks* that
 the feature docs reflect the product understanding (Step 7).
 
+## Review grading
+
+Use only these finding priorities, in descending order:
+
+- **Critical Issues (Must Fix):** a verified path causes data loss, a security failure, a materially
+  wrong operation, or makes a core workflow unusable without reasonable recovery.
+- **Improvements (Should Fix):** an ordinary supported workflow demonstrably fails or repeatedly
+  imposes substantial friction, or a concrete design defect creates meaningful maintenance cost.
+- **Suggestions (Nice to Have):** a worthwhile improvement with small practical impact, including
+  optional polish, local simplification, and rare recoverable edge cases.
+
+Grade the demonstrated consequence, realistic reachability, and available recovery against project
+priorities. A category, missing convention, hypothetical future problem, or confidence that a claim
+is true does not set its priority. Do not assign automatic severity floors or ceilings. Keep
+unverified claims in validation gaps, outside the graded finding count; distinguish suggestions
+from defects. For plans, trace the consequence if implemented and state the assumptions.
+
+Use the short labels **Must Fix**, **Should Fix**, and **Nice to Have** in summaries and ledgers.
+Keep effort, verification status, user-facing change size, and tool/vendor diagnostic ratings
+separate. When called by `code-review`, return its requested evidence and impact fields; the parent
+owns scoring and final triage. Otherwise apply this rubric directly. Omit empty priority sections.
+
 ## Usage
 
 ```
@@ -107,8 +129,7 @@ Create a TodoWrite item per step.
   the read/browser tools needed for the walkthrough without code edits. Disable
   delegation tools for ordinary workers; any coordinating role needs explicit
   subtasks, a descendant limit, and a stopping condition.
-- Rate each finding by user impact: **Critical / High / Medium / Suggestion**
-  (definitions in the checklist).
+- Rate each finding using Review grading, tied to the persona's actual task, consequence, and available recovery.
 
 ### Step 5 — Prioritize recommendations
 - Turn findings into concrete, actionable changes — what to add, change, or remove,
@@ -175,13 +196,11 @@ persona on their primary job, and the single most important thing to change.
 - ...
 
 ## Findings
-### Critical
+### Critical Issues (Must Fix)
 - **<title>** (UC<n>, effort: M) — what the user hits, why it blocks the job, the fix.
-### High
+### Improvements (Should Fix)
 - ...
-### Medium
-- ...
-### Suggestions
+### Suggestions (Nice to Have)
 - ...
 
 ## Prioritized recommendations
@@ -206,15 +225,17 @@ Actions: No `docs/product/persona.md` exists. Read the README + dashboard routes
 infer a "small-team ops manager" persona, ask 2 questions to confirm their main
 goal. Write `persona.md` and `use-cases.md` (UC1 set up a workspace, UC2 invite
 teammates, UC3 read the daily report). Walk each from code. Find UC2 has no resend
-for a lost invite (High) and the empty dashboard teaches nothing (Medium). Write
+for a lost invite (Should Fix if it blocks the normal onboarding flow) and the empty dashboard
+provides little guidance (Nice to Have if users can still complete their task). Write
 `docs/product/2026-05-30-review.md`; summarize top 3 fixes inline.
 
 ### Example 2: Live, scoped review
 User says: "review-product --live the onboarding flow"
 Actions: Refine the existing persona, focus use-cases on first-run. Launch the app
 via `run`, click through signup → first value, screenshot each step. Discover the
-email-verification step dead-ends on mobile (Critical) and time-to-first-value is
-~6 steps (High). Recommend a deferred-verification path. Write the dated review.
+email-verification step dead-ends on mobile (Must Fix if no supported recovery exists).
+A six-step onboarding flow needs evidence of substantial friction before it is Should Fix;
+step count alone does not establish a defect. Recommend a deferred-verification path. Write the dated review.
 
 ### Example 3: Cross-model check before a roadmap meeting
 User says: "review product --multi"
@@ -267,4 +288,4 @@ refine them in place. Dated review files are snapshots and are never rewritten.
   `review-cleancode` for implementation quality and Anthropic's frontend-design skill for
   visual craft.
 - See `references/checklist.md` for the persona/use-case templates, the friction
-  lenses (Nielsen heuristics + product/JTBD), and severity definitions.
+  lenses (Nielsen heuristics + product/JTBD). Grading is defined in this skill.

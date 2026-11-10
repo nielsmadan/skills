@@ -11,6 +11,28 @@ effort: high
 
 Assess, review, and generate tests following consistent principles.
 
+## Review grading
+
+Use only these finding priorities, in descending order:
+
+- **Critical Issues (Must Fix):** a verified path causes data loss, a security failure, a materially
+  wrong operation, or makes a core workflow unusable without reasonable recovery.
+- **Improvements (Should Fix):** an ordinary supported workflow demonstrably fails or repeatedly
+  imposes substantial friction, or a concrete design defect creates meaningful maintenance cost.
+- **Suggestions (Nice to Have):** a worthwhile improvement with small practical impact, including
+  optional polish, local simplification, and rare recoverable edge cases.
+
+Grade the demonstrated consequence, realistic reachability, and available recovery against project
+priorities. A category, missing convention, hypothetical future problem, or confidence that a claim
+is true does not set its priority. Do not assign automatic severity floors or ceilings. Keep
+unverified claims in validation gaps, outside the graded finding count; distinguish suggestions
+from defects. For plans, trace the consequence if implemented and state the assumptions.
+
+Use the short labels **Must Fix**, **Should Fix**, and **Nice to Have** in summaries and ledgers.
+Keep effort, verification status, user-facing change size, and tool/vendor diagnostic ratings
+separate. When called by `code-review`, return its requested evidence and impact fields; the parent
+owns scoring and final triage. Otherwise apply this rubric directly. Omit empty priority sections.
+
 ## Which mode runs — read first
 
 **Bare `/test` with no mode flag → Assess, over the whole suite. Always.**
@@ -231,10 +253,16 @@ Report uncovered lines/branches for files in scope.
 ```markdown
 ## Test Review: {scope}
 
-### Critical Issues
-- {file}:{test} - {issue}
+### Critical Issues (Must Fix)
+- {file}:{test} - {verified consequence}
 
-### Completeness Gaps
+### Improvements (Should Fix)
+- {file}:{test} - {verified consequence}
+
+### Suggestions (Nice to Have)
+- {file}:{test} - {small practical benefit}
+
+### Supporting coverage evidence
 - {code_file}:{function} - no tests found
 - {code_file}:{function} - missing test for error case
 - {code_file}:{function} - missing test for edge case: {scenario}
@@ -245,15 +273,13 @@ Report uncovered lines/branches for files in scope.
 - Uncovered in scope:
   - {file}:{lines} - {description}
 
-### Pattern Violations (--staged)
+### Supporting pattern evidence (--staged)
 - {test_file} - setup pattern differs from existing tests
 - {test_file} - mocking approach inconsistent with {example_file}
 
-### Test Smells
+### Supporting test-design evidence
 - {file}:{test} - {smell}
 
-### Suggestions
-- {improvement}
 ```
 
 ---

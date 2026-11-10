@@ -12,6 +12,28 @@ effort: high
 
 Language-agnostic review of one question: **does the change do things the way this codebase already does them?** Every finding names the precedent it diverges from. A divergence without a cited precedent is an opinion, not a finding.
 
+## Review grading
+
+Use only these finding priorities, in descending order:
+
+- **Critical Issues (Must Fix):** a verified path causes data loss, a security failure, a materially
+  wrong operation, or makes a core workflow unusable without reasonable recovery.
+- **Improvements (Should Fix):** an ordinary supported workflow demonstrably fails or repeatedly
+  imposes substantial friction, or a concrete design defect creates meaningful maintenance cost.
+- **Suggestions (Nice to Have):** a worthwhile improvement with small practical impact, including
+  optional polish, local simplification, and rare recoverable edge cases.
+
+Grade the demonstrated consequence, realistic reachability, and available recovery against project
+priorities. A category, missing convention, hypothetical future problem, or confidence that a claim
+is true does not set its priority. Do not assign automatic severity floors or ceilings. Keep
+unverified claims in validation gaps, outside the graded finding count; distinguish suggestions
+from defects. For plans, trace the consequence if implemented and state the assumptions.
+
+Use the short labels **Must Fix**, **Should Fix**, and **Nice to Have** in summaries and ledgers.
+Keep effort, verification status, user-facing change size, and tool/vendor diagnostic ratings
+separate. When called by `code-review`, return its requested evidence and impact fields; the parent
+owns scoring and final triage. Otherwise apply this rubric directly. Omit empty priority sections.
+
 ## Usage
 
 ```
@@ -57,10 +79,7 @@ The diff scopes review the **diff** against the rest of the repo: the precedents
    - appears in Out of Scope below;
    - follows a written rule or the newer of two patterns (Gotchas);
    - cites precedents that do not actually agree with each other. Re-open each cited `file:line` to confirm before keeping the finding.
-7. **Classify severity**:
-   - **High**: missed wiring (siblings are all registered somewhere and this one is not, so it is unreachable, undocumented, or untested), or a divergence that changes behaviour callers rely on (a different error type, exit code, return shape, or log level that downstream code or alerts key on).
-   - **Medium**: a second way to do a job the codebase already does one way — a hand-rolled helper, a different config or logging mechanism, a new dependency for something an existing one covers, a structure that differs from every sibling.
-   - **Suggestion**: naming, file placement, or ordering drift with no behavioural effect.
+7. **Classify severity** using Review grading; justify the impact with evidence.
 8. **Report** using the Output Format below.
 
 For more than five files or with `--all`, split the units into groups of related kinds and give each group to one sub-agent; merge and deduplicate their findings.
@@ -106,7 +125,7 @@ These are **never findings** here. Do not report them, and do not mention them a
 | Version-specific library API usage | `review-library-use` |
 | Test assertion quality and coverage gaps | `test --review`; this skill checks only that tests exist where siblings have them, in their style |
 | Inconsistencies between existing files the change did not touch | Report only what the scoped diff introduces, except with `--all` |
-| A deliberate improvement that replaces the old pattern everywhere in the change's reach | That is a migration, not drift. It becomes a finding only if it leaves two ways to do the same job — then report it as Medium, cite both, and recommend which to keep |
+| A deliberate improvement that replaces the old pattern everywhere in the change's reach | That is a migration, not drift. It becomes a finding only if it leaves two ways to do the same job — then grade the demonstrated cost, cite both, and recommend which to keep |
 
 ## Autofix
 
@@ -130,18 +149,21 @@ Under `code-review`, the main thread runs the checks and applies the items that 
 ```markdown
 ## Consistency Review: {scope}
 
-### High Priority (missed wiring / behaviour callers rely on)
+### Critical Issues (Must Fix)
+- {file}:{line} — {verified severe consequence and why recovery is inadequate}
+  **Precedent:** {file:line}, {file:line}
+  **Fix:** {repair}
+
+### Improvements (Should Fix)
 - {file}:{line} - {category}: {what the change does}
   **Precedent:** {file:line}, {file:line} — {what they do}
   **Fix:** {the change that brings it in line}
 
-### Medium Priority (second way to do the same job)
+### Suggestions (Nice to Have)
 - {file}:{line} - {category}: {what the change does}
   **Precedent:** {file:line}, {file:line} — {what they do}
   **Fix:** {the change that brings it in line}
 
-### Suggestions (naming / placement drift)
-- {file}:{line} - {category}: {divergence} (precedent: {file:line})
 ```
 
 Append the tag from Autofix to every finding that qualifies, e.g. `[autofix, verify: suite]`.
@@ -160,7 +182,7 @@ If nothing survives the filter, say so plainly and stop. An empty result is norm
 **A new CLI subcommand that skipped the registry:**
 > /review-consistency --staged
 
-The diff adds `cmd_export` in `cli/export.py`. Every sibling in `cli/` is listed in `cli/__init__.py:COMMANDS` and has a `tests/cli/test_<name>.py`; `export` has neither. Reports High (unreachable from the CLI) with both siblings cited. Also finds `export` reading `os.environ["EXPORT_DIR"]` where the other commands call `config.get()` (`cli/sync.py:14`, `cli/import_.py:22`) — Medium. And `tests/cli/test_export.py` builds its records with an inline `make_record()` where every other CLI test imports builders from `tests/factories/` — Medium, tagged `[autofix, verify: suite]`.
+The diff adds `cmd_export` in `cli/export.py`. Every sibling in `cli/` is listed in `cli/__init__.py:COMMANDS` and has a `tests/cli/test_<name>.py`; `export` has neither. Reports Should Fix (unreachable from the CLI) with both siblings cited. Also finds `export` reading `os.environ["EXPORT_DIR"]` where the other commands call `config.get()` (`cli/sync.py:14`, `cli/import_.py:22`) — Nice to Have unless the divergence creates a concrete behavioral or maintenance cost. And `tests/cli/test_export.py` builds its records with an inline `make_record()` where every other CLI test imports builders from `tests/factories/` — Nice to Have, tagged `[autofix, verify: suite]`.
 
 **Following a documented migration:**
 > /review-consistency --changed
@@ -170,7 +192,7 @@ The change logs through `structlog` while 40 files still use `logging.getLogger`
 **Whole-repo audit:**
 > /review-consistency --all
 
-Groups the repo by construct kind and reports Competing Patterns: HTTP handlers return errors as `{"error": msg}` in 12 places and `{"detail": msg}` in 5, with `detail` the newer. No High or Medium findings, since `--all` reports existing drift as clusters rather than blaming individual files.
+Groups the repo by construct kind and reports Competing Patterns: HTTP handlers return errors as `{"error": msg}` in 12 places and `{"detail": msg}` in 5, with `detail` the newer. No per-instance graded findings, since `--all` reports existing drift as clusters rather than blaming individual files.
 
 ## Troubleshooting
 

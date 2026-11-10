@@ -11,6 +11,28 @@ effort: high
 
 Performance analysis for common bottlenecks and inefficiencies.
 
+## Review grading
+
+Use only these finding priorities, in descending order:
+
+- **Critical Issues (Must Fix):** a verified path causes data loss, a security failure, a materially
+  wrong operation, or makes a core workflow unusable without reasonable recovery.
+- **Improvements (Should Fix):** an ordinary supported workflow demonstrably fails or repeatedly
+  imposes substantial friction, or a concrete design defect creates meaningful maintenance cost.
+- **Suggestions (Nice to Have):** a worthwhile improvement with small practical impact, including
+  optional polish, local simplification, and rare recoverable edge cases.
+
+Grade the demonstrated consequence, realistic reachability, and available recovery against project
+priorities. A category, missing convention, hypothetical future problem, or confidence that a claim
+is true does not set its priority. Do not assign automatic severity floors or ceilings. Keep
+unverified claims in validation gaps, outside the graded finding count; distinguish suggestions
+from defects. For plans, trace the consequence if implemented and state the assumptions.
+
+Use the short labels **Must Fix**, **Should Fix**, and **Nice to Have** in summaries and ledgers.
+Keep effort, verification status, user-facing change size, and tool/vendor diagnostic ratings
+separate. When called by `code-review`, return its requested evidence and impact fields; the parent
+owns scoring and final triage. Otherwise apply this rubric directly. Omit empty priority sections.
+
 ## Usage
 
 ```
@@ -44,11 +66,7 @@ Performance analysis for common bottlenecks and inefficiencies.
 3. **Parallelize** if scope has >5 files: spawn one sub-agent per category, each scanning all files for that category. Merge results and deduplicate.
 
    Dispatch workers that return findings without editing files. Disable delegation tools where supported; read-only access alone does not prevent delegation. Any coordinating role needs explicit subtasks, a descendant limit, and a stopping condition in its brief.
-4. **Classify severity** for each finding:
-   - **Critical**: User-facing slowdown, data loss risk, or resource exhaustion (e.g., memory leak, N+1 on hot path)
-   - **High**: Measurable inefficiency on a common code path but not immediately user-visible (e.g., O(n²) on lists typically < 100 items but growing)
-   - **Medium**: Suboptimal pattern that could become a problem at scale (e.g., missing pagination, sequential requests that could be parallel)
-   - **Suggestion**: Optimization opportunity with marginal current impact
+4. **Classify severity** using Review grading; justify the impact with evidence.
 5. **Report findings** grouped by severity using the Output Format below
 
 ## Performance Checklist
@@ -90,20 +108,18 @@ For annotated BAD/GOOD code examples for each category, see `references/perf-che
 ```markdown
 ## Performance Review: {scope}
 
-### Critical (user-facing slowdown)
+### Critical Issues (Must Fix)
 - {file}:{line} - {issue type}: {description}
   **Impact:** {why it matters}
   **Fix:** {solution with code example}
 
-### High Priority
+### Improvements (Should Fix)
 - {file}:{line} - {issue}
   **Fix:** {solution}
 
-### Medium Priority
+### Suggestions (Nice to Have)
 - {file} - {issue}
 
-### Suggestions
-- {optimization opportunity}
 ```
 
 ## Examples
@@ -111,7 +127,7 @@ For annotated BAD/GOOD code examples for each category, see `references/perf-che
 **Staged changes introduce N+1 query:**
 > /review-perf --staged
 
-Reviews staged files and catches a new user list endpoint that queries posts per user in a loop. Reports it as Critical with the impact ("100 users = 101 queries") and provides a fix using eager loading with `include`.
+Reviews staged files and catches a new user list endpoint that queries posts per user in a loop. Records the query count ("100 users = 101 queries") and checks actual sizes and latency. Reports Should Fix when the ordinary path has demonstrated substantial cost; otherwise records a useful optimization as Nice to Have. Resource exhaustion or a core outage needs separate evidence for Must Fix. Suggests eager loading with `include`.
 
 **Full audit finds memory leak in dashboard:**
 > /review-perf --all

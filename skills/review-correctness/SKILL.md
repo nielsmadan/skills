@@ -13,6 +13,28 @@ Check correct behavior under normal inputs, failures, and changing assumptions. 
 
 Read `references/defensive-checklist.md` for examples, language-specific exhaustiveness mechanisms, and supporting sources when a finding needs them. Follow this skill's ownership and evidence rules when using those examples.
 
+## Review grading
+
+Use only these finding priorities, in descending order:
+
+- **Critical Issues (Must Fix):** a verified path causes data loss, a security failure, a materially
+  wrong operation, or makes a core workflow unusable without reasonable recovery.
+- **Improvements (Should Fix):** an ordinary supported workflow demonstrably fails or repeatedly
+  imposes substantial friction, or a concrete design defect creates meaningful maintenance cost.
+- **Suggestions (Nice to Have):** a worthwhile improvement with small practical impact, including
+  optional polish, local simplification, and rare recoverable edge cases.
+
+Grade the demonstrated consequence, realistic reachability, and available recovery against project
+priorities. A category, missing convention, hypothetical future problem, or confidence that a claim
+is true does not set its priority. Do not assign automatic severity floors or ceilings. Keep
+unverified claims in validation gaps, outside the graded finding count; distinguish suggestions
+from defects. For plans, trace the consequence if implemented and state the assumptions.
+
+Use the short labels **Must Fix**, **Should Fix**, and **Nice to Have** in summaries and ledgers.
+Keep effort, verification status, user-facing change size, and tool/vendor diagnostic ratings
+separate. When called by `code-review`, return its requested evidence and impact fields; the parent
+owns scoring and final triage. Otherwise apply this rubric directly. Omit empty priority sections.
+
 ## Instructions
 
 1. Resolve the scope. When called by `code-review`, use its supplied file list and diff scope without recomputing them. An explicit target selects those files or directories; otherwise use the Scope table.
@@ -93,7 +115,7 @@ For diff scopes, report defects introduced or exposed by the change, including n
 
 ## Output
 
-When called by `code-review`, follow its mode-specific finding and scoring instructions: comprehensive mode uses independent scorers, while quick mode uses the integrated reviewer’s self-verification. Standalone, group findings as Critical, Should Fix, or Nice to Have according to concrete consequences, reachability, and scope. Do not assign a severity floor to exhaustiveness/timeouts or a ceiling to misleading guards.
+When called by `code-review`, follow its mode-specific finding and scoring instructions: comprehensive mode uses independent scorers, while quick mode uses the integrated reviewer’s self-verification. Standalone, use the shared Review grading section. Do not assign a severity floor to exhaustiveness/timeouts or a ceiling to misleading guards.
 
 Each finding includes:
 

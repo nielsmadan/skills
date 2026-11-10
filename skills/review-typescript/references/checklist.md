@@ -37,9 +37,7 @@ ESLint flags casts that are *provably redundant* and *provably unsafe*. What's l
 
 State your reasoning for each finding. "Cast hides that `getUser` is mistyped as `any`" is a finding; "there's a cast here" is not (and is probably already lint-flagged).
 
-## Severity
+## Grading
 
-- **Critical**: a type-modeling flaw that lets illegal state reach runtime and cause a crash/corruption (invalid-states-representable in a load-bearing model; a boundary cast on unvalidated external data that will throw on malformed input).
-- **High**: a modeling problem that will cause bugs or force error-prone handling as the code evolves (outputs too wide, cast hiding a wrong upstream type, hand-copied type that will silently drift).
-- **Medium**: annotation/inference misuse (`as`-as-label, missing definition-site annotation on a complex literal, missing public-API return type), sentinel values, over-optional types.
-- **Suggestion**: nominal-type opportunities, DRY-via-utility-type refactors where the current code is merely repetitive, not buggy.
+Apply the Review grading rubric in SKILL.md. Checklist categories are not severity tiers;
+trace the consequence, reachability, and recovery before assigning priority.

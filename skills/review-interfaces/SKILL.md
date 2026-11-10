@@ -11,6 +11,28 @@ effort: high
 
 Interface design review for functions, classes, modules, and components.
 
+## Review grading
+
+Use only these finding priorities, in descending order:
+
+- **Critical Issues (Must Fix):** a verified path causes data loss, a security failure, a materially
+  wrong operation, or makes a core workflow unusable without reasonable recovery.
+- **Improvements (Should Fix):** an ordinary supported workflow demonstrably fails or repeatedly
+  imposes substantial friction, or a concrete design defect creates meaningful maintenance cost.
+- **Suggestions (Nice to Have):** a worthwhile improvement with small practical impact, including
+  optional polish, local simplification, and rare recoverable edge cases.
+
+Grade the demonstrated consequence, realistic reachability, and available recovery against project
+priorities. A category, missing convention, hypothetical future problem, or confidence that a claim
+is true does not set its priority. Do not assign automatic severity floors or ceilings. Keep
+unverified claims in validation gaps, outside the graded finding count; distinguish suggestions
+from defects. For plans, trace the consequence if implemented and state the assumptions.
+
+Use the short labels **Must Fix**, **Should Fix**, and **Nice to Have** in summaries and ledgers.
+Keep effort, verification status, user-facing change size, and tool/vendor diagnostic ratings
+separate. When called by `code-review`, return its requested evidence and impact fields; the parent
+owns scoring and final triage. Otherwise apply this rubric directly. Omit empty priority sections.
+
 ## Usage
 
 ```
@@ -44,11 +66,7 @@ Interface design review for functions, classes, modules, and components.
 3. **Parallelize** if scope has >5 files: spawn one sub-agent per category, each scanning all files for that category. Merge results and deduplicate.
 
    Dispatch workers that return findings without editing files. Disable delegation tools where supported; read-only access alone does not prevent delegation. Any coordinating role needs explicit subtasks, a descendant limit, and a stopping condition in its brief.
-4. **Classify severity** for each finding:
-   - **Critical**: Interface that actively misleads callers into incorrect usage, allows invalid states, or has a naming/type mismatch that will cause bugs
-   - **High**: Interface with significant usability problems — too many params, weak types where strong types exist, public members that leak implementation
-   - **Medium**: Suboptimal design that increases cognitive load — inconsistent naming, boolean flags, mild YAGNI violations
-   - **Suggestion**: Improvement opportunity with marginal current impact
+4. **Classify severity** using Review grading; justify the impact with evidence.
 5. **Report findings** grouped by severity using the Output Format below
 
 ## Interface Checklist
@@ -110,20 +128,18 @@ For annotated BAD/GOOD code examples for each category, see `references/interfac
 ```markdown
 ## Interface Review: {scope}
 
-### Critical (misleads callers / allows invalid states)
+### Critical Issues (Must Fix)
 - {file}:{line} - {issue type}: {description}
   **Impact:** {why it matters}
   **Fix:** {solution with code example}
 
-### High Priority
+### Improvements (Should Fix)
 - {file}:{line} - {issue}
   **Fix:** {solution}
 
-### Medium Priority
+### Suggestions (Nice to Have)
 - {file} - {issue}
 
-### Suggestions
-- {improvement opportunity}
 ```
 
 ## Examples
@@ -131,7 +147,7 @@ For annotated BAD/GOOD code examples for each category, see `references/interfac
 **Staged changes introduce a component with overlapping props:**
 > /review-interfaces --staged
 
-Reviews staged files and catches a `<Button>` component that accepts both `label` (string) and `children` for button text. Reports it as Critical with the impact ("callers will disagree on which to use, leading to inconsistent behavior") and a fix to remove `label` in favor of `children`.
+Reviews staged files and catches a `<Button>` component that accepts both `label` (string) and `children` for button text. Checks the precedence contract and real callers. An undocumented redundant choice is Nice to Have; inconsistent output on an ordinary caller path can be Should Fix. Suggests one clear label contract without assuming that the two props alone prove a serious defect.
 
 **Full audit finds god class with 15 public methods:**
 > /review-interfaces --all

@@ -98,6 +98,12 @@ After the last finding:
 
 Never push, never touch `I`, and never touch a repo the brief does not name.
 
+**A brief marked `Approach: plan` or `Approach: longshot`** is one bigger change. Run that skill
+with the brief as its input instead of steps 1–5; its own review replaces step 5. Its go-ahead
+gate is the one point where the worker asks the user anything: send the lead one line saying the
+worker is waiting on the user, then wait. The brief's rules still bind: no push, and steps 6
+and 7 as usual.
+
 ## Syncing
 
 | Worker home | Catch up to the lead (before each brief) | Rebase before reporting |

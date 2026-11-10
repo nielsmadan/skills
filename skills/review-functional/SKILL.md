@@ -14,6 +14,28 @@ Language-agnostic review for the functional-programming lessons that pay off in 
 
 This skill is explicitly **not** a push toward functional *style*: currying, point-free code, recursion and monads are out of scope and are never findings. What it does check is whether a reader can predict what a function does from its signature and its inputs, and whether the code states what it produces rather than how it accumulated it.
 
+## Review grading
+
+Use only these finding priorities, in descending order:
+
+- **Critical Issues (Must Fix):** a verified path causes data loss, a security failure, a materially
+  wrong operation, or makes a core workflow unusable without reasonable recovery.
+- **Improvements (Should Fix):** an ordinary supported workflow demonstrably fails or repeatedly
+  imposes substantial friction, or a concrete design defect creates meaningful maintenance cost.
+- **Suggestions (Nice to Have):** a worthwhile improvement with small practical impact, including
+  optional polish, local simplification, and rare recoverable edge cases.
+
+Grade the demonstrated consequence, realistic reachability, and available recovery against project
+priorities. A category, missing convention, hypothetical future problem, or confidence that a claim
+is true does not set its priority. Do not assign automatic severity floors or ceilings. Keep
+unverified claims in validation gaps, outside the graded finding count; distinguish suggestions
+from defects. For plans, trace the consequence if implemented and state the assumptions.
+
+Use the short labels **Must Fix**, **Should Fix**, and **Nice to Have** in summaries and ledgers.
+Keep effort, verification status, user-facing change size, and tool/vendor diagnostic ratings
+separate. When called by `code-review`, return its requested evidence and impact fields; the parent
+owns scoring and final triage. Otherwise apply this rubric directly. Omit empty priority sections.
+
 ## Usage
 
 ```
@@ -52,11 +74,7 @@ This skill is explicitly **not** a push toward functional *style*: currying, poi
 
    Dispatch workers that return findings without editing files. Disable delegation tools where supported; read-only access alone does not prevent delegation. Any coordinating role needs explicit subtasks, a descendant limit, and a stopping condition in its brief.
 5. **Drop every finding that appears in Out of Scope below** before classifying. Do this as an explicit pass, not as a background judgement.
-6. **Classify severity** for each finding:
-   - **Critical**: Hidden shared mutable state, or a function that mutates data its caller still holds — bugs that reproduce only under specific call ordering
-   - **High**: Business logic welded to I/O so it cannot be tested without mocks; a decision function reaching for the clock, environment, or a global
-   - **Medium**: Command/query violation, manual accumulation where the language has a direct expression, a value declared then mutated across branches
-   - **Suggestion**: Improvement with marginal current impact
+6. **Classify severity** using Review grading; justify the impact with evidence.
 7. **Report findings** grouped by severity using the Output Format below
 
 ## Checklist
@@ -125,20 +143,18 @@ These are **never findings**, no matter how the code is written. Do not report t
 ```markdown
 ## Functional Review: {scope}
 
-### Critical (hidden shared state / caller's data mutated)
+### Critical Issues (Must Fix)
 - {file}:{line} - {category}: {description}
   **Impact:** {the call ordering or sequence that produces the bug}
   **Fix:** {solution with code example}
 
-### High Priority (untestable logic / non-determinism)
+### Improvements (Should Fix)
 - {file}:{line} - {category}: {description}
   **Fix:** {solution}
 
-### Medium Priority
+### Suggestions (Nice to Have)
 - {file} - {category}: {description}
 
-### Suggestions
-- {improvement opportunity}
 ```
 
 If nothing survives the Out of Scope pass, say so plainly and stop. An empty result is a normal outcome for code that was already written this way.
@@ -148,12 +164,12 @@ If nothing survives the Out of Scope pass, say so plainly and stop. An empty res
 **A handler with the decision buried in it:**
 > /review-functional --staged
 
-Finds an `updateSubscription` handler that loads the account, computes the proration against `datetime.now()`, writes the new row, and sends the email — all in one function. Reports as High: the proration rule cannot be tested without a database and a frozen clock. Fix extracts `compute_proration(account, plan, at)` taking the timestamp as a parameter, leaving the handler to fetch, call, and persist.
+Finds an `updateSubscription` handler that loads the account, computes the proration against `datetime.now()`, writes the new row, and sends the email — all in one function. Reports as Should Fix: the proration rule cannot be tested without a database and a frozen clock. Fix extracts `compute_proration(account, plan, at)` taking the timestamp as a parameter, leaving the handler to fetch, call, and persist.
 
 **Caller's list mutated:**
 > /review-functional --changed
 
-Finds `normalize_tags(tags)` calling `tags.sort()` before returning a new list. The caller's list is reordered as a side effect nobody declared. Reports as Critical with the fix `sorted(tags)`.
+Finds `normalize_tags(tags)` calling `tags.sort()` before returning a new list. The caller's list is reordered as a side effect nobody declared. Reports Should Fix if callers depend on the original ordering, citing that caller, with the fix `sorted(tags)`. Without a demonstrated behavioral or maintenance cost, treat the API surprise as Nice to Have.
 
 **Nothing to report:**
 > /review-functional --staged
@@ -173,7 +189,7 @@ The diff adds two pure helpers and a thin handler that calls them. Reports no fi
 
 ## Notes
 
-- Effect placement and shared state carry the highest severity, because they produce bugs. Expression shape is a readability finding and caps at Medium — but report it, don't skip it.
+- Grade effect placement, shared state, and expression shape by their demonstrated consequences. None has a fixed priority; a readability-only improvement is usually Nice to Have.
 - Purity in imperative languages works at module scale, not at every helper. Don't split a coherent 15-line function to chase it.
 - A finding needs a concrete failure or a concrete test that can't be written. "This isn't pure" on its own is not a finding.
 - For `--all`, use parallel agents per category (5 agents)

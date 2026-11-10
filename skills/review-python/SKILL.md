@@ -15,6 +15,28 @@ anything, whether async work has an owner, and whether a good primitive is being
 
 Run on `.py` / `.pyi` files. Complements `review-cleancode` (SOLID/DRY/smells) — don't repeat it.
 
+## Review grading
+
+Use only these finding priorities, in descending order:
+
+- **Critical Issues (Must Fix):** a verified path causes data loss, a security failure, a materially
+  wrong operation, or makes a core workflow unusable without reasonable recovery.
+- **Improvements (Should Fix):** an ordinary supported workflow demonstrably fails or repeatedly
+  imposes substantial friction, or a concrete design defect creates meaningful maintenance cost.
+- **Suggestions (Nice to Have):** a worthwhile improvement with small practical impact, including
+  optional polish, local simplification, and rare recoverable edge cases.
+
+Grade the demonstrated consequence, realistic reachability, and available recovery against project
+priorities. A category, missing convention, hypothetical future problem, or confidence that a claim
+is true does not set its priority. Do not assign automatic severity floors or ceilings. Keep
+unverified claims in validation gaps, outside the graded finding count; distinguish suggestions
+from defects. For plans, trace the consequence if implemented and state the assumptions.
+
+Use the short labels **Must Fix**, **Should Fix**, and **Nice to Have** in summaries and ledgers.
+Keep effort, verification status, user-facing change size, and tool/vendor diagnostic ratings
+separate. When called by `code-review`, return its requested evidence and impact fields; the parent
+owns scoring and final triage. Otherwise apply this rubric directly. Omit empty priority sections.
+
 ## Relationship to the toolchain (read first)
 
 **Ruff's defaults changed radically in 0.16.0** and most "what ruff covers" intuition predates it:
@@ -300,19 +322,6 @@ reach the rule, fold it into the one-time recommendation instead of reporting ea
   if mypy's speed is a real problem — but mypy `--strict` is not a finding to begin with.
 - **Docstring coverage** (`D`) unless the project already enforces it.
 
-## Severity
-
-- **Critical**: crashes, corrupts, or silently loses data at runtime — an unvalidated external
-  value entering the domain where no branch matches, a truncate-in-place write to a file another
-  program depends on, malformed-row skipping combined with a rewrite, an exception that escapes
-  the top-level handler on a reachable path.
-- **High**: will cause bugs as the code evolves — invalid states representable in a load-bearing
-  model, a hierarchy bypassed so exit codes are lost, blocking work on the event loop, a task with
-  no owner, shared mutable state mutated across an `await`, a missing timeout on the slowest call.
-- **Medium**: `dict` where a dataclass belongs, in-band result/error unions, coverage holes from
-  unannotated defs, variance, encoding and atomicity inconsistencies, discarded diagnostics.
-- **Suggestion**: `NamedTuple` over commented tuples, `@override`, `__all__` on a library,
-  naming and ergonomics where the code is awkward rather than buggy.
 
 ## Output Format
 
@@ -324,21 +333,19 @@ reach the rule, fold it into the one-time recommendation instead of reporting ea
 review). **At `--all` only:** the §P results. On a diff review, omit this block unless something in
 it changes what you reported.}
 
-### Critical (crash / data loss / corruption reachable)
+### Critical Issues (Must Fix)
 - {file}:{line} — {category}: {description}
   **Why it's not a ruff or mypy finding:** {what judgment this needed}
   **Impact:** {what breaks}
   **Fix:** {model change / boundary validation / real failure path — with code}
 
-### High (design problems that will cause bugs)
+### Improvements (Should Fix)
 - {file}:{line} — {category}: {description}
   **Fix:** {solution}
 
-### Medium (modeling, typing, boundaries)
+### Suggestions (Nice to Have)
 - {file}:{line} — {category}: {description} — {suggested change}
 
-### Suggestions
-- {opportunities}
 ```
 
 If `--multi` was used, append one subsection per advisor that responded (titled with the advisor's
@@ -352,7 +359,8 @@ name as reported by `second-opinion`), then a **Cross-Model Agreement** subsecti
 A 400-line schema validator proves the exact shape of each resource spec, then stores the result
 as `dict[str, Any]`. Downstream, `provision()` re-checks `isinstance(spec.get("range"), list)` and
 raises on an unknown `type` — branches that cannot execute, and which permanently depress the
-coverage number. Reports High: a `TypedDict` union keyed on a `Literal` `type` field turns the
+coverage number. Reports Nice to Have on those facts; Should Fix needs demonstrated meaningful
+maintenance cost or a failing supported path. A `TypedDict` union keyed on a `Literal` `type` field turns the
 final `else` into an `assert_never` type error and deletes five defensive raises. Not a mypy
 finding: `Any` conforms to every consumer, so mypy has no discriminator to narrow on and cannot
 see the branches as unreachable.
@@ -362,7 +370,7 @@ see the branches as unreachable.
 
 An `async` worker pushes a progress modal, then calls `cmd_roundup(...)`, which three frames down
 scans every session directory, calls `time.sleep`, runs `shutil.rmtree`, and issues N sequential
-LLM subprocesses with no `timeout=`. Reports High — the modal cannot paint and keystrokes are dead
+LLM subprocesses with no `timeout=`. Reports Should Fix — the modal cannot paint and keystrokes are dead
 until it returns; fix with `asyncio.to_thread` or `thread=True`, and add a timeout. `ASYNC221` is
 silent because the subprocess call is not lexically inside the `async def`.
 
@@ -371,7 +379,7 @@ silent because the subprocess call is not lexically inside the `async def`.
 
 `errors.py` defines `ApplicationError(exit_code, is_error)` with `UsageError` (exit 2) and
 `MissingRecipeError` (exit 0). The code raises 61 raw `ValueError`s, four of them in a function
-that raises `UsageError` correctly on the line above. Reports High — every one renders identically
+that raises `UsageError` correctly on the line above. Reports Should Fix — every one renders identically
 through the generic handler and exits 1, discarding the distinctions the hierarchy exists to carry.
 `TRY002` only catches `raise Exception`; `ValueError` is a perfectly ordinary raise.
 

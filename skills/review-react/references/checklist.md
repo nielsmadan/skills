@@ -127,12 +127,7 @@ Load only the section matching the baseline's renderer.
   (`useFocusEffect`), or screens assuming they unmount when navigated away from — stack
   screens stay mounted.
 
-## Severity
+## Grading
 
-- **Critical** — wrong data shown or persisted: stale response overwriting a newer one, state
-  attached to the wrong list row, server secret reaching the client.
-- **High** — will cause bugs as the code evolves: derived or duplicated state, event logic in
-  effects, missing cleanup, contradictory state flags.
-- **Medium** — structure and cost: state placement, context churn, measurable render cost,
-  boundary placement.
-- **Suggestion** — newer APIs or patterns that would simplify the code without fixing a bug.
+Apply the Review grading rubric in SKILL.md. Checklist categories are not severity tiers;
+trace the consequence, reachability, and recovery before assigning priority.

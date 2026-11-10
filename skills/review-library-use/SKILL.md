@@ -15,6 +15,28 @@ uses — the correct-usage rules, API contracts, and footguns captured in the re
 `library-docs` distills "how to use this version correctly"; this skill checks the code
 actually does.
 
+## Review grading
+
+Use only these finding priorities, in descending order:
+
+- **Critical Issues (Must Fix):** a verified path causes data loss, a security failure, a materially
+  wrong operation, or makes a core workflow unusable without reasonable recovery.
+- **Improvements (Should Fix):** an ordinary supported workflow demonstrably fails or repeatedly
+  imposes substantial friction, or a concrete design defect creates meaningful maintenance cost.
+- **Suggestions (Nice to Have):** a worthwhile improvement with small practical impact, including
+  optional polish, local simplification, and rare recoverable edge cases.
+
+Grade the demonstrated consequence, realistic reachability, and available recovery against project
+priorities. A category, missing convention, hypothetical future problem, or confidence that a claim
+is true does not set its priority. Do not assign automatic severity floors or ceilings. Keep
+unverified claims in validation gaps, outside the graded finding count; distinguish suggestions
+from defects. For plans, trace the consequence if implemented and state the assumptions.
+
+Use the short labels **Must Fix**, **Should Fix**, and **Nice to Have** in summaries and ledgers.
+Keep effort, verification status, user-facing change size, and tool/vendor diagnostic ratings
+separate. When called by `code-review`, return its requested evidence and impact fields; the parent
+owns scoring and final triage. Otherwise apply this rubric directly. Omit empty priority sections.
+
 ## Relationship to the other reviewers (read first)
 Deliberately **non-overlapping**:
 - **General/`code-review` agents** judge logic, architecture, security, clean code — library-*agnostic*. This skill only flags things that are wrong **relative to a specific library's docs/version**.
@@ -76,11 +98,6 @@ whether the scoped code uses them per current docs. Wait for all results before 
 ### Step 5: Classify and report
 Group by severity. Every finding must cite the convention or doc it violates — otherwise drop it.
 
-## Severity
-- **Critical:** doc-violating misuse that will fail at runtime for real inputs — calling a removed API, missing required init that crashes, wrong auth/security config from the library's guide.
-- **High:** deprecated-but-working usage that breaks on the next upgrade, or a documented footgun that will bite (wrong option shape silently ignored, incorrect call order).
-- **Medium:** using an older correct pattern when the pinned version documents a better/required one; non-idiomatic usage the docs warn against.
-- **Suggestion:** minor doc-recommended improvements.
 
 ## Output Format
 ```markdown
@@ -89,19 +106,17 @@ Group by severity. Every finding must cite the convention or doc it violates —
 ### Reference
 {library-use present? which libraries/versions were in scope. Note staleness or degraded mode.}
 
-### Critical (doc-violating, will fail at runtime)
+### Critical Issues (Must Fix)
 - {file}:{line} — {library} `{version}`: {what's wrong}
   **Convention:** {the bullet/doc rule it violates}  ·  **Docs:** {url}
   **Fix:** {concrete correct usage — with code}
 
-### High (breaks on upgrade / documented footgun)
+### Improvements (Should Fix)
 - {file}:{line} — {library}: {issue} — {fix}
 
-### Medium (older pattern / non-idiomatic per pinned version)
+### Suggestions (Nice to Have)
 - {file}:{line} — {library}: {issue} — {fix}
 
-### Suggestions
-- {doc-recommended improvements}
 ```
 If `--multi` was used, append one subsection per advisor, then a **Cross-Model Agreement** subsection.
 
@@ -110,12 +125,12 @@ If `--multi` was used, append one subsection per advisor, then a **Cross-Model A
 **Stale API after a bump:**
 > /review-library-use --staged
 
-`library-use` records `better-auth 2.0`; the staged code calls `emailAndPassword({ requireVerification })` — renamed to `requireEmailVerification` in 2.0. Reports Critical with the doc link and the corrected call. A general reviewer wouldn't know the rename.
+`library-use` records `better-auth 2.0`; the staged code calls `emailAndPassword({ requireVerification })` — renamed to `requireEmailVerification` in 2.0. Traces whether the ignored option actually bypasses required verification. That security failure is Must Fix; a harmless renamed option alone is not. Includes the doc link and corrected call. A general reviewer wouldn't know the rename.
 
 **Cross-SDK confusion:**
 > /review-library-use --changed
 
-Java code calls a `firebase-admin` method that only exists in the JavaScript SDK. Reports Critical, citing the Java SDK docs from the `library-use` block.
+Java code calls a `firebase-admin` method that only exists in the JavaScript SDK. Reports Should Fix for the broken supported call path, citing the Java SDK docs from the `library-use` block. Escalates only if its demonstrated consequence meets Must Fix.
 
 **No reference yet:**
 > /review-library-use

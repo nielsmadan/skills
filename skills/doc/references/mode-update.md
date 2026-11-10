@@ -16,7 +16,9 @@ in `references/principles.md`.
 
 1. **Determine the changed scope** (above).
 2. **Map** changed files/symbols → affected docs: grep `docs/**`, `README.md`,
-   `CLAUDE.md` for the changed symbols/topics to find the docs describing them.
+   `CLAUDE.md` and existing glossaries for the changed symbols/topics to find the docs describing them.
+   If a concept's meaning is disputed, use [domain-modeling.md](domain-modeling.md): code is
+   evidence of current behavior, not permission to redefine the intended domain.
 3. **Apply in place**: edit each affected doc to match the current code — **replace**
    the stale parts, preserve formatting/style, stay concise (current state, not
    history). Update the "how it works now" sections; leave "why" alone unless the

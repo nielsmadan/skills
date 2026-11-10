@@ -1,6 +1,6 @@
 ---
 name: codebase-review
-description: Review a whole codebase aspect by aspect — overview, docs truth-check, state, API, persistence, caching, startup, auth, errors, UI, layering, dependencies, CI, tests, security, feature deep dives, consistency, architecture roadmap — writing a doc per aspect and a verified findings ledger that doubles as the TODO. Plans first (recon, `blind-spots`, `review-plan`, one start gate), then runs independently. `--fix` hands settled findings to named worker sessions in worktrees or sibling checkouts, integrated locally by fast-forward without pushing; major user-facing changes wait for decision waves at the end. Reports user-facing and other changes. Use for "codebase review", "review the whole codebase", "onboard me to this repo", "deep dive this app", "audit the code base", "review and fix everything". Not for a diff or PR (code-review), a CLI release pass (release-review), or building a feature (longshot).
+description: Review a whole codebase aspect by aspect, with aspects fitted to the project type (mobile, desktop, web frontend, static site, CLI, backend, library) — overview, docs truth-check, architecture, tests, security, the type's own foundations, feature deep dives, consistency, architecture roadmap — writing a doc per aspect and a verified findings ledger that doubles as the TODO. Plans first (recon, `blind-spots`, `review-plan`, one start gate), then runs independently. `--fix` hands settled findings to named worker sessions in worktrees or sibling checkouts, integrated locally by fast-forward without pushing; major user-facing changes wait for decision waves at the end. Reports user-facing and other changes. Use for "codebase review", "review the whole codebase", "onboard me to this repo", "deep dive this app", "audit the code base", "review and fix everything". Not for a diff or PR (code-review), a CLI release pass (release-review), or building a feature (longshot).
 argument-hint: '[--fix] [--worker LEAD] [--aspects a,b,…] [repo paths or focus] (blank resumes a programme)'
 effort: high
 ---
@@ -22,9 +22,32 @@ a preselected recommendation and the original invocation are none of them answer
 `references/workers.md`.
 
 References:
-- `references/aspects.md`: the aspect catalog, its order and each aspect's questions
+- `references/aspects.md`: the aspect catalog by project type, how to pick from it, its order
+  and each aspect's questions
 - `references/formats.md`: programme, ledger, prompts, briefs, decision waves, the final report
 - `references/workers.md`: worker setup, worker mode, syncing and local integration
+
+## Review grading
+
+Use only these finding priorities, in descending order:
+
+- **Critical Issues (Must Fix):** a verified path causes data loss, a security failure, a materially
+  wrong operation, or makes a core workflow unusable without reasonable recovery.
+- **Improvements (Should Fix):** an ordinary supported workflow demonstrably fails or repeatedly
+  imposes substantial friction, or a concrete design defect creates meaningful maintenance cost.
+- **Suggestions (Nice to Have):** a worthwhile improvement with small practical impact, including
+  optional polish, local simplification, and rare recoverable edge cases.
+
+Grade the demonstrated consequence, realistic reachability, and available recovery against project
+priorities. A category, missing convention, hypothetical future problem, or confidence that a claim
+is true does not set its priority. Do not assign automatic severity floors or ceilings. Keep
+unverified claims in validation gaps, outside the graded finding count; distinguish suggestions
+from defects. For plans, trace the consequence if implemented and state the assumptions.
+
+Use the short labels **Must Fix**, **Should Fix**, and **Nice to Have** in summaries and ledgers.
+Keep effort, verification status, user-facing change size, and tool/vendor diagnostic ratings
+separate. When called by `code-review`, return its requested evidence and impact fields; the parent
+owns scoring and final triage. Otherwise apply this rubric directly. Omit empty priority sections.
 
 ## The contract
 
@@ -38,21 +61,43 @@ State it back at the start gate:
    with everything that depends on it. The run continues around it, and the user decides held
    items in waves at the end, never one at a time mid-run.
 4. **Milestone pings only.** One line per finished aspect or integrated batch.
-5. **Local and unpushed.** Writes go only to the docs root, the ledger and, under `--fix`, the
-   worker branches. Approval of the start gate authorises creating the planned worktrees and
-   branches, the workers' commits on their branches, and fast-forward integration of those
-   branches into the integration branch. Nothing is pushed, and no repo outside the plan is
-   touched.
+5. **Local and unpushed.** Writes go to the work folder and, at the end, the harvest into the
+   repo's docs. Under `--fix` they also go to the worker branches. Approval of the start gate
+   authorises:
+   - creating the planned worktrees and branches
+   - the workers' commits on their branches
+   - fast-forward integration of those branches into the integration branch
+   - deleting the work folder once Phase 8's conditions hold
+
+   Nothing is pushed, and no repo outside the plan is touched.
 
 **The stops:** an irreversible or destructive operation; a security-sensitive action; a side
 effect beyond the contract (a push, a release, a non-fast-forward change to the integration
 branch); or the framing turning out to be wrong about something load-bearing. Everything else
 is a ruling.
 
+## The work folder
+
+Everything the run produces lives in `.codebase-review/` at the root of the lead's checkout. A
+multi-repo run uses the primary repo. Its layout:
+
+- `programme.md`
+- `findings.md`, the ledger and TODO
+- `docs/<aspect>.md`, one per aspect
+- `briefs/`
+- `run/`, for raw findings, verifications and check logs (`$RUN`)
+- `report.md`
+
+The folder is never committed. At the start gate, append `/.codebase-review/` to
+`.git/info/exclude`, which is local to this clone and shared with its worktrees, so `.gitignore`
+stays untouched. Do not choose another location, and do not ask about it.
+
+The folder is scratch, not the record. Phase 8 harvests what is durable into the repo's docs,
+then deletes the folder once nothing in it is still needed.
+
 ## Phase 0 — Start or resume, then recon
 
-Look for `codebase-review/programme.md` under the repo's `docs/` or under a `docs/` folder in
-any parent directory (a workspace above several checkouts).
+Look for `.codebase-review/programme.md` at the repo root.
 
 - **Found:** read `programme.md` and the ledger. Print **Now**, **Next** and the in-flight
   batches. Check each worker branch for commits since the last update and integrate any that
@@ -64,8 +109,12 @@ Recon happens before any question, because an uninformed question wastes a round
 instruction files (`AGENTS.md`, `CLAUDE.md`, `README.md`), the docs tree and ADRs, the stack and
 build files, the test setup, the CI and lint config, the git state of every candidate repo, and
 any sibling checkouts in the workspace. Use at most 3 read-only `Explore` agents, one per repo.
-Draft the **system overview** from this (aspect 1 in `references/aspects.md`). It is the first
-thing the user gets, and it makes the interview concrete.
+Draft the **system overview** from this (the first Core aspect in `references/aspects.md`). It is
+the first thing the user gets, and it makes the interview concrete.
+
+**Tag the project types** in the overview, per repo or package, with the signals behind each
+tag (`Types: app/ → mobile app; packages/ui → library: UI component — signals: …`). The tags
+decide which catalog sections apply, so a wrong tag means a wrong plan.
 
 ## Phase 1 — The interrogation
 
@@ -74,12 +123,14 @@ questions are mandatory wherever they fall in its tree:
 
 - **Repos:** which are reviewed, which are read-only reference, and (with `--fix`) which are
   writable.
-- **Docs root:** where the aspect docs and the ledger live. The options are the repo's own doc
-  set (routed through `doc`, committed with the fixes) or a workspace folder outside the repos
-  (private knowledge docs that the team never sees). Ask whether wrong repo docs get corrected,
-  or only logged as `D` findings.
-- **Aspects:** which ones, how deep, and which feature areas get deep dives. Propose a list
-  from the catalog fitted to the recon, and ask about anything the catalog lacks.
+- **End state for open findings:** where findings still open at the end will live. The options
+  are a roadmap or TODO doc in the repo, the issue tracker, or the work folder until they are
+  addressed (which delays its deletion). Without `--fix`, every finding is still open at the
+  end, so this question settles where the TODO lives.
+- **Types and aspects:** confirm the type tags in the first round. Then propose Core plus every
+  section the tags match, deduplicated, and the feature units for deep dives (feature areas,
+  pages, commands, endpoint groups or modules). Every aspect of a matched section is planned or
+  goes under Skipped with a one-line reason. Add the project-specific aspects the catalog lacks.
 - **Baseline:** the branch and commit to review. Uncommitted user edits are reviewed at their
   committed version and are never mentioned.
 - **With `--fix`:**
@@ -99,7 +150,8 @@ Answer the user's own opening questions with analysis in the first round. Do not
 ## Phase 2 — The plan
 
 Draft `programme.md` (format in `references/formats.md`) in the conversation. It contains the
-framing table, the fix policy, and the aspect list in catalog tier order. For each aspect it
+framing table, the type tags, the fix policy, the aspect list in catalog tier order, and the
+Skipped list. For each aspect it
 gives the scope paths, the doc path, the sibling docs it builds on, its boundary with
 neighbouring aspects, the model, and which aspects run in parallel (only those with disjoint
 scopes, at most 3 at once).
@@ -108,7 +160,7 @@ The scope paths matter twice. They keep the reviewers apart, and the readiness a
 them to decide when an area is settled.
 
 **Self-review the draft** for overlapping scopes, aspects without questions, aspects the
-definition of done does not need (cut them, and say what you cut) and missing framing. Then run
+definition of done does not need (move them to Skipped with the reason) and missing framing. Then run
 `review-plan` over it, always, and fold in its findings. Bring any rejected finding to the gate
 with the reason.
 
@@ -130,16 +182,16 @@ The ruled-fix findings then go to `longshot` at the end, with the ledger as its 
 
 ### Start gate
 
-Present the framing, the aspect plan, the fix policy, the Workers table and the contract. Say
-that preparation is complete, then ask: **"Start the review with this plan? After you approve,
+Present the framing, the type tags, the aspect plan with its Skipped list, the fix policy, the
+Workers table and the contract. Say that preparation is complete, then ask: **"Start the review with this plan? After you approve,
 you can leave it running."** Wait for an explicit yes. A reply that changes scope gets settled
 and a revised gate.
 
 After the yes, announce **"The review is starting. I'll decide details myself, hold major
-user-facing changes for the end, and send milestone pings."** Only now write `programme.md` to
-`<docs-root>/codebase-review/`, record the base commit and the user's approval message, and
-create `RUN=${TMPDIR:-/tmp}/codebase-review-<slug>` for raw findings, verifications and check
-logs.
+user-facing changes for the end, and send milestone pings."** Only now create the work folder
+and add it to `.git/info/exclude`. Confirm with `git check-ignore .codebase-review` that it is
+excluded. Then write `programme.md`, recording the base commit and the user's approval message.
+Set `RUN` to the absolute path of `.codebase-review/run`.
 
 ## Phase 4 — The review loop
 
@@ -151,7 +203,7 @@ For each aspect, in plan order, with up to 3 in parallel where the plan allows:
    numbers, rejects what the code disproves, and marks duplicates of existing ledger entries.
    A finding with no verification mark never gets handed off.
 3. **Second opinion, where it pays.** Invoke `second-opinion` for any of the following:
-   - a high-severity finding the verifier only rated `✔ (likely)`
+   - a potentially consequential finding the verifier only rated `✔ (likely)`; keep it ungraded until confirmed
    - a security or data-loss finding
    - a recommendation that would restructure a whole area
 
@@ -160,9 +212,9 @@ For each aspect, in plan order, with up to 3 in parallel where the plan allows:
 4. **Ledger.** Merge the verified findings into `findings.md` under the aspect's section, with
    stable IDs. Under `--fix`, rule each one against the fix policy: `fix`, `todo` or `held`.
    Mark the dependents of held entries as blocked.
-5. **Docs.** When the docs root is the repo's doc set, fold the aspect doc in with `doc`:
-   `--generate` for a new area, `--update` where a repo doc was wrong. Otherwise the reviewer's
-   doc stands as written.
+5. **Docs.** The aspect doc stays in `.codebase-review/docs/` until the Phase 8 harvest.
+   Where the repo's own docs (README, `AGENTS.md`, ADRs, API docs) are wrong, log a `D`
+   finding, which the fix policy covers like any other finding.
 6. **Ping**, for example `Aspect 7/22 done — auth: 19 findings (6 bugs), 2 held. On to analytics.`
    Send it in the same message as the next dispatch. An ended turn is a stopped run.
 
@@ -186,6 +238,11 @@ send its path to an idle worker. On Claude Code, use `SendMessage` to the worker
 other harnesses, print the path for the user to relay. Do not monitor the worker. When its
 report arrives, integrate it following "Lead-side integration" in `references/workers.md`. That
 includes running the check command yourself. Then go back to the review.
+
+**Bigger changes go through `plan` or `longshot`.** A finding or Phase 6 theme that spans
+several areas, changes a shared interface, or costs more than about half a day goes alone in its
+brief, marked `Approach: plan`, or `Approach: longshot` for multi-hour work. The worker runs that
+skill on the brief in its own checkout instead of the per-finding loop (`references/workers.md`).
 
 Prioritise batches that remove code, because removed code stops showing up in later aspects.
 An area is usually first settled after tier 2, so hand-offs normally begin during tier 3.
@@ -235,7 +292,7 @@ Under `--fix`:
    changed.
 
 Then write the final report (template in `references/formats.md`) to
-`<docs-root>/codebase-review/report.md` and print it. It must contain:
+`.codebase-review/report.md` and print it in full. It must contain:
 
 - **Blocked on you**, first
 - **User-facing changes**: each one with before → after in the user's terms, its finding and
@@ -246,6 +303,32 @@ Then write the final report (template in `references/formats.md`) to
 
 Do not remove worktrees, delete branches or squash. Workers committed one self-contained commit
 per finding, so the history is already clean. Offer `squash-commits` only if the user asks.
+
+### Harvest, then delete the work folder
+
+**Harvest with `doc`.** Move into the repo's own doc set whatever the next reader of the repo
+needs and does not have:
+
+- how the system works, where the repo lacks it: architecture, data flow, startup, state
+  ownership
+- the conventions the consistency sweep settled
+- decisions from the waves that constrain future work, as ADRs if the repo keeps them
+- the roadmap
+
+Leave behind the review mechanics: finding IDs, verification marks, batches, rulings about the
+run itself, and anything the code now says. Under `--fix`, commit the harvest on the integration
+branch. Without it, leave the doc changes uncommitted for the user to review.
+
+**Move the open findings** (`todo`, held and undecided, or every finding in a review-only run)
+to the end state the interview settled. An issue tracker is outward-facing: write the issue
+texts into the report for the user to file, and never create issues yourself.
+
+**Delete `.codebase-review/`** once every finding is fixed, rejected, a duplicate or moved, and
+the harvest is committed or handed over. Before deleting, check each condition: the ledger has
+no open entry, the harvest commit exists or the doc diff is present, and the report was printed
+in this conversation. If the end state is "the work folder", or a condition fails, keep the
+folder and list what still holds it in Blocked on you. A later `codebase-review` run in this
+repo resumes the programme and deletes the folder once its last findings are addressed.
 
 ## Model per role
 
@@ -263,20 +346,36 @@ Pass `model` on every dispatch. An omitted model silently inherits the session's
 ### Example: onboarding to an inherited app, review only
 
 User: *"I'm new on this app and middleware. Review it thoroughly: architecture, state, startup,
-tests, everything. Docs go in my own folder; keep the repos untouched."*
+tests, everything. Don't commit anything."*
 
 Actions:
 1. Recon with 3 `Explore` agents, then a system overview draft.
-2. `blind-spots`: docs root `~/work/<project>/docs`, middleware as reference only, 22 aspects
-   including shop and onboarding deep dives.
-3. `review-plan` over the programme, then the start gate and the yes.
-4. Tiers 1–5 with pings. Each aspect yields a doc plus verified findings in `findings.md`. Two
-   security findings go through `second-opinion`.
+2. `blind-spots`: the middleware is reference only, 22 aspects including shop and onboarding
+   deep dives, and open findings stay in the work folder.
+3. `review-plan` over the programme, then the start gate and the yes. `.codebase-review/` is
+   created and excluded.
+4. Tiers 1–5 with pings. Each aspect yields a doc in `.codebase-review/docs/` plus verified
+   findings in `findings.md`. Two security findings go through `second-opinion`.
 5. Synthesis: the consistency sweep, consolidation, hotspots, and `architecture.md` with a
    ranked roadmap.
+6. Harvest: an architecture doc and a startup doc go into the repo's `docs/`, uncommitted.
 
-Result: 24 docs, a 1,000-line ledger and TODO with priorities at the top, and a report leading
-with coverage and the roadmap. The repos are untouched.
+Result: a report that leads with coverage and the roadmap, nothing committed, and the work folder
+kept, because its 300 open findings are the user's TODO.
+
+### Example: a library, review only
+
+User: *"codebase-review this Swift package before I tag 1.0."*
+
+Actions:
+1. Recon tags it `library: UI component` (a published package, public exports, no app target).
+2. `blind-spots` confirms the tag. The plan takes Core, Library and UI component library, with
+   modules as the feature units. No client-app aspect is ever proposed, so nothing has to be
+   cut. Skipped: agent setup (the repo has no agent files).
+3. The run reviews the public API, semver history, platform matrix, theming, component
+   accessibility and behaviour inside hosts, then one deep dive per module.
+
+Result: findings about accidental public API and an untested platform, and a roadmap toward 1.0.
 
 ### Example: review and fix with two workers
 
@@ -338,5 +437,5 @@ rebase.
 Never rewind the integration branch without the user.
 
 ### Context runs out mid-run
-**Solution:** re-read `programme.md` (Now, Start, Workers, Batches) and the ledger, then resume.
+**Solution:** re-read `.codebase-review/programme.md` (Now, Start, Workers, Batches) and the ledger, then resume.
 If no start approval is recorded, ask before continuing; never invent one.
