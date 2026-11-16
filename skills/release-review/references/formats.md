@@ -18,6 +18,8 @@ conversation history.
 | Release path | ship 0.9.0, then run the programme, then 1.0.0 | 2026-09-14 |
 | Breaking changes | wide open until the freeze | 2026-09-14 |
 | Out of scope | Antigravity harness | 2026-09-14 |
+| Promises | "`init` never overwrites existing config" (README:40); … | 2026-09-14 |
+| Smoke list | in a scratch HOME: `tool init` → `tool sync` → `tool check` exits 0; … | 2026-09-14 |
 
 ## Phases
 | | Phase | Status |
@@ -106,28 +108,18 @@ Each ruled entry that changes a flow updates the flow in the same edit.
 
 ## briefs/B-n.md
 
-A brief for an implementer session. It must be executable by a session that never saw this
-conversation.
+A brief for an implementer session. Use `crew`'s envelope (`references/brief.md` there), with
+`Base:` also naming the commits the entries depend on, and the report path `reports/B-n.md` in
+the programme directory. Items are the entries, copied verbatim (changes.md stays the source of
+truth). Add these Rules after crew's defaults:
 
 ```markdown
-# Batch B-2: <one-line theme>
-
-Checkout: <absolute path>. Base: <commit>, which must contain <commits it depends on>.
-Entries: S-06, S-07 (copied verbatim below; changes.md is the source of truth).
-Approach: <implement directly | plan | longshot — run that skill with this brief as its input>
-
-## Rules
-- If an entry's premise does not match the code you find, stop and report. Do not adapt the
-  ruling to fit.
-- Verify each entry with the command in its Verify line. Confirm the new tests actually ran
-  (the count moved, the test names appear in the output). A pass count that did not change
+- Verify each entry with the command in its Verify line. A pass count that did not change
   means the tests were deselected, not that they passed.
-- Read exit codes directly, never through a pipe (`cmd | tail` reports tail's status).
 - Probe in an isolated scratch HOME, and unset tool-specific config-dir variables that would
   otherwise point back at the real one.
-- Commit per entry as `<type>: <subject>` following the repo's commit policy. Do not push.
-- Report: commits, verification output summary, anything stopped on.
-
-## Entries
-<verbatim entries>
+- Never narrow one of these promises, or edit a doc to drop or soften one. If an entry seems to
+  need it, stop that entry and report it: <the framing's Promises, verbatim>
+- Behaviour you did not expect goes in the report as a possible finding, even when it looks
+  like an artefact of the probe.
 ```

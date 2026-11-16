@@ -4,6 +4,8 @@
 - Build: {revision plus relevant local-change identity}; target: {URL/device/binary/host}
 - Environment: {versions, configuration, fixture identifiers; no credentials}
 - Procedure: {link}; actual setup/deviations: {commands, inputs, injected faults}
+- Evidence directory: {absolute path}; baseline: {prior index path or none}
+- Comparison context: {viewport/device/OS or terminal dimensions, fixture and configuration differences}
 
 ## Scenario matrix
 
@@ -13,6 +15,7 @@
 
 Results: Pass / Fail / Blocked / Not run / N/A. Give a reason for the last three.
 Label evidence as runtime observation, automated check, or inspection only.
+Link retained files by scenario and state; keep initial failures and retests distinct.
 
 ## Findings
 
@@ -30,3 +33,4 @@ Label evidence as runtime observation, automated check, or inspection only.
 - {Counts by result, unresolved findings, and what the evidence supports}
 - {Blocked/untested cases, prerequisites, excluded surfaces, mock limitations}
 - {Cleanup completed; any remaining session-owned state}
+- {Key retained artifact links; any capture gaps; temporary storage subject to cleanup}

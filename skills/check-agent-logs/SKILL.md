@@ -1,6 +1,6 @@
 ---
 name: check-agent-logs
-description: Search past Claude Code, Codex, Droid, OpenCode, and Pi session logs to recover context from earlier work across the current project and sibling checkouts. Use when a bug, topic, or decision was handled in a previous session but its agent or checkout is unknown; when the user says "we fixed/discussed this before", "find the session where", "recover prior context", "check agent logs", "check Claude projects", "search past sessions/transcripts", or "which checkout was that in". Do not use for aggregate failure-pattern analysis; use review-logs for that.
+description: Search past Claude Code, Codex, Cursor CLI, Droid, OpenCode, and Pi session logs to recover context from earlier work across the current project and sibling checkouts. Use when a bug, topic, or decision was handled in a previous session but its agent or checkout is unknown; when the user says "we fixed/discussed this before", "find the session where", "recover prior context", "check agent logs", "check Claude projects", "search past sessions/transcripts", or "which checkout was that in". Do not use for aggregate failure-pattern analysis; use review-logs for that.
 ---
 
 <!-- Generated from https://github.com/nielsmadan/agentic-coding — edits here are overwritten. -->
@@ -18,11 +18,11 @@ Use a distinctive regex such as an error string, symbol, ticket ID, or unusual
 phrase. With no agent selector, the script searches all agents. Selectors compose:
 
 ```bash
-python3 scripts/search_agent_logs.py "QUERY" [--claude] [--codex] [--droid] [--opencode] [--pi] [--current] [--all]
+python3 scripts/search_agent_logs.py "QUERY" [--claude] [--codex] [--cursor] [--droid] [--opencode] [--pi] [--current] [--all]
 ```
 
 - `--current` selects the harness running the skill.
-- `--all` and no selector both select all five agents.
+- `--all` and no selector both select all six agents.
 - `--scope siblings` is the default project scope. `--scope current` searches
   only the current checkout; `--scope all` searches every recorded project.
 - `--app NAME` searches session cwd values containing `NAME` and overrides scope.
@@ -83,6 +83,12 @@ directly when you need the whole arc of the work rather than one answer.
 `distill` sends the transcript to OpenRouter, so skip it for sessions likely to
 hold credentials or data the user would not send to a third party.
 
+**Cursor transcripts are thinner than the others.** The Cursor CLI's transcript
+holds prompts, replies and tool calls but no tool output, so `--mode log` and
+`--kind tool` show what was run, never what it returned. Its cwd and title come
+from the CLI's chat metadata; subagent transcripts take their parent's cwd. Chats
+from the Cursor IDE are not searched.
+
 Read more than one when attribution is ambiguous. Trust the printed `cwd` over
 encoded storage paths. Transcripts can contain secrets or PII; use them as
 context without repeating sensitive values to the user or writing them elsewhere.
@@ -107,6 +113,8 @@ none was driven by another session, a scheduled wake-up or a compaction. A bare
 `--until` date includes that whole day, and `--days N` can stand in for `--since`.
 The footer merges overlapping sessions into one active total per day. Claude
 subagent transcripts are skipped, since their parent session already covers them.
+Cursor records only each prompt's minute and the chat's last update, so its spans
+miss the time spent between prompts and its active time is a lower bound.
 
 ### 4. Widen only as needed
 

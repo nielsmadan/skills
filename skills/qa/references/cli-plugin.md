@@ -19,6 +19,13 @@ Select applicable cases for the changed command:
 - First run and existing config, documented precedence, rerun/idempotence, partial
   failure and recovery. Inspect files/state produced through the normal command.
 
+Save selected command captures in the run's evidence directory, tied to scenario
+IDs. Record the tested process's exit status, not `tee`'s or a later command's.
+Capture relevant state before a mutating invocation and again afterward, before
+fixture cleanup; retain small output files or focused snapshots/diffs that establish
+the effect. Record any normalization of timestamps or generated IDs for comparison
+so it does not hide a meaningful change. Preserve failure captures alongside retests.
+
 For a TUI, use a PTY and real key sequences, then verify the resulting screen and
 state. Noninteractive output does not establish interactive behavior. Bound waits
 and terminate only the process started for the case.

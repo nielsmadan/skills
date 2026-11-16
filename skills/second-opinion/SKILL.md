@@ -119,12 +119,12 @@ unavailable and continue with the others.
 
 **Pi:** `--tools` is the read-only guard (no `edit`/`write`/`bash`). Pi has no `-m` short flag — it is `--model`:
 ```bash
-command pi -p --no-session --tools read,grep,find,ls --model opencode-go/glm-5.3 --thinking high "$(cat .second-opinion.md)" </dev/null
+command pi -p --no-session --tools read,grep,find,ls --model opencode-go/hy4 --thinking high "$(cat .second-opinion.md)" </dev/null
 ```
 
 **OpenCode** (2.x): use plan mode and deny its task tool for this consultation. The inline config applies only to this process. `--standalone` keeps the run in a private server instead of the shared background one:
 ```bash
-OPENCODE_CONFIG_CONTENT='{"agent":{"plan":{"permission":{"task":"deny"}}}}' command opencode run --standalone --agent plan -m 'opencode-go/kimi-k3#max' "$(cat .second-opinion.md)" </dev/null
+OPENCODE_CONFIG_CONTENT='{"agent":{"plan":{"permission":{"task":"deny"}}}}' command opencode run --standalone --agent plan -m 'opencode-go/kimi-k3.1-pro#max' "$(cat .second-opinion.md)" </dev/null
 ```
 
 **Droid:** Gemini 4 Argon at high effort, with file-reading and search tools only:

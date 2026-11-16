@@ -4,12 +4,14 @@ import importlib.util
 import io
 import json
 import os
+import shutil
 import sqlite3
 import sys
 import tempfile
 import time
 import unittest
 from contextlib import redirect_stderr, redirect_stdout
+from dataclasses import replace
 from pathlib import Path
 from unittest.mock import patch
 
@@ -30,6 +32,8 @@ class SearchAgentLogsTests(unittest.TestCase):
             claude_projects=root / "claude-projects",
             claude_archive=root / "claude-archive",
             codex_sessions=root / "codex-sessions",
+            cursor_projects=root / "cursor" / "projects",
+            cursor_chats=root / "cursor" / "chats",
             droid_sessions=root / "droid-sessions",
             opencode_db=root / "opencode" / "opencode.db",
             pi_sessions=root / "pi-sessions",
@@ -41,6 +45,7 @@ class SearchAgentLogsTests(unittest.TestCase):
             self.roots.claude_archive, "claude-archived", self.sibling, "needle archived"
         )
         self.make_codex_session("codex-session", self.cwd, "needle codex")
+        self.make_cursor_session("cursor-session", self.cwd, "needle cursor")
         self.make_droid_session("droid-session", self.cwd, "needle droid")
         self.make_pi_session("pi-session", self.sibling, "needle pi")
         self.make_opencode_db("opencode-session", self.cwd, "needle opencode")
@@ -107,6 +112,51 @@ class SearchAgentLogsTests(unittest.TestCase):
                     },
                 },
             ],
+        )
+
+    def make_cursor_session(self, session_id: str, cwd: str, text: str) -> None:
+        folder = (
+            self.roots.cursor_projects / "work-app-dev1" / "agent-transcripts" / session_id
+        )
+        prompt = (
+            "<timestamp>Monday, Aug 10, 2026, 12:07 PM (UTC+2)</timestamp>\n"
+            f"<user_query>\n{text}\n</user_query>"
+        )
+        self.write_jsonl(
+            folder / f"{session_id}.jsonl",
+            [
+                {"role": "user", "message": {"content": [{"type": "text", "text": prompt}]}},
+                {
+                    "role": "assistant",
+                    "message": {
+                        "content": [
+                            {"type": "text", "text": "looking"},
+                            {
+                                "type": "tool_use",
+                                "name": "Shell",
+                                "input": {"command": "grep needle-in-cursor-tool"},
+                            },
+                        ]
+                    },
+                },
+                {"type": "turn_ended", "status": "success"},
+            ],
+        )
+        self.write_jsonl(
+            folder / "subagents" / "cursor-subagent.jsonl",
+            [{"role": "user", "message": {"content": [{"type": "text", "text": "needle subagent"}]}}],
+        )
+        meta = self.roots.cursor_chats / "hash" / session_id / "meta.json"
+        meta.parent.mkdir(parents=True)
+        meta.write_text(
+            json.dumps(
+                {
+                    "createdAtMs": 1786356360000,
+                    "updatedAtMs": 1786356480000,
+                    "title": "Cursor title",
+                    "cwd": cwd,
+                }
+            )
         )
 
     def make_droid_session(self, session_id: str, cwd: str, text: str) -> None:
@@ -215,6 +265,8 @@ class SearchAgentLogsTests(unittest.TestCase):
             "claude:claude-live",
             "claude:claude-archived",
             "codex:codex-session",
+            "cursor:cursor-session",
+            "cursor:cursor-subagent",
             "droid:droid-session",
             "opencode:opencode-session",
             "pi:pi-session",
@@ -379,14 +431,7 @@ class SearchAgentLogsTests(unittest.TestCase):
         self.assertIn("needle opencode", stdout)
 
     def test_explicit_missing_provider_fails_but_all_is_incomplete(self):
-        missing = search_agent_logs.Roots(
-            self.roots.claude_projects,
-            self.roots.claude_archive,
-            self.roots.codex_sessions.parent / "missing",
-            self.roots.droid_sessions,
-            self.roots.opencode_db,
-            self.roots.pi_sessions,
-        )
+        missing = replace(self.roots, codex_sessions=self.roots.codex_sessions.parent / "missing")
         stdout = io.StringIO()
         stderr = io.StringIO()
         with redirect_stdout(stdout), redirect_stderr(stderr):
@@ -462,7 +507,7 @@ class SearchAgentLogsTests(unittest.TestCase):
         self.assertEqual(
             refs,
             ["opencode:opencode-session", "codex:codex-session", "pi:pi-session",
-             "droid:droid-session", "claude:claude-timeline"],
+             "droid:droid-session", "cursor:cursor-session", "claude:claude-timeline"],
         )
         claude = payload["sessions"][-1]
         self.assertEqual(
@@ -470,7 +515,43 @@ class SearchAgentLogsTests(unittest.TestCase):
             [{"start": "2026-08-11T09:00:00+00:00", "end": "2026-08-11T09:10:00+00:00",
               "minutes": 10, "prompts": 1}],
         )
-        self.assertEqual(payload["daily_active_minutes"], {"2026-08-10": 1, "2026-08-11": 10})
+        self.assertEqual(payload["daily_active_minutes"], {"2026-08-10": 2, "2026-08-11": 10})
+
+    def test_cursor_session_takes_cwd_and_title_from_chat_metadata(self):
+        status, stdout, _ = self.run_main(
+            ["needle", "--cursor", "--cwd", self.cwd, "--scope", "current", "--format", "json"]
+        )
+        self.assertEqual(status, 0)
+        results = {result["ref"]: result for result in json.loads(stdout)["results"]}
+        self.assertEqual(sorted(results), ["cursor:cursor-session", "cursor:cursor-subagent"])
+        session = results["cursor:cursor-session"]
+        self.assertEqual(session["title"], "Cursor title")
+        self.assertEqual(session["cwd"], self.cwd)
+        self.assertEqual(session["first_ts"], "2026-08-10T10:06:00Z")
+        self.assertEqual(session["last_ts"], "2026-08-10T10:08:00Z")
+        self.assertEqual(results["cursor:cursor-subagent"]["cwd"], self.cwd)
+        self.assertEqual(results["cursor:cursor-subagent"]["title"], "needle subagent")
+
+    def test_cursor_read_strips_prompt_wrappers_and_keeps_tools_for_log_mode(self):
+        status, stdout, _ = self.run_main(["--read", "cursor:cursor-session"])
+        self.assertEqual(status, 0)
+        self.assertIn("2026-08-10T10:07:00Z [user/message]\nneedle cursor\n", stdout)
+        self.assertIn("[assistant/message]\nlooking", stdout)
+        self.assertNotIn("needle-in-cursor-tool", stdout)
+        status, stdout, _ = self.run_main(["--read", "cursor:cursor-session", "--mode", "log"])
+        self.assertEqual(status, 0)
+        self.assertIn("needle-in-cursor-tool", stdout)
+
+    def test_cursor_without_chat_metadata_is_incomplete_and_scoped_out(self):
+        shutil.rmtree(self.roots.cursor_chats)
+        status, stdout, stderr = self.run_main(["needle", "--all", "--cwd", self.cwd])
+        self.assertEqual(status, 0)
+        self.assertIn("(incomplete)", stdout)
+        self.assertIn("Cursor chat metadata unavailable", stderr)
+        self.assertIn("claude:claude-live", stdout)
+        status, stdout, _ = self.run_main(["needle", "--cursor", "--scope", "all"])
+        self.assertEqual(status, 0)
+        self.assertIn("cursor:cursor-session", stdout)
 
     def test_timeline_requires_a_start(self):
         stderr = io.StringIO()

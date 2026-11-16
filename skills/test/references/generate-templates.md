@@ -81,6 +81,7 @@ describe('{ServiceName}', () => {
 - [ ] Tests are independent (no shared state)
 - [ ] Edge cases covered
 - [ ] Tests are focused (one concern each)
+- [ ] No tests that only assert a constant equals its literal value (flag for removal)
 
 **Flaky Patterns:**
 - [ ] No unseeded `Math.random()`

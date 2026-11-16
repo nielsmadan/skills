@@ -1,5 +1,30 @@
 # Security Checklist — Code Examples & Commands
 
+## Broken Access Control (OWASP A01)
+
+- Trace how the authenticated identity, role, and tenant are established. A caller-supplied
+  tenant header or resource ID is a selector, not proof of permission. Verify membership or
+  delegated access against trusted state before the sensitive read or mutation.
+- Follow object access through routes, services, repositories, and database policies. Check
+  detail, list/search, export/download, mutation, and batch paths that exist in scope. Nested
+  resources need the relevant parent/tenant relationship enforced; a scoped parent lookup
+  does not prove a separately loaded child belongs to it.
+- Check permission-changing operations such as invitations, role assignment, ownership
+  transfers, and credential administration against the acting user's authority. Logging in
+  proves identity; it does not by itself authorize administration or another user's records.
+- Check tenant-sensitive cache keys, queued jobs, and storage access when those paths carry
+  identity across a boundary. Determine whether trusted context survives that transition;
+  do not demand a particular enforcement layer when an existing control already covers it.
+- Do not flag intentionally public resources, shared access, or privileged service actions
+  merely for lacking an owner predicate. Establish the intended access contract. If external
+  row-level policies or gateway rules are decisive but unavailable, record a validation gap.
+
+Example: a user may fetch their own private invoice. Trace whether selecting a different
+invoice ID reaches another user's data despite all effective controls. A parameterized query
+prevents SQL injection but does not establish authorization. Conversely, a verified database
+policy that filters by the trusted session tenant may already enforce the boundary. Report
+the actual path and consequence, not just the shape of the query.
+
 ## Injection (OWASP A03)
 
 **SQL Injection:**

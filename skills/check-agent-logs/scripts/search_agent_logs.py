@@ -13,7 +13,7 @@ from pathlib import Path
 from typing import Iterable, Iterator
 
 
-AGENTS = ("claude", "codex", "droid", "opencode", "pi")
+AGENTS = ("claude", "codex", "cursor", "droid", "opencode", "pi")
 
 
 @dataclass(frozen=True)
@@ -21,6 +21,8 @@ class Roots:
     claude_projects: Path
     claude_archive: Path
     codex_sessions: Path
+    cursor_projects: Path
+    cursor_chats: Path
     droid_sessions: Path
     opencode_db: Path
     pi_sessions: Path
@@ -33,10 +35,18 @@ class Roots:
         codex_dir = Path(os.environ.get("CODEX_HOME", home / ".codex"))
         pi_dir = Path(os.environ.get("PI_CODING_AGENT_DIR", home / ".pi" / "agent"))
         factory_dir = Path(os.environ.get("FACTORY_HOME_OVERRIDE", home)) / ".factory"
+        cursor_data = Path(os.environ.get("CURSOR_DATA_DIR") or home / ".cursor")
+        xdg_config = os.environ.get("XDG_CONFIG_HOME")
+        cursor_config = Path(
+            os.environ.get("CURSOR_CONFIG_DIR")
+            or (Path(xdg_config) / "cursor" if xdg_config else home / ".cursor")
+        )
         return cls(
             claude_projects=claude_dir / "projects",
             claude_archive=xdg_data / "ringleader" / "archive",
             codex_sessions=codex_dir / "sessions",
+            cursor_projects=cursor_data / "projects",
+            cursor_chats=cursor_config / "chats",
             droid_sessions=factory_dir / "sessions",
             opencode_db=xdg_data / "opencode" / "opencode.db",
             pi_sessions=Path(
@@ -539,6 +549,138 @@ def search_pi(
     return results, []
 
 
+CURSOR_TIMESTAMP = re.compile(
+    r"<timestamp>\s*(?:\w+,\s*)?(?P<date>\w+ \d{1,2}, \d{4}),\s*"
+    r"(?P<time>\d{1,2}:\d{2}\s*[AP]M)\s*\(UTC(?P<offset>[+-]\d{1,2}(?::\d{2})?)?\)\s*</timestamp>\n?"
+)
+CURSOR_QUERY_TAG = re.compile(r"\n?</?user_query>\n?")
+
+
+def cursor_prompt_time(found: re.Match[str]) -> str | None:
+    text = f"{found['date']} {found['time'].replace(' ', '')}"
+    for layout in ("%b %d, %Y %I:%M%p", "%B %d, %Y %I:%M%p"):
+        try:
+            moment = datetime.strptime(text, layout)
+            break
+        except ValueError:
+            continue
+    else:
+        return None
+    hours, _, minutes = (found["offset"] or "+0").partition(":")
+    sign = -1 if hours.startswith("-") else 1
+    offset = timedelta(hours=abs(int(hours)), minutes=int(minutes or 0)) * sign
+    local = moment.replace(tzinfo=timezone(offset))
+    return local.astimezone(timezone.utc).isoformat().replace("+00:00", "Z")
+
+
+def cursor_clean_text(text: str) -> tuple[str | None, str]:
+    found = CURSOR_TIMESTAMP.search(text)
+    stamp = cursor_prompt_time(found) if found else None
+    return stamp, CURSOR_QUERY_TAG.sub("\n", CURSOR_TIMESTAMP.sub("", text)).strip()
+
+
+def cursor_clean_block(block: object) -> tuple[str | None, object]:
+    if isinstance(block, str):
+        return cursor_clean_text(block)
+    if isinstance(block, dict) and block.get("type") == "text" and isinstance(block.get("text"), str):
+        stamp, text = cursor_clean_text(block["text"])
+        return stamp, {**block, "text": text}
+    return None, block
+
+
+def cursor_entries(record: dict) -> list[Entry]:
+    message = record.get("message")
+    if not isinstance(message, dict):
+        return []
+    role = str(record.get("role", "message"))
+    content = message.get("content")
+    if role != "user":
+        return content_entries(role, content, None)
+    cleaned = [cursor_clean_block(block) for block in (content if isinstance(content, list) else [content])]
+    stamp = next((found for found, _ in cleaned if found), None)
+    return content_entries(role, [block for _, block in cleaned], stamp)
+
+
+def cursor_chat_index(root: Path) -> dict[str, dict]:
+    index: dict[str, dict] = {}
+    if not root.is_dir():
+        return index
+    for path in root.glob("*/*/meta.json"):
+        try:
+            value = json.loads(path.read_text())
+        except (OSError, json.JSONDecodeError):
+            continue
+        if isinstance(value, dict):
+            index[path.parent.name] = value
+    return index
+
+
+def cursor_transcript_paths(root: Path) -> Iterator[Path]:
+    if not root.is_dir():
+        raise FileNotFoundError(f"Cursor transcripts not found: {root}")
+    yield from root.glob("*/agent-transcripts/**/*.jsonl")
+
+
+def cursor_session_data(path: Path, chats: dict[str, dict]) -> tuple[SessionMeta, list[Entry]]:
+    session_id = path.stem
+    own = chats.get(session_id, {})
+    owner = chats.get(path.parent.parent.name, {}) if path.parent.name == "subagents" else own
+    title = own.get("title")
+    cwd = owner.get("cwd")
+    meta = SessionMeta(
+        "cursor",
+        session_id,
+        str(path),
+        title=title if isinstance(title, str) else None,
+        cwd=cwd if isinstance(cwd, str) else None,
+    )
+    entries = [entry for record in jsonl_records(path) for entry in cursor_entries(record)]
+    created, updated = own.get("createdAtMs"), own.get("updatedAtMs")
+    if isinstance(updated, (int, float)) and entries and entries[-1].timestamp is None:
+        entries[-1] = replace(entries[-1], timestamp=iso_from_millis(updated))
+    if isinstance(created, (int, float)):
+        update_timestamps(meta, iso_from_millis(created))
+    for entry in entries:
+        update_timestamps(meta, entry.timestamp)
+    if meta.title is None:
+        first_user = next(
+            (entry.text for entry in entries if entry.role == "user" and entry.kind == KIND_MESSAGE),
+            None,
+        )
+        if first_user:
+            meta.title = compact_title(first_user)
+    return meta, entries
+
+
+def cursor_warnings(roots: Roots) -> list[str]:
+    if roots.cursor_chats.is_dir():
+        return []
+    return [f"Cursor chat metadata unavailable, so session cwd is unknown: {roots.cursor_chats}"]
+
+
+def search_cursor(
+    roots: Roots, pattern: re.Pattern[str], options: SearchOptions
+) -> tuple[list[MatchResult], list[str]]:
+    paths = [
+        path
+        for path in cursor_transcript_paths(roots.cursor_projects)
+        if recent_enough(path, options.cutoff)
+    ]
+    chats = cursor_chat_index(roots.cursor_chats)
+    found = (scan_entries(*cursor_session_data(path, chats), pattern, options) for path in paths)
+    return [result for result in found if result], cursor_warnings(roots)
+
+
+def read_cursor_session(session_id: str, roots: Roots) -> tuple[SessionMeta, list[Entry]]:
+    matches = [
+        path for path in cursor_transcript_paths(roots.cursor_projects) if session_id in path.stem
+    ]
+    if not matches:
+        raise FileNotFoundError(f"Session not found: cursor:{session_id}")
+    path = max(matches, key=lambda candidate: candidate.stat().st_mtime)
+    return cursor_session_data(path, cursor_chat_index(roots.cursor_chats))
+
+
 def open_opencode(path: Path) -> sqlite3.Connection:
     if not path.is_file():
         raise FileNotFoundError(f"OpenCode database not found: {path}")
@@ -629,6 +771,7 @@ def search_opencode(
 SEARCHERS = {
     "claude": search_claude,
     "codex": search_codex,
+    "cursor": search_cursor,
     "droid": search_droid,
     "opencode": search_opencode,
     "pi": search_pi,
@@ -853,6 +996,12 @@ def timeline_paths(agent: str, roots: Roots, options: SearchOptions) -> Iterator
 def timeline_sources(
     agent: str, roots: Roots, options: SearchOptions
 ) -> Iterator[tuple[SessionMeta, list[Entry]]]:
+    if agent == "cursor":
+        chats = cursor_chat_index(roots.cursor_chats)
+        for path in cursor_transcript_paths(roots.cursor_projects):
+            if path.parent.name != "subagents" and recent_enough(path, options.cutoff):
+                yield cursor_session_data(path, chats)
+        return
     if agent != "opencode":
         for path in timeline_paths(agent, roots, options):
             yield read_jsonl_session(agent, path)
@@ -1307,6 +1456,8 @@ def main(argv: list[str] | None = None, roots: Roots | None = None) -> int:
             agent, session_id = parse_ref(args.read)
             if agent == "opencode":
                 meta, entries = read_opencode_session(session_id, roots)
+            elif agent == "cursor":
+                meta, entries = read_cursor_session(session_id, roots)
             else:
                 path = locate_jsonl(agent, session_id, roots)
                 meta, entries = read_jsonl_session(agent, path)

@@ -22,6 +22,8 @@ Give every scorer the prompt below **verbatim**, filling in only the braces. Do 
 ```
 You are checking claims from a code review. For each claim, read the code it cites and enough of its callers, tests and related files to decide whether it is true. You are not told which reviewer wrote it.
 
+Decide by reading the code. Run a test or mutation experiment only when reading cannot settle a claim: at most 3 in total, only the test files covering that code, each under `timeout 120`, and only in a disposable copy outside the checkout, never in it. If an experiment cannot run or runs over, give the verdict the reading supports.
+
 Project guidelines:
 {relevant AGENTS.md / CLAUDE.md excerpts}
 
@@ -152,4 +154,4 @@ For each issue, explain:
 
 ## Next: back to SKILL.md Step 6
 
-**Printing this output does not end the run.** Return to `SKILL.md` and do **Step 6: Offer to Fix** — the mandatory AskUserQuestion prompt letting the user pick a fix scope. Do not end the turn on the formatted output alone.
+**Printing this output does not end the run.** Return to `SKILL.md` and do **Step 5.5** (snapshot the reviewed state) and **Step 6: Offer to Fix** — the mandatory AskUserQuestion prompt letting the user pick a fix scope. Do not end the turn on the formatted output alone.

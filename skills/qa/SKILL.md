@@ -108,6 +108,47 @@ fixtures, mocks, launch scripts, and per-checkout resources. Confirm the running
 artifact contains the change before interpreting results. Record versions and
 relevant local changes; a commit hash alone does not identify a modified build.
 
+#### Retain evidence for later sessions
+
+Create a unique run directory under `${TMPDIR:-/tmp}/qa/<project-key>/`, where the
+project key combines a readable repo name with a short hash of its absolute root
+path to distinguish checkouts. Name each run `<UTC-timestamp>-<feature>-<unique-suffix>`.
+Keep this separate from disposable fixtures and tool session directories. If that
+location is unavailable, use an allowed temporary location and report its absolute
+path. Retain the run after QA; temporary storage is reusable across sessions, not
+permanent storage, and may be removed by system cleanup.
+
+Keep a small `index.md` in the run directory using [the run template](assets/run.md):
+scope, timestamp, checkout/build identity (including relevant local changes), target
+and environment, scenario results, and relative links to retained evidence. Update
+it as cases finish so an interrupted run remains useful. Use scenario IDs and state
+names in filenames, such as `Q3-error-before.png` and `Q3-success-retest-01.png`;
+keep attempts distinct and never overwrite a prior run or original failure.
+
+Retain evidence that explains a finding or provides a useful comparison checkpoint:
+
+- **Web/native UI:** important final screens, distinct loading/empty/error states,
+  relevant viewport/device variants, and defect/retest pairs. Keep short recordings
+  when motion or timing matters; skip routine navigation and duplicate frames.
+- **CLI/TUI:** exact invocation, working directory, fixture/input identity, separate
+  stdout and stderr, and the command's exit status. Keep relevant generated files or
+  before/after state snapshots and diffs; for interactive behavior retain a PTY
+  transcript or screen capture with terminal dimensions and the input sequence.
+- **API/plugin/library:** selected requests and responses, consumer output, relevant
+  diagnostics, and observable state changes tied to scenarios.
+
+Save or copy useful tool captures into the run directory before closing sessions or
+deleting fixtures; verify files exist and are readable. Keep secrets and private
+data out of retained artifacts as well as reports; use synthetic data and sanitized
+captures, not full environment dumps or authenticated network traces.
+
+For a later comparison, look in the project's existing run directories and inspect
+their indexes. Compare matching scenarios with compatible fixtures, viewport/device
+or terminal dimensions, and configuration; record the baseline path and material
+differences. Missing or incompatible evidence means no comparison was established.
+
+#### Execute and observe
+
 Use unique sessions, track processes/settings/fixtures you create, and keep
 interactions on one shared target sequential. Use existing test credentials through
 the project's normal mechanism. Keep secrets and private data out of reports.
@@ -164,10 +205,11 @@ fixtures. Never reset the user's checkout or clear unrelated app/device state.
 
 ### 5. Report the result
 
-Report in the conversation and write no file. A QA pass over a feature is routine
-work, so it gets no `docs/tests/` entry by default, however many scenarios it covered.
+Report in the conversation and retain the temporary evidence bundle and index.
+A QA pass over a feature gets no `docs/tests/` entry by default, however many
+scenarios it covered; the temporary index is not a repository test record.
 
-Write a record only when asked for one, or when this run produced something a later
+Write a repository record only when asked for one, or when this run produced something a later
 run would refer back to: measurements worth comparing against, or a fixture/fault
 setup intricate enough that repeating it needs written instructions. A list of
 scenarios that passed is not such a result. When the procedure is worth keeping but
@@ -179,10 +221,13 @@ For a run that does warrant one, follow the shared
 `runs/YYYY-MM-DD-HHMM.md` for this run, with a collision-safe suffix and relative
 evidence links. The procedure records setup, fixture/fault creation, expected
 outcomes, and cleanup; the dated record captures actual steps, the completed matrix,
-and findings. Keep previous run results intact.
+and findings. Copy evidence needed by that durable record alongside it rather than
+linking only to temporary files. Keep previous run results intact.
 
 End with the tested scope, coverage counts, highest-impact findings, blockers, and
-a link to the record if one was written. State whether coverage is complete or
+absolute links to the temporary index and key screenshots/logs/state captures,
+plus a link to the repository record if one was written. Include any baseline used
+and say when evidence could not be retained. State whether coverage is complete or
 partial; “no bugs found” is qualified by what was actually exercised. Research
 provenance for maintainers is in [sources](references/sources.md).
 

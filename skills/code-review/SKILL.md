@@ -1,7 +1,7 @@
 ---
 name: code-review
 description: Clean up comments and mechanical loose ends, then review code with comprehensive and quick modes. Use when reviewing code changes, PRs, or specific files for quality, bugs, and best practices.
-argument-hint: '[target] [--quick] [--correctness] [--logic] [--architecture] [--security] [--performance] [--history] [--test] [--interface] [--clean-code] [--functional] [--consistency] [--defensive] [--typescript] [--project] [--library-use] [--staged] [--unpushed] [--all] [--changed] [--multi] [--rereview]'
+argument-hint: '[target] [--quick] [--correctness] [--logic] [--architecture] [--security] [--performance] [--history] [--test] [--interface] [--clean-code] [--functional] [--consistency] [--defensive] [--typescript] [--project] [--library-use] [--staged] [--unpushed] [--all] [--changed] [--multi] [--re]'
 effort: high
 ---
 
@@ -64,10 +64,10 @@ Flag parsing, scope resolution, and the preflight cleanup (Steps 1–3b.6) need 
 /code-review --multi                  # All aspects + external advisors
 /code-review --multi --architecture   # Architecture only + external advisors
 /code-review --all --multi            # Whole repo + external opinions
-/code-review --rereview               # Re-review automatically after fixes are applied
+/code-review --re                     # Review, then re-review only what the fixes changed
 ```
 
-`--rereview` composes with comprehensive aspect selections, `--quick`, scope flags, or `--multi`.
+`--re` composes with comprehensive aspect selections, `--quick`, scope flags, or `--multi`. Invoked after an earlier review in the same conversation, it reviews only what changed since that review (Step 7) instead of starting over.
 
 ## Review Modes
 
@@ -75,9 +75,9 @@ The default mode is comprehensive: run all selected perspectives independently, 
 
 Every mode first runs `review-tidy --fix` over the resolved scope; it coordinates comment cleanup through `review-comments` and then mechanical cleanup, with formatting last. The cleanup is a preflight edit, not a review perspective: its results are reported separately and are never scored or promoted into Must Fix/Should Fix findings.
 
-`--quick` runs one thorough integrated review at full reasoning effort, saving time through fewer agents and no separate scoring round. It keeps the normal scope resolution, project-guideline checks, severity output, fix prompt, and optional `--rereview` loop, but uses one integrated read-only reviewer and no separate scorer agents. It does not activate automatically from diff size: a tiny auth, migration, or concurrency change may still deserve the comprehensive mode.
+`--quick` runs one thorough integrated review at full reasoning effort, saving time through fewer agents and no separate scoring round. It keeps the normal scope resolution, project-guideline checks, severity output, fix prompt, and optional `--re` loop, but uses one integrated read-only reviewer and no separate scorer agents. It does not activate automatically from diff size: a tiny auth, migration, or concurrency change may still deserve the comprehensive mode.
 
-`--quick` composes with a target, one scope flag, or `--rereview`. It cannot be combined with aspect flags or `--multi`; abort with `--quick is a complete review preset; remove the aspect flags or --multi.`
+`--quick` composes with a target, one scope flag, or `--re`. It cannot be combined with aspect flags or `--multi`; abort with `--quick is a complete review preset; remove the aspect flags or --multi.`
 
 ## Aspect Selection
 
@@ -156,9 +156,9 @@ Search for and identify all files related to "$ARGUMENTS". Use Glob and Grep to 
 
 If the removed `--comments` aspect flag is passed, abort with `Comment cleanup now runs automatically before every code review. Use review-comments directly for a standalone comment report.`
 
-Strip aspect flags (`--correctness`, `--logic`, `--architecture`, `--security`, `--performance`, `--history`, `--test`, `--interface`, `--clean-code`, `--functional`, `--consistency`, `--defensive`, `--typescript`, `--project`, `--library-use`), scope flags (`--staged`, `--unpushed`, `--all`, `--changed`), `--quick`, `--multi`, and `--rereview` from `$ARGUMENTS`. The remainder is the review target.
+Strip aspect flags (`--correctness`, `--logic`, `--architecture`, `--security`, `--performance`, `--history`, `--test`, `--interface`, `--clean-code`, `--functional`, `--consistency`, `--defensive`, `--typescript`, `--project`, `--library-use`), scope flags (`--staged`, `--unpushed`, `--all`, `--changed`), `--quick`, `--multi`, and `--re` from `$ARGUMENTS`. The remainder is the review target.
 
-If `--quick` appears with any aspect flag or with `--multi`, abort with `--quick is a complete review preset; remove the aspect flags or --multi.` It may compose with a target, one scope flag, and `--rereview`.
+If `--quick` appears with any aspect flag or with `--multi`, abort with `--quick is a complete review preset; remove the aspect flags or --multi.` It may compose with a target, one scope flag, and `--re`.
 
 In comprehensive mode, if any aspect flags are present, launch ONLY the corresponding agents (including the conditional add-ons only when a `--<language>`/`--cli`/`--react`/`--swiftui`/`--project`/`--library-use` flag is passed). Otherwise launch all 10 core agents plus whatever Step 3b.5 detects. In quick mode, follow the single-reviewer branch in Step 3c.
 
@@ -264,13 +264,17 @@ For every harness, retain full review reasoning effort. Give the reviewer this i
 - Always return a short coverage statement naming the behaviors traced, callers/dependencies and tests examined, and checks actually run. State any unexamined scope, checks not run, and material unresolved uncertainties; distinguish these from confirmed findings. Do not infer safety from missing evidence.
 - Return `No actionable findings.` if nothing survives, followed by the coverage statement and any limitations.
 
-After the agent returns, resolve any requested verification checks before final filtering, without launching more reviewers or scorers. Apply its `autofix` findings yourself after checking each still meets that test, and list them under `Applied automatically`; a finding that fails the test goes to its severity section instead. Run a `verify:` item's check first, in a disposable copy with the fix applied: for `verify: suite` the full test suite must pass under `timeout`; for `verify: mutation` the affected tests must pass, then fail once you break the behaviour they assert in the code under test (grep to confirm the break landed). An item whose check fails or cannot run goes to its severity section. Deduplicate the rest and render the surviving items under `Critical Issues (Must Fix)`, `Improvements (Should Fix)`, and `Suggestions (Nice to Have)`, omitting empty sections. Within a section, list `S` findings first, then `M`, then `L`, each prefixed with its effort tag (`[S]`, `[M]`, `[L]`). Explain what is wrong, why it matters, and how to fix it. Include the coverage statement and material limitations even when there are no findings. Do not show likelihood or blast-radius metadata and do not launch scorer agents. Then continue to Step 6.
+After the agent returns, resolve any requested verification checks before final filtering, without launching more reviewers or scorers. Apply its `autofix` findings yourself after checking each still meets that test, and list them under `Applied automatically`; a finding that fails the test goes to its severity section instead. Run a `verify:` item's check first, in a disposable copy with the fix applied: for `verify: suite` the full test suite must pass under `timeout`; for `verify: mutation` the affected tests must pass, then fail once you break the behaviour they assert in the code under test (grep to confirm the break landed). An item whose check fails or cannot run goes to its severity section. Deduplicate the rest and render the surviving items under `Critical Issues (Must Fix)`, `Improvements (Should Fix)`, and `Suggestions (Nice to Have)`, omitting empty sections. Within a section, list `S` findings first, then `M`, then `L`, each prefixed with its effort tag (`[S]`, `[M]`, `[L]`). Explain what is wrong, why it matters, and how to fix it. Include the coverage statement and material limitations even when there are no findings. Do not show likelihood or blast-radius metadata and do not launch scorer agents. Then continue to Step 5.5.
 
 #### Comprehensive mode
 
 **Load `references/agents.md`** — it carries the brief for each of Agents 1–10.
 
 Launch the selected review perspectives in parallel, queuing successive batches when runtime capacity requires it.
+
+**One agent per perspective.** Never pair two aspects in one brief to save agents, not even small ones. A capacity limit queues reviewers; it never merges them. A past run paired functional with consistency, and the consistency half came back covering only what its brief listed.
+
+**Brief with the scope, not a checklist of where to look.** Give each reviewer the resolved scope or file list, the project facts it cannot cheaply discover, and its aspect brief from `references/agents.md`. Do not list the units, files or precedents it should examine: a reviewer handed "focus on X, Y, Z" reviews X, Y and Z, and the rest of the diff goes unreviewed for that aspect. If a fact about one file matters, state it as context and say the whole file list remains in scope.
 
 **Claude Code caps concurrent subagents** at `CLAUDE_CODE_MAX_CONCURRENT_SUBAGENTS`. Launch up to that many at once, then launch each remaining reviewer as soon as one returns. A launch refused with `Concurrent subagent limit reached` never ran: despite the message's "Do not retry", queue it and launch it when a slot frees, and never drop the aspect. The same limit applies to the scorer round.
 
@@ -312,7 +316,17 @@ Then append: "Provide a focused code review in 300 words or less covering: poten
 
 Skip these steps in quick mode; Step 3c already produced the filtered, formatted review. In comprehensive mode, **load `references/scoring-and-output.md`** and follow it. In short: score every issue with independent parallel scorers using the exact prompt there (only `traced` passes, and the verdict means only "is this true"), have those same scorers return impact, effort, likelihood and blast radius so improbable findings route to an appendix instead of the work list, apply the `autofix` items, then render the severity sections.
 
-When that reference is done, **come back here and do Step 6** — the rendered output is not the end of the run.
+When that reference is done, **come back here and do Steps 5.5 and 6** — the rendered output is not the end of the run.
+
+## Step 5.5: Snapshot the reviewed state
+
+In both modes, after the output is rendered and any `autofix` items are applied, record what was reviewed so a re-review can find what changed since. In the session's scratch directory:
+
+- copy every existing file in the Step 3b file list to `cr-snapshot/<round>/`, keeping its repo-relative path;
+- save `git status --porcelain` there as `status.txt`;
+- save the findings list as `findings.md`: each finding's aspect, `file:line`, one-line claim and section. Step 6 adds each one's disposition (`fixed`, `declined`, or `appendix`) once known.
+
+Do not use `git stash`, commits or any other git write for this. The snapshot is local scratch, not history.
 
 ## Step 6: Offer to Fix
 
@@ -334,18 +348,63 @@ Skip this step entirely (no prompt) only when there are no Must Fix and no Shoul
 
 Build the options only from the `Critical Issues`, `Improvements`, and `Suggestions` sections. `Applied automatically` items are already done and are never offered. **Never include `Improbable / Not Worth Handling` items** — not even under "Fix everything". Step 4.5 already judged them not worth doing, and offering to fix them reintroduces exactly the noise the appendix exists to remove.
 
-When the user selects a fix option, apply the fixes for exactly the chosen severity tier(s) — no more, no less.
+When the user selects a fix option, apply the fixes for exactly the chosen severity tier(s) — no more, no less. Record each finding's disposition in the snapshot's `findings.md`.
 
-## Step 7: Re-Review After Fixes (`--rereview` only)
+Code written to fix a finding has not been reviewed. Without `--re`, end the run with a `Not yet reviewed` line naming the files the fixes changed, and suggest `/code-review --re`, which reviews only those changes.
 
-If `--rereview` was passed AND fixes were applied in Step 6, automatically run the review again to verify the fixes landed cleanly and didn't introduce new issues:
+## Step 7: Re-Review the Fixes (`--re`)
 
-- Re-run Steps 3–6 with the **same review mode, aspect, `--multi`, and target/scope selection** as the original run.
-- Review the **same file list** computed in step 3b — fixes turn staged files into unstaged edits, so re-resolving scope from scratch could miss them. Reuse the original file list directly rather than recomputing from `git diff`.
-- Announce the re-review at the start, e.g. `Re-reviewing after fixes (--rereview)`.
-- The re-review's Step 6 fix prompt runs as normal. This forms a natural loop: review → fix → re-review → fix … It terminates when the re-review surfaces no Must Fix/Should Fix findings (Step 6 is skipped) or the user picks "Don't fix anything".
+A re-review checks only what changed since the last snapshot: the fixes, plus anything else edited since. It is not a second full review, and it does not re-run the preflight cleanup on unchanged files.
 
-Without `--rereview`, Step 6 ends the run after fixes are applied — the user must invoke `/code-review` again manually to verify.
+It runs in two cases:
+
+- `--re` was passed and Step 6 applied fixes: continue straight into it.
+- `/code-review --re` is invoked and an earlier review in this conversation left a Step 5.5 snapshot: skip Steps 1–6 and start here from the latest snapshot. This covers fixes applied after the review ended, by the user or by a calling skill. With no snapshot in the conversation, run a normal review that loops as in the first case.
+
+Announce it, e.g. `Re-reviewing the 4 files changed since the review (--re)`.
+
+### 7a. Compute the delta
+
+Compare each snapshot file with its current content (`git diff --no-index`), and compare `git status --porcelain` with `status.txt` to find files created, deleted or renamed since. The delta is those hunks and files. If it is empty, say `Nothing changed since the review.` and stop.
+
+If `findings.md` has no dispositions because the fixes were made outside Step 6, mark each finding whose `file:line` falls in the delta as `fixed` and the rest as `declined`.
+
+### 7b. Pick the aspects
+
+Start from the aspect of every finding marked `fixed`, so each fix is checked against the finding it addressed. Then add aspects for what the delta contains:
+
+| The delta contains | Add |
+|---|---|
+| Changed conditions, control flow, data handling, async or error paths | correctness |
+| New or renamed identifiers, files, components, props, exports, keys or strings | consistency, interface |
+| New or changed tests, or production changes with no test change | test |
+| Changed exported signatures, or code moved between modules | architecture, interface |
+| Auth, URLs, input parsing, secrets, shell or SQL | security |
+| Loops, queries, render paths or caches | performance |
+| Files a language, shape, project or library-use reviewer covered in the original run | that reviewer |
+
+If the original run used aspect flags, choose only from those aspects, plus correctness when production code changed. History, and functional unless the delta adds state or mutation, are rarely worth a re-review.
+
+### 7c. Pick the depth
+
+Use the delta's size, not the original run's mode:
+
+| Delta | How |
+|---|---|
+| Renames, moves, strings, comments or config only, under ~30 changed lines, no logic | **No sub-agents.** Check it yourself: confirm each fixed finding is resolved, grep for references to anything renamed or removed (string literals included), run the affected tests under `timeout`. |
+| Under ~200 changed lines across at most ~6 files, or the original run was `--quick` | **One reviewer**, using the quick-mode brief from Step 3c with the delta as its scope and the aspects from 7b as its checklist. No scorer round. |
+| Larger | **Comprehensive mode, limited to the aspects from 7b**, one agent each, scored as usual. Re-run external advisors only here, and only if the original run used `--multi`. |
+
+### 7d. Brief and report
+
+Every re-review brief (or your own check) gets:
+
+- the delta as the scope, with the original diff and the full files as context only;
+- each `fixed` finding, to confirm resolved or report as not resolved;
+- each `declined` or `appendix` finding, marked as already decided: not to be raised again;
+- the instruction to report only issues in the delta or caused by it.
+
+Render a `Re-review of fixes` section listing each fixed finding as `resolved` or `not resolved`, then any new findings in the usual severity sections. Take a new Step 5.5 snapshot, then run Step 6 as normal. The loop ends when a re-review has no Must Fix or Should Fix findings, or the user picks "Don't fix anything".
 
 ## Examples
 
@@ -375,9 +434,9 @@ Runs the preflight cleanup and all 10 agents against every file in the repo (`gi
 Runs the same 10 review agents plus external reviews from every advisor `second-opinion` has configured, after the preflight cleanup. The output includes a cross-model agreement section highlighting issues where the internal agents and external advisors converge, giving higher confidence to consensus findings. `--multi` composes with aspect and scope flags, e.g. `/code-review --multi --architecture` or `/code-review --all --multi`.
 
 **Review, fix, then re-review automatically:**
-> /code-review --rereview
+> /code-review --re
 
-Runs the review, offers the fix prompt (Step 6), and — once fixes are applied — immediately re-runs the same review on the same files to confirm the fixes landed and introduced no new issues. The loop continues until a re-review comes back with no Must Fix/Should Fix findings or the user declines to fix. Composes with aspect, scope, and `--multi` flags.
+Runs the review, offers the fix prompt (Step 6), and once fixes are applied, re-reviews only what they changed. It confirms each fixed finding is resolved and checks the new code with the aspects that change touches. A rename-only fix gets no sub-agents at all, and a small fix gets one reviewer. The loop continues until a re-review comes back with no Must Fix/Should Fix findings or the user declines to fix. Run `/code-review --re` later in the same conversation to re-review fixes made after the review ended.
 
 ## Troubleshooting
 

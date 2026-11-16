@@ -1,7 +1,7 @@
 ---
 name: plan
-description: Lightweight planning workflow — plan read-only in-session when already on Opus or stronger, otherwise delegate planning to an Opus subagent (or adopt a plan already agreed in the conversation), then implement in auto mode after a single go-ahead gate, run QA and one `code-review --multi`, fix findings, repeat QA only after substantial code changes, update docs, and commit the task's work. The middle tier between "just do it" (tiny tasks) and `longshot` (multi-hour features). Never enters plan mode, so it sidesteps the plan-mode permission prompts. Use when the user invokes /plan, or wants a plan for a medium-sized task before implementing.
-argument-hint: '[--review] <task, or blank to infer from conversation>'
+description: Lightweight planning workflow — plan read-only in-session when already on Opus or stronger, otherwise delegate planning to an Opus subagent (or adopt a plan already agreed in the conversation). With --plan-only, save the plan to a Markdown file and stop. Otherwise implement in auto mode after a single go-ahead gate, run QA and one `code-review --multi`, fix findings, repeat QA only after substantial code changes, update docs, and commit the task's work. The middle tier between "just do it" (tiny tasks) and `longshot` (multi-hour features). Never enters plan mode, so it sidesteps the plan-mode permission prompts. Use when the user invokes /plan, or wants a plan for a medium-sized task before implementing.
+argument-hint: '[--plan-only] [--review] <task, or blank to infer from conversation>'
 effort: xhigh
 ---
 
@@ -10,7 +10,8 @@ effort: xhigh
 # Plan (middle tier)
 
 Produce a concrete implementation plan for a medium-sized task, then implement it
-after one approval gate. Deliberately lighter than `longshot` (no up-front
+after one approval gate, or save it to a file and stop with `--plan-only`.
+Deliberately lighter than `longshot` (no up-front
 interview, per-task implementer subagents or rulings ledger) and
 heavier than just editing — the space where a plan helps but full ceremony is overkill.
 
@@ -34,20 +35,33 @@ The argument is the task. If blank, infer the task from the current conversation
 /plan add a --json flag to the export command    # plan a stated task
 /plan                                            # plan the task from context, or adopt a plan agreed above
 /plan --review <task>                            # plan, then multi-agent review before the gate
+/plan --plan-only <task>                         # save the plan to a file and stop
+/plan --plan-only --review <task>                # review the plan, then save it and stop
 ```
 
 ## Flags
 
+- `--plan-only` — draft the plan, write it to a Markdown file, and stop at Step 3a.
+  Use a path the user specifies; otherwise use
+  `docs/plans/<YYYY-MM-DD>-<task-slug>.md` relative to the project root (or the
+  working directory outside a project). Create the parent directory as needed.
+  Choose a numbered suffix if the default path already exists; update an existing
+  plan only when the user asks to revise it. This flag takes no positional value;
+  the remaining text is the task. It combines with `--review` in either order.
 - `--review` — after the plan is drafted, run `review-plan` (multi-agent) on it and
   fold the findings in before presenting for go-ahead. `review-plan` is already
   multi-agent; there is no separate `--multi`. The final `code-review --multi`
-  runs regardless of this flag.
+  runs regardless of this flag when implementing; `--plan-only` stops before it.
 
 ## Instructions
 
 ### Step 1: Scope check (early exit)
 
 Judge the task's size first.
+
+With `--plan-only`, continue to Step 2 for any task size: the user explicitly
+requested a plan artifact. Note scope concerns in the plan rather than exiting
+or switching workflows.
 
 - **Trivial** (one-liner, obvious fix, rename, config flip): planning is overhead.
   Say so in one line and offer to just do it directly — do not spend a planning
@@ -115,6 +129,20 @@ Invoke the `review-plan` skill (via the Skill tool) against the plan in current
 context. Fold its findings into the plan — apply clear improvements directly, and
 surface unresolved disagreements as open questions for the gate.
 
+### Step 3a: Save and stop (only if `--plan-only`)
+
+Write the final plan to the path selected above. Make it self-contained: include
+the task statement, relevant requirements from the conversation, and the full
+plan skeleton. Include the QA, review, verification, documentation, and commit
+steps described in Step 4 as proposed future work, honoring the user's limits.
+Keep unresolved questions in the file and mark which ones block implementation.
+
+Exploration and optional review remain read-only; the plan file and its parent
+directory are the only writes authorized by this mode. Verify the saved file,
+then return its path with a brief summary and any blocking questions. Do not
+print the full plan inline, request implementation approval, or continue to
+Steps 4–9. A later request to implement the saved plan is a separate instruction.
+
 ### Step 4: Present and STOP
 
 Print the plan inline, cleanly formatted, with the **Assumptions & open questions**
@@ -152,8 +180,10 @@ QA when consumer behavior changed.
 Run `code-review --multi` over the complete task diff, including new files and any
 changes already committed during the task. Give it an explicit scope so unrelated
 work in the checkout stays outside the review. This is mandatory, even without
-`--review`; do not substitute `--quick`. Run exactly one code review: do not pass
-`--rereview` or dispatch another review after fixes.
+`--review`; do not substitute `--quick`. Run one full code review only. After the
+fixes below, run `code-review --re` once in the same session: it reviews only
+what changed since the review, so the fix code does not go unreviewed. Fix what it
+finds without a further re-review.
 
 Fix every valid finding, including lower-severity ones, without another approval
 round. Record a concrete reason for any finding rejected as incorrect or
@@ -209,7 +239,7 @@ User: "Plan adding a `--json` flag to export."
 
 Actions: the session (or, below Opus, one read-only subagent) drafts the approach → present the plan including
 QA, review, and docs → wait for approval → implement in the main session →
-`qa --fix` → one `code-review --multi` → fix findings and verify → repeat QA only
+`qa --fix` → one `code-review --multi` → fix findings → `code-review --re` of the fixes → verify → repeat QA only
 if the fixes substantially changed code → update usage docs and examples → `commit`
 → report changes, QA, each review finding's resolution, checks, docs, and commits.
 

@@ -61,6 +61,14 @@ means it probably should not be an effect.
   so is a context used by one child. Passing `children` or a render slot often removes both.
 - **Controlled/uncontrolled mixing.** A component accepting `value` but also keeping its own
   copy, or switching between `value={undefined}` and a defined value.
+- **Enabled actions without behavior.** Trace optional handlers such as `onRename?.(id)`
+  through parents, wrappers, and live callers. Report an enabled button or menu item that
+  silently does nothing when its handler is absent. An optional notification callback is
+  valid when the component already performs the action internally; hidden or deliberately
+  disabled actions are also valid. Recommend wiring the action, requiring its handler, or
+  hiding/disabling it according to the intended interaction. Grade the demonstrated user
+  impact, not the optional-call syntax. Let `review-typescript` own contract-only narrowing;
+  report a shared root cause once when both reviews run.
 - **God components.** A component mixing data loading, business rules and layout that cannot
   be tested or reused; split along those seams. Leave size alone if the pieces are cohesive.
 - **Error and Suspense boundaries** placed so one failing widget blanks the whole screen, or
@@ -131,3 +139,6 @@ Load only the section matching the baseline's renderer.
 
 Apply the Review grading rubric in SKILL.md. Checklist categories are not severity tiers;
 trace the consequence, reachability, and recovery before assigning priority.
+
+The optional-handler check is informed by HumanLayer's
+[narrow-react-prop-types](https://github.com/humanlayer/skills/blob/main/plugins/narrow-react-prop-types/skills/narrow-react-prop-types/SKILL.md).

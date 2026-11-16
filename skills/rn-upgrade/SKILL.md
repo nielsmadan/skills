@@ -1,28 +1,45 @@
 ---
 name: rn-upgrade
-description: React Native upgrade workflow. Use when upgrading React Native, bumping RN version, migrating to a new RN release, or resolving breaking changes after a React Native update.
-argument-hint: <target version>
+description: Use when upgrading React Native or Expo SDK versions or resolving upgrade-related dependency issues. Detects Expo projects and follows SDK-compatible versions and their native-project workflow.
+argument-hint: <RN version or Expo SDK target>
 ---
 
 <!-- Generated from https://github.com/nielsmadan/agentic-coding — edits here are overwritten. -->
 
 # React Native Upgrade Command
 
-You are tasked with upgrading a React Native application to the version specified in $ARGUMENTS (or the latest version if not specified).
+Upgrade the application to the requested React Native version or Expo SDK target. Determine the project's workflow before resolving an omitted target to the latest stable release.
 
 ## Usage
 
 ```
 /rn-upgrade 0.76
 /rn-upgrade 0.75.4
+/rn-upgrade expo <SDK target>
 /rn-upgrade          # upgrades to latest stable
 ```
 
 ## Gotchas
 - The rn-diff-purge diff reflects a pristine RN template only. Custom native code (modified `MainApplication.kt`, `AppDelegate.swift`) may be silently overwritten because it's not in the diff.
-- Multi-version jumps (e.g., 0.73 → 0.76) require building and testing at each intermediate version. A breakage at 0.74 that is masked until 0.76 is much harder to diagnose.
+- Standalone RN multi-version jumps (e.g., 0.73 → 0.76) require building and testing at each intermediate version. Expo upgrade sequences follow the SDK release notes instead.
 
 ## Instructions
+
+### Choose the upgrade path
+
+Inspect the app workspace's package.json, lockfile, app config, scripts, and native-project
+documentation. An `expo` dependency means Expo compatibility must be checked even in an
+app with manually maintained native projects; directory presence alone does not identify
+the workflow.
+
+- **Expo present:** read [Expo SDK upgrades](references/expo.md) and follow that workflow
+  instead of the standalone React Native steps, troubleshooting, and guidelines below.
+  Expo determines the compatible React and React Native versions. An explicit RN target
+  must first be mapped to a supported Expo SDK; do not independently bump RN to latest.
+- **No Expo dependency:** follow the standalone workflow below. Do not add Expo as part
+  of a React Native upgrade.
+
+### Standalone React Native
 
 1. **Determine versions:**
    - Check the current React Native version in package.json
@@ -93,6 +110,13 @@ You are tasked with upgrading a React Native application to the version specifie
    - Provide links to relevant release notes
 
 ## Examples
+
+**Expo app with generated or maintained native projects:**
+> rn-upgrade expo <SDK target>
+
+Reads the Expo reference, resolves compatible dependency versions, and establishes native
+project ownership before choosing regeneration or manual migration. Existing `ios/` and
+`android/` directories do not imply they are disposable.
 
 **Single version upgrade:**
 > /rn-upgrade 0.76

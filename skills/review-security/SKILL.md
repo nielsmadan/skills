@@ -66,19 +66,47 @@ owns scoring and final triage. Otherwise apply this rubric directly. Omit empty 
 
 ## Workflow
 
-1. **Determine scope** based on flags (see Scope table above)
+1. **Determine scope** based on flags (see Scope table above). For `--all`, map the relevant
+   entry points, actors, protected resources, and trust boundaries before assigning checks.
+   Keep a compact in-session coverage list; no report files are required.
 2. **Review each file** against the Security Checklist below, prioritizing categories in this order:
    1. Injection (OWASP 2021 A03) — highest exploitation likelihood
    2. Sensitive Data Exposure (OWASP 2021 A02) — hardcoded secrets are easy wins
    3. Broken Authentication (OWASP 2021 A07) — auth bugs have outsized impact
-   4. Security Misconfiguration (OWASP 2021 A05) — config issues are common in PRs
-   5. Dependency Vulnerabilities — run audit commands last (they take time)
+   4. Broken Access Control (OWASP 2021 A01) — ownership, role, and tenant enforcement
+   5. Security Misconfiguration (OWASP 2021 A05) — config issues are common in PRs
+   6. Resource Exhaustion — attacker-controlled resource consumption
+   7. Dependency Vulnerabilities — run audit commands last (they take time)
 3. **Parallelize** if scope has >5 files: spawn one sub-agent per checklist category, each scanning all files. Merge results and deduplicate.
 
    Dispatch workers that return findings without editing files. Disable delegation tools where supported; read-only access alone does not prevent delegation. Any coordinating role needs explicit subtasks, a descendant limit, and a stopping condition in its brief.
 4. **Check dependencies** using the ecosystem-specific commands in the Dependency Vulnerabilities section
-5. **Classify severity** using Review grading; justify the impact with evidence.
-6. **Report findings** grouped by severity using the Output Format below
+5. **Validate candidates** against the evidence requirements below, checking existing controls
+   before accepting a finding. Classify severity using Review grading.
+6. **Report findings** grouped by severity using the Output Format below. For `--all`, include
+   the coverage summary; a clean finding list does not establish complete coverage.
+
+## Evidence requirements
+
+For each vulnerability, identify the actor and their actual capabilities, controlled input or
+action, intended permission or trust boundary, affected resource, and concrete security result.
+Cite the source path from entry point through effective controls to the sensitive operation.
+Check middleware, shared policy helpers, database policies, and relevant configuration rather
+than treating a missing inline check as proof.
+
+State whether verification is source-only or reproduced locally, with exact file/line evidence
+and any decisive test result. A complete source trace can establish a defect without a live
+exploit. If deployment behavior, provider policy, or another unavailable fact decides the
+outcome, put the hypothesis in **Validation gaps**, with the missing fact and a bounded check;
+do not assume the control is present or absent, or include it in graded finding counts.
+Use dummy identities and records for local checks; a review does not authorize probing live
+services or accessing other users' data. Recommend the smallest fix that enforces the boundary.
+
+For `--all`, summarize relevant surfaces and boundaries as **examined**, **partially examined**,
+**not examined**, or **not applicable**, with evidence or a reason. Include skipped scanners
+and unresolved deployment assumptions. Collect actual coverage from workers; assignment to an
+agent alone does not count as examination. Keep this in the response, or return it to the
+calling review coordinator, unless the user requested an artifact.
 
 ## Security Checklist
 
@@ -106,6 +134,15 @@ For code examples, grep patterns, false-positive rules, and dependency audit com
 - [ ] No sensitive fields (passwords, tokens) written to logs
 - [ ] Grep source files for secret patterns — see `references/security-checklist.md` for patterns and false-positive filtering rules
 
+### Broken Access Control (OWASP A01)
+
+- [ ] Read and mutation paths enforce the actor's permission on the requested resource,
+  including object ownership, role changes, and tenant boundaries where applicable.
+- [ ] Caller-supplied IDs, tenant selectors, and batch items cannot bypass those checks;
+  authorization is enforced at a trusted boundary, not solely by UI visibility.
+- [ ] Shared middleware, service policies, and database row policies are traced before
+  reporting missing enforcement. See the reference for authorization-specific checks.
+
 ### Security Misconfiguration (OWASP A05)
 
 - [ ] Debug mode disabled in production
@@ -127,6 +164,9 @@ Keep scanner/vendor ratings as evidence. Grade each applicable vulnerability usi
 
 ## Output Format
 
+For each vulnerability below include actor/input, boundary/resource, demonstrated result,
+source trace, and verification method. Keep non-security suggestions separate from defects.
+
 ```markdown
 ## Security Review: {scope}
 
@@ -145,6 +185,14 @@ Keep scanner/vendor ratings as evidence. Grade each applicable vulnerability usi
 | Package | Vendor severity | CVE | Fix Version |
 |---------|----------|-----|-------------|
 | {pkg} | Critical | CVE-XXXX-XXXX | {version} |
+
+### Validation gaps
+- {source-grounded hypothesis}: {missing fact}; {bounded validation step}
+
+### Coverage (--all)
+| Surface / boundary | Status | Evidence or gap |
+|--------------------|--------|-----------------|
+| {entry point → protected resource} | {examined / partially examined / not examined / not applicable} | {source paths, checks, or reason} |
 
 ```
 
@@ -175,3 +223,6 @@ Parallel agents scan the full codebase by security category. Finds a hardcoded A
 - For `--all`, use parallel agents per category for speed
 - Check both source code and configuration files
 - Dependency checks require package manager files (package.json, requirements.txt, etc.)
+
+Boundary evidence and coverage guidance are informed by
+[Cloudflare's security-audit skill](https://github.com/cloudflare/security-audit-skill/blob/main/skills/security-audit/SKILL.md).

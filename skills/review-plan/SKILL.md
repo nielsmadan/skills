@@ -11,27 +11,21 @@ effort: xhigh
 
 Comprehensive review of implementation plans using parallel specialized agents.
 
-## Review grading
+## Plan dispositions
 
-Use only these finding priorities, in descending order:
+Sort every accepted finding by what has to happen to the plan before implementation starts, not by
+severity:
 
-- **Critical Issues (Must Fix):** a verified path causes data loss, a security failure, a materially
-  wrong operation, or makes a core workflow unusable without reasonable recovery.
-- **Improvements (Should Fix):** an ordinary supported workflow demonstrably fails or repeatedly
-  imposes substantial friction, or a concrete design defect creates meaningful maintenance cost.
-- **Suggestions (Nice to Have):** a worthwhile improvement with small practical impact, including
-  optional polish, local simplification, and rare recoverable edge cases.
+- **Rework:** the approach will not solve the problem or rests on a false assumption. The plan
+  needs a different approach before anything else is worth amending.
+- **Amend:** a concrete change to a step, the file manifest, ordering, or verification, such as a
+  missing rollback, an unhandled caller, or a test that cannot fail.
+- **Decide:** an open choice only the user can settle. State the options and what each changes.
+- **Watch:** a pitfall for the implementer that does not change the plan.
 
-Grade the demonstrated consequence, realistic reachability, and available recovery against project
-priorities. A category, missing convention, hypothetical future problem, or confidence that a claim
-is true does not set its priority. Do not assign automatic severity floors or ceilings. Keep
-unverified claims in validation gaps, outside the graded finding count; distinguish suggestions
-from defects. For plans, trace the consequence if implemented and state the assumptions.
-
-Use the short labels **Must Fix**, **Should Fix**, and **Nice to Have** in summaries and ledgers.
-Keep effort, verification status, user-facing change size, and tool/vendor diagnostic ratings
-separate. When called by `code-review`, return its requested evidence and impact fields; the parent
-owns scoring and final triage. Otherwise apply this rubric directly. Omit empty priority sections.
+For each finding, trace the consequence if the plan were implemented as written and state the
+assumption it rests on. Check that assumption against the code and docs where you can; one you
+could not check stays a Decide item or is marked unverified, never a Rework. Omit empty sections.
 
 ## Usage
 
@@ -87,8 +81,9 @@ See [references/agent-prompts.md](references/agent-prompts.md) for full prompt t
 
 ### Step 4: Synthesize Findings
 
-Collect all agent results and synthesize. Pass Review grading to each reviewer; grade the
-consequences if the plan were implemented, not the intensity of a reviewer's language.
+Collect all agent results and synthesize. Assign each accepted finding a Plan disposition from the
+consequence if the plan were implemented, not from the intensity of a reviewer's language.
+Reviewers report findings; the synthesis assigns dispositions.
 
 ```markdown
 ## Plan Review: {plan_name}
@@ -107,46 +102,36 @@ consequences if the plan were implemented, not the intensity of a reviewer's lan
 
 **Recommendation:** {stick with plan / consider alternative X / hybrid}
 
-### Robustness Issues
-
-**Critical Issues (Must Fix):**
-- {issue}: {fix}
-
-**Improvements (Should Fix):**
-- {issue}: {fix}
-
-**Suggestions (Nice to Have):**
-- {small improvement}: {benefit}
-
-### Adversarial Findings
-
-**Valid concerns:**
-- {concern}: {how to address}
-
-**Dismissed concerns:**
-- {concern}: {why it's not a real issue}
-
 ### Research Insights
 (if applicable)
 - {relevant finding}
 
 ---
 
-## Revised Plan Recommendations
+## Findings
 
-{specific improvements to make based on all feedback}
+### Rework
+1. {flaw in the approach} ({source agent}): {consequence if implemented} → {different approach}
 
-### Changes to Make
-1. {change 1}
-2. {change 2}
+### Amend
+2. {plan step or file}: {problem} ({source agent}) → {change to the plan}
 
-### Questions to Resolve
-- {unresolved question}
+### Decide
+3. {question}: {option A → effect} / {option B → effect}
+
+### Watch
+4. {pitfall for implementation}
+
+### Dismissed
+- {concern} ({source agent}): {why it does not apply}
 ```
+
+Number findings sequentially across sections so the user can accept or reject them by number.
 
 ### Step 5: Update Plan
 
-If significant issues found, offer to revise the plan incorporating the feedback.
+If there are Rework or Amend findings, offer to revise the plan incorporating them. Decide items go
+to the user; Watch items go into the plan's notes for the implementer.
 
 ## Examples
 

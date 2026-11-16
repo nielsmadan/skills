@@ -297,8 +297,9 @@ its fixes, as in Phase 4 step 4, and commit them. Whatever QA cannot exercise he
 goes to "Blocked on you".
 
 Then `code-review` over the full diff of every touched
-repo (`--quick` only if the whole longshot was small), then a fix wave, then a
-re-review scoped to those fixes. Cross-repo runs get one reviewer whose job is
+repo (`--quick` only if the whole longshot was small), then a fix wave, then
+`code-review --re` in this session, which reviews only what the fix wave
+changed. Cross-repo runs get one reviewer whose job is
 **contract coherence** — wire formats, manifest shapes, command strings, identity
 semantics agreeing across repo boundaries.
 

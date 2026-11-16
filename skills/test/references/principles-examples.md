@@ -121,3 +121,21 @@ expect(validate('abc123')).toBe(true);
 const VALID_USER_ID = 'user_12345';
 const DOUBLED_VALUE = INPUT * 2;
 ```
+
+---
+
+### 9. No Constant-Restating Tests
+
+```javascript
+// BAD: Restates the source; fails on every intentional change, catches no bug
+test('max retries is 3', () => {
+  expect(MAX_RETRIES).toBe(3);
+});
+
+// GOOD: Tests the behaviour the constant drives
+test('gives up after the last retry', async () => {
+  const send = jest.fn().mockRejectedValue(new Error('down'));
+  await expect(sendWithRetry(send)).rejects.toThrow('down');
+  expect(send).toHaveBeenCalledTimes(MAX_RETRIES + 1);
+});
+```

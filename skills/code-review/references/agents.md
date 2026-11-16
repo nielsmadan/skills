@@ -22,6 +22,8 @@ git worktree remove --force "$SCRATCH/cr-<aspect>"
 
 If you cannot make a copy, describe the experiment in the finding instead of running it.
 
+**Experiments settle a claim; they are not a sweep.** Run a test or mutation experiment only to confirm or refute a specific finding you are about to report, when reading the code cannot settle it. At most 5 mutants per reviewer. Run only the test files that cover the mutated code, never the full suite per mutant, each run under `timeout 120`. If one targeted run takes longer than 2 minutes, stop experimenting and report the remaining claims with code evidence and `experiment not run`. A past test reviewer ran 36 mutants and took nearly two hours while every other reviewer waited.
+
 **Tag safe fixes `autofix`.** A finding is `autofix` when its fix cannot change production behaviour, any change in what a test executes is proven by running tests, and a wrong call would be visible in the diff and cheap to revert. The fix may rest on judgment, as comment cleanup does, but must not need new prose, a design choice, or an edit to exported or public code. Examples: a doc or help line naming a symbol, flag or path the diff renamed or removed; an unexported import or helper whose last use the diff removed, with grep (string literals included) finding no other reference; a test name that names a renamed symbol. When the fix changes what a test executes, append the check it needs:
 
 - `verify: suite` — test code moves unchanged; the full test suite must pass with the fix applied.
@@ -68,7 +70,7 @@ Operate on the file list from step 3b.
 
 ## Agent 5: Test Quality Review (`--test`)
 Invoke `test --review` with the scope-translated arguments.
-- Mutation-test only in a disposable copy (see Rules for every agent), never in the shared checkout
+- Mutation-test only in a disposable copy and within the experiment budget (see Rules for every agent), never in the shared checkout
 - Check for missing edge cases and coverage gaps
 - Identify brittle or flaky test patterns
 - Flag over-mocking and testing implementation instead of behavior
@@ -97,6 +99,7 @@ Read `review-functional` and apply its checklist to the resolved scope or file l
 
 ## Agent 7c: Consistency Review (`--consistency`)
 Read `review-consistency` and apply its workflow to the resolved scope or file list. Do this work yourself; do not dispatch sub-agents or launch other agent CLIs.
+- The parent gives this agent the scope only. It never lists the units to inventory or the precedents to compare against: building that inventory from every added or renamed identifier, file, component, prop, constant and type in the diff is the review. A past brief listed eight units, and the reviewer missed the naming inside two components the list left out.
 - Inventory each unit the change adds and its kind, then collect existing same-kind precedents from the whole checkout, not only the scoped files
 - Flag divergences in naming, placement, mechanism (errors, logging, config, existing helpers), sibling shape, and registration, citing at least two agreeing precedent `file:line`s or a written rule
 - Documented project rules and the newer of two competing patterns win over older precedent

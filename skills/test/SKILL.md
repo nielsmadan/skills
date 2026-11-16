@@ -117,6 +117,10 @@ One concern per test — avoid multi-step flows that test several behaviors in a
 
 Use named constants for test inputs and expected values so the intent is clear at a glance.
 
+### 9. No Constant-Restating Tests
+
+A test that only asserts a constant, config value, or enum member equals its literal (`expect(MAX_RETRIES).toBe(3)`) duplicates the source and catches no bug. Generate never writes one; review flags each for removal, or for replacement with a test of the behaviour the value drives.
+
 For BAD/GOOD code examples of each principle, see `references/principles-examples.md`.
 
 ---
