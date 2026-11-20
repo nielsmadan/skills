@@ -112,19 +112,19 @@ claude --tools "Read,Grep,Glob" --disable-slash-commands --no-session-persistenc
 command codex exec -s read-only --skip-git-repo-check --disable multi_agent --disable multi_agent_v2 -c agents.enabled=false "$(cat .second-opinion.md)" </dev/null
 ```
 
-Use the Pi and OpenCode model ids and `max` reasoning settings below exactly,
+Use the Pi and OpenCode model ids and reasoning settings below exactly,
 including in `--quick` mode. Change them only when the user explicitly requests it.
 If a selected model or reasoning level is unavailable, report that advisor as
 unavailable and continue with the others.
 
 **Pi:** `--tools` is the read-only guard (no `edit`/`write`/`bash`). Pi has no `-m` short flag — it is `--model`:
 ```bash
-command pi -p --no-session --tools read,grep,find,ls --model opencode-go/hy4 --thinking high "$(cat .second-opinion.md)" </dev/null
+command pi -p --no-session --tools read,grep,find,ls --model opencode-go/kimi-k3.1-pro --thinking max "$(cat .second-opinion.md)" </dev/null
 ```
 
 **OpenCode** (2.x): use plan mode and deny its task tool for this consultation. The inline config applies only to this process. `--standalone` keeps the run in a private server instead of the shared background one:
 ```bash
-OPENCODE_CONFIG_CONTENT='{"agent":{"plan":{"permission":{"task":"deny"}}}}' command opencode run --standalone --agent plan -m 'opencode-go/kimi-k3.1-pro#max' "$(cat .second-opinion.md)" </dev/null
+OPENCODE_CONFIG_CONTENT='{"agent":{"plan":{"permission":{"task":"deny"}}}}' command opencode run --standalone --agent plan -m 'opencode-go/hy4#high' "$(cat .second-opinion.md)" </dev/null
 ```
 
 **Droid:** Gemini 4 Argon at high effort, with file-reading and search tools only:

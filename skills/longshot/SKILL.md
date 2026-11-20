@@ -261,15 +261,19 @@ suite) is compile-verified as far as possible, recorded, and carried to the hand
 
 Pass `model` on every dispatch. An omitted one inherits the session model — usually
 the most expensive — and that silently puts routine implementation on the top tier.
-The names are Claude Code's; on another harness use its equivalent tier.
+The names are Claude Code's; on another harness use its equivalent tier, and pass the
+tier's reasoning effort too where the dispatch takes one.
 
 | Role | Model |
 |---|---|
+| Recon, research, docs harvest | `sonnet` |
+| Plan critics | `review-plan` sets their tiers |
 | Implementer, `Tier: standard` | `sonnet` |
 | Implementer, `Tier: design` | `opus` |
 | Reviewer | `sonnet`; `opus` for a `design` task, or a diff touching concurrency, security, a persisted format or a repo boundary |
 | Scoped re-review | `sonnet` |
 | Fixer | `sonnet`; `opus` in round 3 |
+| Feature QA | `sonnet` |
 | Phase 5 contract reviewer and fix wave | `opus` — `code-review` picks its own models |
 
 `haiku` is left out on purpose: working from prose over several steps it takes more

@@ -10,16 +10,15 @@ Full prompt templates for the research workers selected in Step 4. Apply that st
 - Stack Overflow and Reddit often block plain fetches; expect to need that retry.
 - When exact text matters (code, config, a quote), ask the fetch for the passage verbatim and quote only what it returned.
 
-## Docs Agent (Context7)
+## Docs Agent
 
 **Spawn when:** Library/framework is identified
 
 ```
-Use Context7 to look up documentation for {library_name}.
+Look up the official documentation for {library_name}.
 
-1. First call resolve-library-id with libraryName="{library_name}" and query="{goal_or_problem}"
-2. If resolve-library-id returns no match, fall back to WebSearch: "{library_name} official documentation {goal_or_problem}"
-3. If a match is found, call query-docs with the resolved library ID and query="{goal_or_problem}"
+1. Use WebSearch: "{library_name} official documentation {goal_or_problem}"
+2. Fetch the 1-3 most relevant pages from the official docs site, preferring the version in use
 
 Focus on finding:
 - API usage relevant to: {goal_or_problem}

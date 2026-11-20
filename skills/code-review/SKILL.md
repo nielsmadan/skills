@@ -247,6 +247,7 @@ Keep the file list resolved in Step 3b even if cleanup edits change git status. 
 
 ### 3c. Run the selected mode
 
+
 #### Quick mode (`--quick`)
 
 Do not load `references/agents.md`. Launch exactly **one read-only review agent** and give it the resolved scope or target. Use the same model and reasoning effort as a comprehensive reviewer; do not select a faster profile or lower effort for quick mode. It must not delegate to sub-skills or dispatch more agents.

@@ -10,6 +10,7 @@ the Rules and Items sections from its own ledger; the envelope stays as is.
 
 From: <lead session name> · Lead checkout: <absolute path> · Integration branch: <I>
 Worker: <name> · Checkout: <absolute path> · Branch: <branch>
+Transport: <tool or manual relay> · Lead session: <name and ID> · Worker session: <name and ID>
 Base: <I> must contain <sha>. Run `crew sync` first.
 Check command: <cmd> · Commit convention: <the repo's, e.g. feat/fix/chore, no scopes, no body>
 Approach: <per-item loop | plan | longshot>
@@ -57,6 +58,7 @@ Check after rebase: <command> → <summary line>, exit <code>
 
 ```
 crew hello from <name> (<harness>)
+session <session name> · transport ID <ID, when available>
 checkout <absolute path> · branch <branch> @ <sha>
 check: <command> → <summary line>, exit <code>
 ```

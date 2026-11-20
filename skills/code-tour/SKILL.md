@@ -82,22 +82,61 @@ or unidentifiable, say so briefly and continue from source without running QA.
 The first tour response contains:
 
 1. The scope and high-level aspects added or changed, such as a request, route,
-   UI components, state handling, persistence, or tests, with their purpose.
-2. A short itinerary of input-driven flows. For the first flow, show its concrete
+   UI components, state handling, persistence, or tests, with their purpose and,
+   for changed behavior, a one-line before → after.
+2. Where the change sits in the codebase: the areas of the app the touched files
+   belong to (for example screens, shared components, API client, state, native
+   config), what each area is responsible for, and how a user or caller reaches
+   the changed code. Limit it to the areas the tour visits; a small directory tree
+   or layer sketch with one-line roles works well.
+3. Where the data comes from and where it goes: for each piece of data the change
+   reads or writes, its source (which backend or API endpoint, client cache or
+   query store, persisted storage, bundled asset or config, user input), and where
+   it ends up (rendered, sent to which service, persisted, logged or tracked). A
+   compact table with one row per data item, or a short source → transform → sink
+   line, is enough. Mark sources you inferred but could not confirm in the code.
+4. A short itinerary of input-driven flows. For the first flow, show its concrete
    input and a compact map of the participating code, with file/symbol references
    and each piece's role, before diving into implementation.
-3. The proposed first stop and an invitation to continue or adjust the route.
+5. The proposed first stop and an invitation to continue or adjust the route.
 
 Stop here and wait for the user. Do not append the full walkthrough to the overview.
 For later flows, introduce their code map before their first implementation stop.
 
 ## Walk one meaningful step at a time
 
-Each stop covers one cohesive execution step, not an arbitrary whole file:
+Each stop covers one cohesive execution step, not an arbitrary whole file.
+
+Open every stop with a progress header, including a stop re-presented or resumed
+after a question or side task, so the user can rejoin the tour without scrolling:
+
+- **Covered:** stops already done, by short name; collapse a finished flow to one line.
+- **Now:** flow and stop number with its title, e.g. Flow 2 · stop 1 of 3.
+- **Coming up:** the next stop or two, then the remaining flows and queued branches.
+
+Follow it with a location line: app area › module or layer › file › symbol, plus how
+execution got here from the previous stop (which caller renders, calls, or
+dispatches to it). Describe the file's role in the app, not only its path.
+
+Orient within the file too, in a line or two rather than a listing: what else the file
+holds (its main exports, components, hooks, or sections) and where the excerpt sits
+among them, such as inside which function, after which hook, or before which return.
+When the excerpt is hard to follow on its own, keep a few enclosing lines, such as the
+function signature or the surrounding block, and replace skipped spans with `…`
+instead of showing the whole file.
+
+Then the stop itself:
 
 - Locate the current function/component and show a small, exact code excerpt with
   a clickable absolute file path and line number. Explain the relevant lines,
   including non-obvious syntax, in terms of this input and the feature's behavior.
+- Show what changed, not only the result. Label each excerpt **changed**, **new**,
+  or **existing**. For changed code, show the selected delta as a small `diff`
+  excerpt with `-`/`+` lines from the scope's diff, or a before/after pair when the
+  diff is hard to read, then say in a sentence or two what the old code did and what
+  behaves differently now. For a new file, say what it replaces or where that logic
+  lived before, if anywhere. A `--all` or target tour without a base has no
+  "before"; skip this there.
 - State what enters the step, what it does, and what leaves it: values, state,
   effects, result, or the next call. Connect it to the preceding and next steps.
 - At a decision, name the condition and meaningful outcomes. Trace the chosen path
@@ -113,8 +152,8 @@ For staged or historical code that differs from the working file, label the exce
 version and its line numbers explicitly; warn that opening the working-file link
 may show different code. Never present those coordinates as current-file lines.
 
-End each stop with a compact position marker: current flow/step, pending branches,
-and next stop. Invite questions or feedback, then end the turn and wait. Do not
+End each stop with one line naming the next stop, invite questions or feedback,
+then end the turn and wait. Do not
 advance on silence. “Next”, “continue”, or equivalent advances one stop; a question
 keeps the current stop open. Answer follow-ups at the requested depth, then return
 to the same place. Honor requests to skip, reorder, or cover several steps together.

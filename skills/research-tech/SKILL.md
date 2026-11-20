@@ -25,7 +25,7 @@ research-tech best open-weight coding models on OpenRouter by cost/quality
 ```
 
 ## Gotchas
-- Context7 docs may lag behind a recent major release. Check which version is documented before citing it as authoritative.
+- Docs sites may lag behind a recent major release or show a different version by default. Check which version is documented before citing it as authoritative.
 - "Prefer recent, then higher authority" can be wrong: an authoritative maintainer comment from 18 months ago may be more correct than a popular blog post from last month. Weigh authority first for stable libraries.
 - Quick mode may miss nuance. If a "simple" question turns out complex (e.g., "default port" depends on framework integration), note it and suggest re-running in Standard mode.
 - GitHub star counts are trivially inflated (~6M suspected fake stars as of 2024) — never cite a star count as evidence of quality, adoption, or trust without vetting it. See `references/fake-stars.md`.
@@ -76,7 +76,7 @@ Pick the relevant agents and launch each batch together as runtime capacity allo
 
 | Agent | Spawn when | Search strategy |
 |-------|------------|-----------------|
-| **Docs** | Library/framework mentioned | Context7 `resolve-library-id` then `query-docs`. Fall back to `{lib} official documentation {goal}`. |
+| **Docs** | Library/framework mentioned | `{lib} official documentation {goal}`, then fetch the matching docs pages for the version in use. |
 | **GitHub** | Library with known repo | `site:github.com {lib} "{terms}"`, then read the top 2-3 with `gh` (issues, PRs, raw files). |
 | **General** | Always | `how to {goal} {lib}`. |
 | **Specific** | Error message provided | `"{exact_error_message}" {lib}`. |
