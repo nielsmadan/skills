@@ -38,8 +38,10 @@ integration and fan-out. The caller's brief adds its own Rules section, which ov
 defaults in "Worker loop" wherever they conflict, and names its own work folder for briefs
 and reports.
 
-Used directly, the work folder is `.crew/` in the lead's checkout. Before writing to it, add
-`/.crew/` to `.git/info/exclude` and confirm with `git check-ignore .crew`.
+Used directly, the work folder is `crew/` inside the lead's git directory, beside `crew.json`:
+`crew init` creates its `briefs/` and `reports/` and prints the absolute path. Keeping it out of the
+working tree means formatters, linters, test runners and `git status` never see it; refer to its files
+by absolute path in every message.
 
 ## Session discovery and messaging
 
@@ -110,7 +112,7 @@ If manual relay is necessary, say so at setup, since it costs the user a step pe
    3. **Run the check command yourself** on `I`, into a log file, and read the exit code and
       summary line. The worker's green is not the verdict. A red result goes back as a new
       brief that carries the log path.
-   4. Update the caller's ledger, or the list in `.crew/`.
+   4. Update the caller's ledger, or the list in the work folder.
 
 | `crew integrate` exits | Meaning | Do |
 |---|---|---|
@@ -190,7 +192,8 @@ crew remove <name>                                         # unregister any memb
 ```
 
 `branch -d` refuses an unintegrated branch, so it doubles as a check. The crew state lives in
-each checkout's git directory as `crew.json`, and never in the tree.
+each checkout's git directory as `crew.json`, and the lead's briefs and reports in `crew/` beside it,
+never in the tree.
 
 ## Examples
 
@@ -202,7 +205,7 @@ Actions:
 1. `crew init --session dev1`, `crew add dev2 ../dev2`, `crew add dev3 ../dev3`.
 2. Print each start line. The user types `crew join dev1` in both sessions; two
    hellos arrive with green baselines; `crew status` shows both joined and level.
-3. As the review settles things, write `.crew/briefs/B-1.md` for the settings screen and send it
+3. As the review settles things, write `.git/crew/briefs/B-1.md` for the settings screen and send it
    to dev2, and `B-2.md` for sync errors to dev3.
 4. dev2 reports. `crew integrate dev2 --dry-run` matches the report;
    `crew integrate dev2 --skip dev3` lands 4 commits; the lead's check run is green.

@@ -236,3 +236,11 @@ def test_a_member_of_one_crew_cannot_be_added_to_another(invited, monkeypatch, c
     assert run(monkeypatch, invited["dev1"], "remove", "dev2") == 0
     assert not (invited["dev2"] / ".git" / "crew.json").exists()
     assert run(monkeypatch, other_lead, "add", "dev2", str(invited["dev2"])) == 0
+
+
+def test_init_creates_the_work_folder_inside_the_git_directory(clones, monkeypatch, capsys):
+    lead = clones["dev1"]
+    assert run(monkeypatch, lead, "init") == 0
+    folder = lead / ".git" / "crew"
+    assert sorted(path.name for path in folder.iterdir()) == ["briefs", "reports"]
+    assert f"work folder: {folder}" in capsys.readouterr().out

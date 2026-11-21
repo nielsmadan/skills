@@ -7,6 +7,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 STATE_FILE = "crew.json"
+WORK_FOLDER = "crew"
 LEAD_REF = "refs/crew/lead"
 
 EXIT_OK = 0
@@ -52,6 +53,10 @@ def toplevel(path):
 
 def state_path(git):
     return Path(git.out("rev-parse", "--absolute-git-dir")) / STATE_FILE
+
+
+def work_folder(git):
+    return Path(git.out("rev-parse", "--absolute-git-dir")) / WORK_FOLDER
 
 
 def load_state(git):
@@ -181,6 +186,10 @@ def cmd_init(args):
                      "lead_path": str(git.cwd), "members": members})
     print(f"lead: {git.cwd} · integration branch: {branch} · session: {session or '(unset)'}")
     print(f"tip: {git.out('rev-parse', '--short', branch)}")
+    folder = work_folder(git)
+    for sub in ("briefs", "reports"):
+        (folder / sub).mkdir(parents=True, exist_ok=True)
+    print(f"work folder: {folder}")
 
 
 def cmd_add(args):
