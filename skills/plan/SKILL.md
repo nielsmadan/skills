@@ -1,7 +1,7 @@
 ---
 name: plan
-description: Lightweight planning workflow — plan read-only in-session when already on Opus or stronger, otherwise delegate planning to an Opus subagent (or adopt a plan already agreed in the conversation). With --plan-only, save the plan to a Markdown file and stop. Otherwise implement in auto mode after a single go-ahead gate, run QA and one `code-review --multi`, fix findings, repeat QA only after substantial code changes, update docs, and commit the task's work. The middle tier between "just do it" (tiny tasks) and `longshot` (multi-hour features). Never enters plan mode, so it sidesteps the plan-mode permission prompts. Use when the user invokes /plan, or wants a plan for a medium-sized task before implementing.
-argument-hint: '[--plan-only] [--review] <task, or blank to infer from conversation>'
+description: Lightweight planning workflow — plan read-only in-session when already on Opus or stronger, otherwise delegate planning to an Opus subagent (or adopt a plan already agreed in the conversation). With --plan-only, save the plan to a Markdown file and stop. With --complete, skip planning for work already done ad hoc and run only the finishing steps (QA, review, docs, commit, squash). Otherwise implement in auto mode after a single go-ahead gate, run QA and one `code-review --multi`, fix findings, repeat QA only after substantial code changes, update docs, and commit the task's work. The middle tier between "just do it" (tiny tasks) and `longshot` (multi-hour features). Never enters plan mode, so it sidesteps the plan-mode permission prompts. Use when the user invokes /plan, or wants a plan for a medium-sized task before implementing.
+argument-hint: '[--plan-only] [--review] [--complete] <task, or blank to infer from conversation>'
 effort: xhigh
 ---
 
@@ -37,6 +37,7 @@ The argument is the task. If blank, infer the task from the current conversation
 /plan --review <task>                            # plan, then multi-agent review before the gate
 /plan --plan-only <task>                         # save the plan to a file and stop
 /plan --plan-only --review <task>                # review the plan, then save it and stop
+/plan --complete                                 # finish ad-hoc work already done: QA, review, docs, commit, squash
 ```
 
 ## Flags
@@ -52,8 +53,35 @@ The argument is the task. If blank, infer the task from the current conversation
   fold the findings in before presenting for go-ahead. `review-plan` is already
   multi-agent; there is no separate `--multi`. The final `code-review --multi`
   runs regardless of this flag when implementing; `--plan-only` stops before it.
+- `--complete` — the work was already discussed and implemented in this session
+  without the skill. Skip planning, the gate and implementation (Steps 1–5) and run
+  the finishing steps (Steps 6–9) over it, as set up in Step 0. Remaining text, if
+  any, names the task or narrows its scope; otherwise infer both from the
+  conversation. Invoking it is the go-ahead for the finishing steps, including
+  committing and squashing the task's work; honor any explicit limit the user gives.
+  It does not combine with `--plan-only` or `--review`.
 
 ## Instructions
+
+### Step 0: Complete ad-hoc work (only if `--complete`)
+
+Set up what the planning steps would otherwise have produced, then go straight to
+Step 6:
+
+1. **Reconstruct the requirements.** From the conversation, collect what the user
+   asked for, what was decided along the way (including changes of direction), and
+   the acceptance criteria that follow. These stand in for the approved plan in
+   Steps 6–8.
+2. **Fix the task's scope.** List the files this session changed for the task,
+   committed or not. If the session committed any of that work, record the base:
+   the `HEAD` before the task's first commit. Work from other sessions in the
+   checkout stays out of scope.
+3. **Check the work is actually done.** If nothing was implemented, say so and
+   offer a normal `/plan` instead. If something agreed in the conversation is
+   visibly missing, list it and ask whether to implement it first or finish
+   without it. Otherwise do not stop.
+4. **State the setup in a few lines** — task, requirements, files, base commit if
+   any — and continue to Step 6 without waiting for approval.
 
 ### Step 1: Scope check (early exit)
 
@@ -219,6 +247,14 @@ sessions' work in the checkout stays out. The go-ahead already authorized this; 
 not ask again. Do not commit while a check fails or a blocker remains — leave the
 work uncommitted and say why in the report.
 
+**With `--complete`, then squash if needed.** When Step 0 recorded a base commit,
+the ad-hoc work left commits of its own, so invoke `squash-commits <base>` to fold
+them and the new ones into the fewest self-contained commits. Squash only when
+every commit in `<base>..HEAD` is the task's and none is on a remote; otherwise
+leave history alone and put the proposed before/after commit list under
+**Blockers**. Keep the pre-squash tip for the report. Without a base commit there
+is nothing to squash.
+
 Then report, in this order:
 - **Changed** — the behavior delivered, in a few bullets.
 - **QA** — scenarios covered, defects found and fixed, and whether repeat QA ran and why.
@@ -226,7 +262,8 @@ Then report, in this order:
   was rejected; reviewers that failed or timed out.
 - **Verification** — the checks run and their results.
 - **Docs** — the files updated.
-- **Commits** — each hash and subject, or why nothing was committed.
+- **Commits** — each hash and subject, or why nothing was committed. After a squash,
+  also the pre-squash tip and the undo command `git reset --soft <tip>`.
 - **Blockers** — anything still on the user, such as a reinstall.
 
 Do not stop after implementation with an offer to run review, update docs, or
@@ -242,6 +279,13 @@ QA, review, and docs → wait for approval → implement in the main session →
 `qa --fix` → one `code-review --multi` → fix findings → `code-review --re` of the fixes → verify → repeat QA only
 if the fixes substantially changed code → update usage docs and examples → `commit`
 → report changes, QA, each review finding's resolution, checks, docs, and commits.
+
+User, after discussing and making a change without the skill: "/plan --complete"
+
+Actions: reconstruct requirements and scope from the conversation → state them
+→ `qa --fix` → one `code-review --multi` → fix findings → `code-review --re` →
+verify → update docs → `commit` → `squash-commits <base>` if the ad-hoc work had
+already committed → report.
 
 ## Troubleshooting
 
