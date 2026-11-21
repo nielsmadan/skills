@@ -1,6 +1,6 @@
 ---
 name: check-agent-logs
-description: Search past Claude Code, Codex, Cursor CLI, Droid, OpenCode, and Pi session logs to recover context from earlier work across the current project and sibling checkouts. Use when a bug, topic, or decision was handled in a previous session but its agent or checkout is unknown; when the user says "we fixed/discussed this before", "find the session where", "recover prior context", "check agent logs", "check Claude projects", "search past sessions/transcripts", or "which checkout was that in". Do not use for aggregate failure-pattern analysis; use review-logs for that.
+description: Search past Claude Code, Codex, Cursor CLI, Devin CLI, Droid, OpenCode, and Pi session logs to recover context from earlier work across the current project and sibling checkouts. Use when a bug, topic, or decision was handled in a previous session but its agent or checkout is unknown; when the user says "we fixed/discussed this before", "find the session where", "recover prior context", "check agent logs", "check Claude projects", "search past sessions/transcripts", or "which checkout was that in". Do not use for aggregate failure-pattern analysis; use review-logs for that.
 ---
 
 <!-- Generated from https://github.com/nielsmadan/agentic-coding — edits here are overwritten. -->
@@ -18,11 +18,11 @@ Use a distinctive regex such as an error string, symbol, ticket ID, or unusual
 phrase. With no agent selector, the script searches all agents. Selectors compose:
 
 ```bash
-python3 scripts/search_agent_logs.py "QUERY" [--claude] [--codex] [--cursor] [--droid] [--opencode] [--pi] [--current] [--all]
+python3 scripts/search_agent_logs.py "QUERY" [--claude] [--codex] [--cursor] [--devin] [--droid] [--opencode] [--pi] [--current] [--all]
 ```
 
 - `--current` selects the harness running the skill.
-- `--all` and no selector both select all six agents.
+- `--all` and no selector both select all seven agents.
 - `--scope siblings` is the default project scope. `--scope current` searches
   only the current checkout; `--scope all` searches every recorded project.
 - `--app NAME` searches session cwd values containing `NAME` and overrides scope.
@@ -88,6 +88,12 @@ holds prompts, replies and tool calls but no tool output, so `--mode log` and
 `--kind tool` show what was run, never what it returned. Its cwd and title come
 from the CLI's chat metadata; subagent transcripts take their parent's cwd. Chats
 from the Cursor IDE are not searched.
+
+**Devin sessions come from its `sessions.db`,** opened read-only so a running Devin
+is undisturbed. Devin stores each session as a tree that also holds streamed drafts
+and rebuilt prompts; only the branch it kept and its subagents' branches are read.
+A slash-command prompt shows as typed (`/plan …`) rather than the expanded skill
+text, and subagent tasks appear in their parent session.
 
 Read more than one when attribution is ambiguous. Trust the printed `cwd` over
 encoded storage paths. Transcripts can contain secrets or PII; use them as

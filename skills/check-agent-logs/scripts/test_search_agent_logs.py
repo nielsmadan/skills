@@ -34,6 +34,7 @@ class SearchAgentLogsTests(unittest.TestCase):
             codex_sessions=root / "codex-sessions",
             cursor_projects=root / "cursor" / "projects",
             cursor_chats=root / "cursor" / "chats",
+            devin_db=root / "devin" / "sessions.db",
             droid_sessions=root / "droid-sessions",
             opencode_db=root / "opencode" / "opencode.db",
             pi_sessions=root / "pi-sessions",
@@ -46,6 +47,7 @@ class SearchAgentLogsTests(unittest.TestCase):
         )
         self.make_codex_session("codex-session", self.cwd, "needle codex")
         self.make_cursor_session("cursor-session", self.cwd, "needle cursor")
+        self.make_devin_db("devin-session", self.cwd)
         self.make_droid_session("droid-session", self.cwd, "needle droid")
         self.make_pi_session("pi-session", self.sibling, "needle pi")
         self.make_opencode_db("opencode-session", self.cwd, "needle opencode")
@@ -159,6 +161,72 @@ class SearchAgentLogsTests(unittest.TestCase):
             )
         )
 
+    def make_devin_db(self, session_id: str, cwd: str) -> None:
+        self.roots.devin_db.parent.mkdir(parents=True, exist_ok=True)
+        connection = sqlite3.connect(self.roots.devin_db)
+        connection.executescript(
+            """
+            CREATE TABLE sessions (
+                id TEXT PRIMARY KEY, working_directory TEXT NOT NULL, backend_type TEXT,
+                model TEXT, agent_mode TEXT, created_at INTEGER NOT NULL,
+                last_activity_at INTEGER NOT NULL, title TEXT, main_chain_id INTEGER,
+                hidden INTEGER NOT NULL DEFAULT 0, metadata TEXT
+            );
+            CREATE TABLE message_nodes (
+                row_id INTEGER PRIMARY KEY AUTOINCREMENT, session_id TEXT NOT NULL,
+                node_id INTEGER NOT NULL, parent_node_id INTEGER, chat_message TEXT NOT NULL,
+                created_at INTEGER NOT NULL, metadata TEXT
+            );
+            CREATE TABLE subagent_heads (
+                session_id TEXT NOT NULL, agent_id TEXT NOT NULL,
+                chain_node_id INTEGER NOT NULL, updated_at INTEGER NOT NULL
+            );
+            """
+        )
+        connection.execute(
+            "INSERT INTO sessions (id, working_directory, backend_type, model, agent_mode,"
+            " created_at, last_activity_at, title, main_chain_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            (session_id, cwd, "windsurf", "swe", "normal", 1786356000, 1786356360, "Devin title", 4),
+        )
+        connection.execute(
+            "INSERT INTO subagent_heads VALUES (?, ?, ?, ?)", (session_id, "sidekick", 6, 1786356360)
+        )
+
+        def message(role: str, minute: int, content: str, source: str, **extra) -> str:
+            metadata = {
+                "created_at": f"2026-08-10T10:0{minute}:00Z",
+                "telemetry": {"source": source},
+                **extra.pop("metadata", {}),
+            }
+            return json.dumps({"role": role, "content": content, "metadata": metadata, **extra})
+
+        prompt_metadata = {
+            "is_user_input": True,
+            "extensions": {"chisel/acp-content-blocks": [{"type": "text", "text": "needle devin"}]},
+        }
+        nodes = [
+            (0, None, message("system", 0, "needle system prompt", "sysprompt")),
+            (1, 0, message("user", 1, "expanded skill body\nneedle devin", "user",
+                           metadata=prompt_metadata)),
+            (2, 1, message("assistant", 2, "needle draft", "assistant")),
+            (3, 1, message(
+                "assistant", 3, "looking", "assistant",
+                thinking={"thinking": "needle reasoning", "signature": "opaque"},
+                tool_calls=[{"name": "exec", "arguments": {"command": "grep needle-in-devin-tool"}}],
+            )),
+            (4, 3, message("tool", 4, "needle in devin tool output", "tool_result")),
+            (5, None, message("user", 5, "needle subagent task", "subagent_task",
+                              metadata={"is_user_input": True})),
+            (6, 5, message("assistant", 6, "needle from sidekick", "assistant")),
+        ]
+        connection.executemany(
+            "INSERT INTO message_nodes (session_id, node_id, parent_node_id, chat_message,"
+            " created_at) VALUES (?, ?, ?, ?, ?)",
+            [(session_id, node, parent, chat, 1786356000) for node, parent, chat in nodes],
+        )
+        connection.commit()
+        connection.close()
+
     def make_droid_session(self, session_id: str, cwd: str, text: str) -> None:
         folder = self.roots.droid_sessions / search_agent_logs.encode_claude_path(cwd)
         self.write_jsonl(
@@ -267,6 +335,7 @@ class SearchAgentLogsTests(unittest.TestCase):
             "codex:codex-session",
             "cursor:cursor-session",
             "cursor:cursor-subagent",
+            "devin:devin-session",
             "droid:droid-session",
             "opencode:opencode-session",
             "pi:pi-session",
@@ -506,8 +575,14 @@ class SearchAgentLogsTests(unittest.TestCase):
         refs = [session["ref"] for session in payload["sessions"]]
         self.assertEqual(
             refs,
-            ["opencode:opencode-session", "codex:codex-session", "pi:pi-session",
-             "droid:droid-session", "cursor:cursor-session", "claude:claude-timeline"],
+            ["devin:devin-session", "opencode:opencode-session", "codex:codex-session",
+             "pi:pi-session", "droid:droid-session", "cursor:cursor-session",
+             "claude:claude-timeline"],
+        )
+        self.assertEqual(
+            payload["sessions"][0]["spans"],
+            [{"start": "2026-08-10T10:01:00+00:00", "end": "2026-08-10T10:06:00+00:00",
+              "minutes": 5, "prompts": 1}],
         )
         claude = payload["sessions"][-1]
         self.assertEqual(
@@ -515,7 +590,7 @@ class SearchAgentLogsTests(unittest.TestCase):
             [{"start": "2026-08-11T09:00:00+00:00", "end": "2026-08-11T09:10:00+00:00",
               "minutes": 10, "prompts": 1}],
         )
-        self.assertEqual(payload["daily_active_minutes"], {"2026-08-10": 2, "2026-08-11": 10})
+        self.assertEqual(payload["daily_active_minutes"], {"2026-08-10": 6, "2026-08-11": 10})
 
     def test_cursor_session_takes_cwd_and_title_from_chat_metadata(self):
         status, stdout, _ = self.run_main(
@@ -552,6 +627,43 @@ class SearchAgentLogsTests(unittest.TestCase):
         status, stdout, _ = self.run_main(["needle", "--cursor", "--scope", "all"])
         self.assertEqual(status, 0)
         self.assertIn("cursor:cursor-session", stdout)
+
+    def test_devin_search_reads_only_the_kept_main_and_subagent_chains(self):
+        status, stdout, _ = self.run_main(
+            ["needle", "--devin", "--cwd", self.cwd, "--scope", "current", "--format", "json",
+             "--max-snippets", "9"]
+        )
+        self.assertEqual(status, 0)
+        [result] = json.loads(stdout)["results"]
+        self.assertEqual(result["ref"], "devin:devin-session")
+        self.assertEqual(result["title"], "Devin title")
+        self.assertEqual(result["cwd"], self.cwd)
+        self.assertEqual(result["first_ts"], "2026-08-10T10:00:00Z")
+        self.assertEqual(result["last_ts"], "2026-08-10T10:06:00Z")
+        self.assertEqual(result["by_kind"], {"message": 3, "meta": 1, "tool": 2})
+
+    def test_devin_read_shows_the_typed_prompt_and_keeps_tools_for_log_mode(self):
+        status, stdout, _ = self.run_main(["--read", "devin:devin-session", "--format", "json"])
+        self.assertEqual(status, 0)
+        self.assertEqual(
+            json.loads(stdout)["body"],
+            "2026-08-10T10:01:00Z [user/message]\nneedle devin\n\n"
+            "2026-08-10T10:03:00Z [assistant/message]\nlooking\n\n"
+            "2026-08-10T10:05:00Z [user/message]\nneedle subagent task\n\n"
+            "2026-08-10T10:06:00Z [assistant/message]\nneedle from sidekick\n\n",
+        )
+        status, stdout, _ = self.run_main(["--read", "devin:devin-session", "--mode", "log"])
+        self.assertEqual(status, 0)
+        self.assertIn('exec\n{"command": "grep needle-in-devin-tool"}', stdout)
+        self.assertIn("[tool/tool]\nneedle in devin tool output", stdout)
+        self.assertIn("[assistant/meta]\nneedle reasoning", stdout)
+
+    def test_devin_missing_database_fails_when_selected(self):
+        self.roots.devin_db.unlink()
+        status, _, stderr = self.run_main(["needle", "--devin"])
+        self.assertEqual(status, 2)
+        self.assertIn("Devin database not found", stderr)
+        self.assertFalse(self.roots.devin_db.exists())
 
     def test_timeline_requires_a_start(self):
         stderr = io.StringIO()

@@ -1,6 +1,6 @@
 ---
 name: plan
-description: Lightweight planning workflow — plan read-only in-session when already on Opus or stronger, otherwise delegate planning to an Opus subagent (or adopt a plan already agreed in the conversation). With --plan-only, save the plan to a Markdown file and stop. With --complete, skip planning for work already done ad hoc and run only the finishing steps (QA, review, docs, commit, squash). Otherwise implement in auto mode after a single go-ahead gate, run QA and one `code-review --multi`, fix findings, repeat QA only after substantial code changes, update docs, and commit the task's work. The middle tier between "just do it" (tiny tasks) and `longshot` (multi-hour features). Never enters plan mode, so it sidesteps the plan-mode permission prompts. Use when the user invokes /plan, or wants a plan for a medium-sized task before implementing.
+description: Lightweight planning workflow — run one short `blind-spots` round only when what the user wants is unclear, then plan read-only in-session when already on Opus or stronger, otherwise delegate planning to an Opus subagent (or adopt a plan already agreed in the conversation). With --plan-only, save the plan to a Markdown file and stop. With --complete, skip planning for work already done ad hoc and run only the finishing steps (QA, review, docs, commit, squash). Otherwise implement in auto mode after a single go-ahead gate, run QA and one `code-review --multi`, fix findings, repeat QA only after substantial code changes, update docs, and commit the task's work. The middle tier between "just do it" (tiny tasks) and `longshot` (multi-hour features). Never enters plan mode, so it sidesteps the plan-mode permission prompts. Use when the user invokes /plan, or wants a plan for a medium-sized task before implementing.
 argument-hint: '[--plan-only] [--review] [--complete] <task, or blank to infer from conversation>'
 effort: xhigh
 ---
@@ -11,7 +11,7 @@ effort: xhigh
 
 Produce a concrete implementation plan for a medium-sized task, then implement it
 after one approval gate, or save it to a file and stop with `--plan-only`.
-Deliberately lighter than `longshot` (no up-front
+Deliberately lighter than `longshot` (no full up-front
 interview, per-task implementer subagents or rulings ledger) and
 heavier than just editing — the space where a plan helps but full ceremony is overkill.
 
@@ -109,6 +109,17 @@ or plan from scratch?" Wait for the answer.
   check read-only that the files and claims it relies on hold in the current repo,
   and add any gap or drift as an open question. Continue at Step 3.
 - **From scratch:** plan as below, treating the conversation's plan as context.
+
+**Settle open intent first, only when it is warranted.** Run one short `blind-spots`
+round only when the task leaves open *what the user wants* and the conversation and
+repo do not settle it. That covers what a term refers to, which behaviour they expect,
+or what is in scope, wherever different reasonable readings would produce different
+plans. Invoke it as an embedded call, limited to intent and scope, at most one round,
+and have it return a brief rather than hand off. Wait for the answers, then plan from
+that brief. Technical choices that have a defensible recommendation are not a reason
+to run it. They go into the plan as open questions for the gate. Most tasks skip this
+step. On the in-session path, run it after exploring and before drafting. On the
+dispatch path, run it before dispatching and include the brief in the prompt.
 
 **Plan in this session when it runs on Opus or a stronger model.** Explore
 **read-only** — read, search and read-only shell only, no edits and **no** mutating
@@ -274,11 +285,18 @@ finishing steps.
 
 User: "Plan adding a `--json` flag to export."
 
-Actions: the session (or, below Opus, one read-only subagent) drafts the approach → present the plan including
+Actions: the task and repo settle what is wanted, so skip `blind-spots` → the session (or, below Opus, one read-only subagent) drafts the approach → present the plan including
 QA, review, and docs → wait for approval → implement in the main session →
 `qa --fix` → one `code-review --multi` → fix findings → `code-review --re` of the fixes → verify → repeat QA only
 if the fixes substantially changed code → update usage docs and examples → `commit`
 → report changes, QA, each review finding's resolution, checks, docs, and commits.
+
+User: "/plan make the command bar configurable like the other components"
+
+Actions: exploring shows that "command bar" could mean the palette or the toolbar,
+and that "configurable" could cover appearance or behaviour → one embedded
+`blind-spots` round on what is meant and what is in scope → draft the plan from the
+answers, with the font-type choice left as an open question for the gate.
 
 User, after discussing and making a change without the skill: "/plan --complete"
 

@@ -13,7 +13,7 @@ from pathlib import Path
 from typing import Iterable, Iterator
 
 
-AGENTS = ("claude", "codex", "cursor", "droid", "opencode", "pi")
+AGENTS = ("claude", "codex", "cursor", "devin", "droid", "opencode", "pi")
 
 
 @dataclass(frozen=True)
@@ -23,6 +23,7 @@ class Roots:
     codex_sessions: Path
     cursor_projects: Path
     cursor_chats: Path
+    devin_db: Path
     droid_sessions: Path
     opencode_db: Path
     pi_sessions: Path
@@ -41,12 +42,14 @@ class Roots:
             os.environ.get("CURSOR_CONFIG_DIR")
             or (Path(xdg_config) / "cursor" if xdg_config else home / ".cursor")
         )
+        devin_dir = Path(os.environ.get("DEVIN_SESSIONS_DIR") or xdg_data / "devin" / "cli")
         return cls(
             claude_projects=claude_dir / "projects",
             claude_archive=xdg_data / "ringleader" / "archive",
             codex_sessions=codex_dir / "sessions",
             cursor_projects=cursor_data / "projects",
             cursor_chats=cursor_config / "chats",
+            devin_db=devin_dir / "sessions.db",
             droid_sessions=factory_dir / "sessions",
             opencode_db=xdg_data / "opencode" / "opencode.db",
             pi_sessions=Path(
@@ -681,12 +684,16 @@ def read_cursor_session(session_id: str, roots: Roots) -> tuple[SessionMeta, lis
     return cursor_session_data(path, cursor_chat_index(roots.cursor_chats))
 
 
-def open_opencode(path: Path) -> sqlite3.Connection:
+def open_readonly(path: Path, label: str) -> sqlite3.Connection:
     if not path.is_file():
-        raise FileNotFoundError(f"OpenCode database not found: {path}")
+        raise FileNotFoundError(f"{label} database not found: {path}")
     connection = sqlite3.connect(f"file:{path}?mode=ro", uri=True)
     connection.row_factory = sqlite3.Row
     return connection
+
+
+def open_opencode(path: Path) -> sqlite3.Connection:
+    return open_readonly(path, "OpenCode")
 
 
 def opencode_entry(row: sqlite3.Row) -> Entry | None:
@@ -768,10 +775,186 @@ def search_opencode(
         connection.close()
 
 
+DEVIN_SESSION_COLUMNS = "id, working_directory, title, created_at, last_activity_at, main_chain_id"
+
+
+def iso_from_seconds(value: int | float | None) -> str | None:
+    return None if value is None else iso_from_millis(float(value) * 1000)
+
+
+def open_devin(path: Path) -> sqlite3.Connection:
+    return open_readonly(path, "Devin")
+
+
+def devin_session_rows(connection: sqlite3.Connection, cutoff: float | None) -> list[sqlite3.Row]:
+    rows = connection.execute(f"SELECT {DEVIN_SESSION_COLUMNS} FROM sessions").fetchall()
+    return [row for row in rows if cutoff is None or row["last_activity_at"] >= cutoff]
+
+
+def devin_session_meta(db: Path, row: sqlite3.Row) -> SessionMeta:
+    return SessionMeta(
+        "devin",
+        str(row["id"]),
+        f"{db}#session={row['id']}",
+        title=row["title"],
+        cwd=row["working_directory"],
+        first_ts=iso_from_seconds(row["created_at"]),
+        last_ts=iso_from_seconds(row["last_activity_at"]),
+    )
+
+
+def devin_kept_nodes(rows: list[sqlite3.Row], heads: list[int]) -> list[sqlite3.Row]:
+    by_id = {row["node_id"]: row for row in rows}
+    kept: set[int] = set()
+    for head in heads:
+        node = head
+        while node in by_id and node not in kept:
+            kept.add(node)
+            node = by_id[node]["parent_node_id"]
+    return [by_id[node] for node in sorted(kept)]
+
+
+def devin_message(text: str) -> dict | None:
+    try:
+        value = json.loads(text)
+    except (TypeError, json.JSONDecodeError):
+        return None
+    return value if isinstance(value, dict) else None
+
+
+def devin_messages(
+    connection: sqlite3.Connection, session_id: str, main_chain_id: int | None
+) -> list[tuple[dict, str | None]]:
+    rows = connection.execute(
+        "SELECT node_id, parent_node_id, chat_message, created_at FROM message_nodes"
+        " WHERE session_id = ?",
+        (session_id,),
+    ).fetchall()
+    subagents = connection.execute(
+        "SELECT chain_node_id FROM subagent_heads WHERE session_id = ?", (session_id,)
+    ).fetchall()
+    # Off-chain siblings are streamed drafts and rebuilt prompts; the heads mark the kept history.
+    heads = [head for head in (main_chain_id, *(row[0] for row in subagents)) if head is not None]
+    if not heads and rows:
+        heads = [max(row["node_id"] for row in rows)]
+    parsed = (
+        (devin_message(row["chat_message"]), iso_from_seconds(row["created_at"]))
+        for row in devin_kept_nodes(rows, heads)
+    )
+    return [(message, fallback) for message, fallback in parsed if message]
+
+
+def devin_metadata(message: dict) -> dict:
+    metadata = message.get("metadata")
+    return metadata if isinstance(metadata, dict) else {}
+
+
+def devin_source(message: dict) -> str | None:
+    telemetry = devin_metadata(message).get("telemetry")
+    return telemetry.get("source") if isinstance(telemetry, dict) else None
+
+
+def devin_typed_prompt(message: dict) -> str:
+    extensions = devin_metadata(message).get("extensions")
+    blocks = extensions.get("chisel/acp-content-blocks") if isinstance(extensions, dict) else None
+    if not isinstance(blocks, list):
+        return ""
+    return "\n".join(
+        block["text"]
+        for block in blocks
+        if isinstance(block, dict) and isinstance(block.get("text"), str)
+    )
+
+
+def devin_tool_calls(message: dict) -> str:
+    calls = message.get("tool_calls")
+    return "\n".join(
+        flatten_content({"name": call.get("name"), "arguments": call.get("arguments")})
+        for call in (calls if isinstance(calls, list) else [])
+        if isinstance(call, dict)
+    )
+
+
+def devin_timestamp(message: dict, fallback: str | None) -> str | None:
+    stamp = devin_metadata(message).get("created_at")
+    return stamp if isinstance(stamp, str) else fallback
+
+
+def devin_entries(message: dict, fallback: str | None) -> list[Entry]:
+    metadata = devin_metadata(message)
+    timestamp = devin_timestamp(message, fallback)
+    role = str(message.get("role", "message"))
+    content = flatten_content(message.get("content"))
+    if role == "system":
+        compaction = devin_source(message) == "compaction"
+        summary = Entry("summary", content, timestamp, KIND_META, automated=True)
+        entries = [summary] if compaction else []
+    elif role == "user":
+        human = bool(metadata.get("is_user_input")) and devin_source(message) == "user"
+        text = devin_typed_prompt(message) or content
+        entries = [Entry(role, text, timestamp, KIND_MESSAGE, automated=not human)]
+    elif role == "tool":
+        entries = [Entry(role, content, timestamp, KIND_TOOL)]
+    else:
+        entries = [
+            Entry(role, content, timestamp, KIND_MESSAGE),
+            Entry(role, flatten_content(message.get("thinking")), timestamp, KIND_META),
+            Entry(role, devin_tool_calls(message), timestamp, KIND_TOOL),
+        ]
+    return [entry for entry in entries if entry.text.strip()]
+
+
+def devin_session_data(
+    connection: sqlite3.Connection, db: Path, row: sqlite3.Row
+) -> tuple[SessionMeta, list[Entry]]:
+    meta = devin_session_meta(db, row)
+    entries = [
+        entry
+        for message, fallback in devin_messages(connection, meta.session_id, row["main_chain_id"])
+        for entry in devin_entries(message, fallback)
+    ]
+    for entry in entries:
+        update_timestamps(meta, entry.timestamp)
+    return meta, entries
+
+
+def search_devin(
+    roots: Roots, pattern: re.Pattern[str], options: SearchOptions
+) -> tuple[list[MatchResult], list[str]]:
+    connection = open_devin(roots.devin_db)
+    try:
+        rows = [
+            row
+            for row in devin_session_rows(connection, options.cutoff)
+            if cwd_in_scope(row["working_directory"], options)
+        ]
+        found = (
+            scan_entries(*devin_session_data(connection, roots.devin_db, row), pattern, options)
+            for row in rows
+        )
+        return [result for result in found if result], []
+    finally:
+        connection.close()
+
+
+def read_devin_session(session_id: str, roots: Roots) -> tuple[SessionMeta, list[Entry]]:
+    connection = open_devin(roots.devin_db)
+    try:
+        row = connection.execute(
+            f"SELECT {DEVIN_SESSION_COLUMNS} FROM sessions WHERE id = ?", (session_id,)
+        ).fetchone()
+        if row is None:
+            raise FileNotFoundError(f"Session not found: devin:{session_id}")
+        return devin_session_data(connection, roots.devin_db, row)
+    finally:
+        connection.close()
+
+
 SEARCHERS = {
     "claude": search_claude,
     "codex": search_codex,
     "cursor": search_cursor,
+    "devin": search_devin,
     "droid": search_droid,
     "opencode": search_opencode,
     "pi": search_pi,
@@ -1001,6 +1184,14 @@ def timeline_sources(
         for path in cursor_transcript_paths(roots.cursor_projects):
             if path.parent.name != "subagents" and recent_enough(path, options.cutoff):
                 yield cursor_session_data(path, chats)
+        return
+    if agent == "devin":
+        connection = open_devin(roots.devin_db)
+        try:
+            for row in devin_session_rows(connection, options.cutoff):
+                yield devin_session_data(connection, roots.devin_db, row)
+        finally:
+            connection.close()
         return
     if agent != "opencode":
         for path in timeline_paths(agent, roots, options):
@@ -1458,6 +1649,8 @@ def main(argv: list[str] | None = None, roots: Roots | None = None) -> int:
                 meta, entries = read_opencode_session(session_id, roots)
             elif agent == "cursor":
                 meta, entries = read_cursor_session(session_id, roots)
+            elif agent == "devin":
+                meta, entries = read_devin_session(session_id, roots)
             else:
                 path = locate_jsonl(agent, session_id, roots)
                 meta, entries = read_jsonl_session(agent, path)
