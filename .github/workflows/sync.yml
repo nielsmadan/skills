@@ -27,19 +27,19 @@ jobs:
         run: git clone --depth 1 https://github.com/nielsmadan/agentic-coding.git "$RUNNER_TEMP/ac"
 
       - name: Install loadout
-        run: pip install "git+https://github.com/nielsmadan/loadout@86abb1b378ad7d69cccc4b986009a3f84eb98ccb"
+        run: pip install -r "$RUNNER_TEMP/ac/publish/requirements.txt"
 
       - name: Render
         run: python3 "$RUNNER_TEMP/ac/publish/sync.py" --out .
 
       - name: Commit if changed
         run: |
-          git add -A -- skills README.md LICENSE .claude-plugin .codex-plugin .cursor-plugin .agents
+          git add -A -- . ':!.github'
           if git diff --cached --quiet; then
             echo "no changes"
             exit 0
           fi
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git commit -m "chore: sync skills from agentic-coding"
+          git commit -m "chore: sync skills from agentic-coding@$(git -C "$RUNNER_TEMP/ac" rev-parse --short HEAD)"
           git push
