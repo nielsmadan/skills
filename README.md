@@ -23,7 +23,7 @@ codex plugin marketplace add nielsmadan/skills
 
 Then install `nlsmdn` from `/plugins` and start a new session.
 
-Any other agent (Codex, Cursor, OpenCode, Zed, Copilot CLI, Gemini CLI, Amp):
+Any other agent (Cursor, OpenCode, Zed, Copilot CLI, Gemini CLI, Amp):
 
 ```
 npx skills add nielsmadan/skills
@@ -33,11 +33,15 @@ Add `--skill <name>` to install one, or `--all` to cover every detected agent.
 
 ## Notes
 
-- Third-party marketplaces default to **auto-update off**. Enable it per
-  marketplace in `/plugin`, or run `claude plugin update nlsmdn` when you want
-  changes.
-- There is no `version` field: the version resolves to the source commit SHA, so
-  every push is available immediately to anyone who updates.
+- In Claude Code, third-party marketplaces default to **auto-update off**.
+  Enable it per marketplace in `/plugin`, or run `claude plugin update nlsmdn`
+  when you want changes.
+- The Claude Code plugin has no `version` field: the version resolves to the
+  source commit SHA, so every push is available immediately to anyone who
+  updates.
+- The Codex and Cursor manifests carry a version whose patch number goes up
+  whenever the published skills change; Codex refreshes an installed plugin
+  only when that version changes.
 - Codex budgets its initial skill list at 2% of the model's context window
   (8,000 characters only when the window is unknown) and shortens descriptions
   first when over it; only very large sets see skills omitted. `--skill <name>`

@@ -1,6 +1,6 @@
 {
   "name": "nlsmdn",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Opinionated agent skills for code review, research, and daily workflow",
   "author": {
     "name": "Niels Madan",
@@ -20,7 +20,7 @@
   "interface": {
     "displayName": "nlsmdn",
     "shortDescription": "Opinionated agent skills for code review, research, and daily workflow",
-    "longDescription": "Opinionated agent skills for the daily development loop, organized in groups: multi-perspective code review (an orchestrator plus dedicated reviewers for architecture, security, performance, interfaces, tests, and language-specific design, with cross-CLI second opinions), planning and research workflows, testing and debugging, git and session history, docs and writing, web and mobile workflows (SEO, Flutter and React Native upgrades), and small environment tools. Generated and synced hourly from a single source repo.",
+    "longDescription": "Opinionated agent skills for the daily development loop, organized in groups: multi-perspective code review (an orchestrator plus dedicated reviewers for architecture, security, performance, correctness, interfaces, and language-specific design, with cross-CLI second opinions), planning and research workflows, testing and debugging, git and session history, docs and writing, web and mobile workflows (SEO, Flutter and React Native upgrades), and small environment tools. Generated from a single source repo and republished when it changes.",
     "developerName": "Niels Madan",
     "category": "Developer Tools",
     "websiteURL": "https://github.com/nielsmadan/skills"

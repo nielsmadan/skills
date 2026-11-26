@@ -16,7 +16,7 @@ effort: low
    - Otherwise, explain the assistant's immediately preceding reply.
    - If no target is available, ask what the user wants explained.
 2. Use the conversation and already-loaded context first. If project context is necessary and unclear, read at most one clearly relevant file under `docs/`.
-3. Start with a clearer plain-language restatement. Then select only the dimensions that add useful context:
+3. Start by restating the target in plainer language. Then select only the dimensions that add useful context:
    - practical meaning, why it matters, terminology, assumptions, or a concrete example;
    - for programming topics, user impact and when users encounter it;
    - the surrounding architecture and where this area sits in the project;
