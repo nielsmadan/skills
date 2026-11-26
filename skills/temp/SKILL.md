@@ -20,7 +20,7 @@ Make quick, reversible code changes for local testing. Every change is marked wi
 Usage: `temp always show questionnaire`
 
 1. Search the codebase for code related to the user's description.
-2. Make the **minimal** change needed — flip a boolean, comment out a guard, force a condition, hardcode a value. Prefer the smallest diff possible.
+2. Make the **minimal** change needed — flip a boolean, comment out a guard, force a condition, hardcode a value.
 3. Mark every modified line with a comment containing `TEMP:` and the reason. Use the appropriate comment syntax for the language.
 
 **Marking rules:**

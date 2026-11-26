@@ -2,7 +2,7 @@
   "name": "nlsmdn",
   "displayName": "nlsmdn",
   "description": "Opinionated agent skills for code review, research, and daily workflow",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "author": {
     "name": "Niels Madan",
     "url": "https://github.com/nielsmadan"
